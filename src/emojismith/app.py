@@ -1,24 +1,26 @@
 """FastAPI application factory."""
 
+import os
+from dotenv import load_dotenv
+
 from fastapi import FastAPI
 from typing import Dict, Any
-from emojismith.application.handlers.slack_webhook import (
-    SlackWebhookHandler,
-)
+from slack_sdk.web.async_client import AsyncWebClient
+from emojismith.application.handlers.slack_webhook import SlackWebhookHandler
+from emojismith.application.services.emoji_service import EmojiCreationService
+from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 
 
 def create_webhook_handler() -> SlackWebhookHandler:
     """Create webhook handler with dependencies."""
-    # TODO: Implement proper dependency injection in future iterations
-    # For now, return a mock to make tests pass
-    from unittest.mock import AsyncMock
+    # Load environment variables and initialize real Slack repository and service
+    load_dotenv()
+    slack_token = os.getenv("SLACK_BOT_TOKEN")
+    slack_client = AsyncWebClient(token=slack_token)
+    slack_repo = SlackAPIRepository(slack_client)
+    emoji_service = EmojiCreationService(slack_repo=slack_repo)
 
-    mock_emoji_service = AsyncMock()
-    mock_slack_repo = AsyncMock()
-
-    return SlackWebhookHandler(
-        emoji_service=mock_emoji_service, slack_repo=mock_slack_repo
-    )
+    return SlackWebhookHandler(emoji_service=emoji_service)
 
 
 def create_app() -> FastAPI:
@@ -38,7 +40,16 @@ def create_app() -> FastAPI:
 
     @app.post("/slack/events")
     async def slack_events(payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle Slack webhook events."""
-        return await webhook_handler.handle_message_action(payload)
+        """Handle Slack webhook events, including URL verification."""
+        # Handle Slack URL verification challenge
+        if payload.get("type") == "url_verification":
+            return {"challenge": payload.get("challenge")}
+
+        event_type = payload.get("type")
+        if event_type == "message_action":
+            return await webhook_handler.handle_message_action(payload)
+        if event_type == "view_submission":
+            return await webhook_handler.handle_modal_submission(payload)
+        return {"status": "ignored"}
 
     return app

@@ -1,28 +1,17 @@
 """Slack webhook handler for message actions."""
 
-from typing import Dict, Any, Protocol
+import logging
+from typing import Dict, Any
 from emojismith.domain.entities.slack_message import SlackMessage
-from emojismith.domain.repositories import SlackRepository
-
-
-class EmojiService(Protocol):
-    """Protocol for emoji creation service."""
-
-    async def initiate_emoji_creation(
-        self, message: SlackMessage, trigger_id: str
-    ) -> None:
-        """Initiate emoji creation process."""
-        ...
+from emojismith.application.services.emoji_service import EmojiCreationService
 
 
 class SlackWebhookHandler:
     """Handles Slack webhook events for emoji creation."""
 
-    def __init__(
-        self, emoji_service: EmojiService, slack_repo: SlackRepository
-    ) -> None:
+    def __init__(self, emoji_service: EmojiCreationService) -> None:
         self._emoji_service = emoji_service
-        self._slack_repo = slack_repo
+        self._logger = logging.getLogger(__name__)
 
     async def handle_message_action(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle Slack message action webhook payload."""
@@ -44,50 +33,26 @@ class SlackWebhookHandler:
         trigger_id = payload["trigger_id"]
 
         # Initiate emoji creation process
-        await self._emoji_service.initiate_emoji_creation(slack_message, trigger_id)
+        try:
+            await self._emoji_service.initiate_emoji_creation(slack_message, trigger_id)
+            return {"status": "ok"}
+        except Exception:
+            self._logger.exception("Failed to initiate emoji creation")
+            return {
+                "status": "error",
+                "error": "Failed to create emoji. Please try again later.",
+            }
 
-        return {"status": "ok"}
+    async def handle_modal_submission(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle modal submission for emoji creation."""
+        # Validate callback ID
+        view = payload.get("view", {})
+        if view.get("callback_id") != "emoji_creation_modal":
+            raise ValueError("Invalid callback_id for modal submission")
 
-    async def open_emoji_creation_modal(
-        self, trigger_id: str, message_context: str
-    ) -> None:
-        """Open modal dialog for emoji description input."""
-        modal_view = {
-            "type": "modal",
-            "callback_id": "emoji_creation_modal",
-            "title": {"type": "plain_text", "text": "Create Emoji Reaction"},
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": (
-                            f"*Message context:*\n> " f"{message_context[:100]}..."
-                        ),
-                    },
-                },
-                {
-                    "type": "input",
-                    "block_id": "emoji_description",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "description",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": (
-                                "Describe the emoji you want "
-                                "(e.g., facepalm reaction)"
-                            ),
-                        },
-                        "multiline": False,
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Emoji Description",
-                    },
-                },
-            ],
-            "submit": {"type": "plain_text", "text": "Generate Emoji"},
-        }
-
-        await self._slack_repo.open_modal(trigger_id=trigger_id, view=modal_view)
+        # Delegate to emoji service
+        try:
+            return await self._emoji_service.handle_modal_submission(payload)
+        except Exception:
+            self._logger.exception("Failed to handle modal submission")
+            return {"status": "error", "error": "Invalid submission or internal error."}
