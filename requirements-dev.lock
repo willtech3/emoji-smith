@@ -11,7 +11,7 @@ click==8.2.1
 coverage==7.9.1
 distlib==0.3.9
 distro==1.9.0
--e file:///Users/williamlane/Desktop/Code/emoji-smith
+# Local path removed for portability
 fastapi==0.115.12
 filelock==3.18.0
 flake8==7.2.0
