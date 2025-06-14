@@ -156,19 +156,33 @@ pytest --cov=src tests/      # Tests with 90%+ coverage
 - **📝 Explicit commits**: Never use `git add .` - always specify files explicitly
 - **🛡️ Branch protection**: All changes require pull request review
 
-## 📁 Project Structure
+## 📁 Project Structure (DDD Architecture)
 
 ```
 emoji-smith/
-├── src/emojismith/          # Main application code
-│   ├── handlers/            # Slack event handlers
-│   ├── services/            # Business logic (emoji generation)
-│   ├── repositories/        # External service abstractions
-│   └── models/              # Domain models and types
-├── tests/                   # Test suite (unit + integration)
-├── infra/                   # AWS CDK infrastructure code
-├── .github/workflows/       # CI/CD pipeline definitions
-└── docs/                    # Additional documentation
+├── src/emojismith/          # Main application (Clean Architecture)
+│   ├── domain/             # 🏛️  Domain Layer (pure business logic)
+│   │   ├── entities/       # Core business objects
+│   │   ├── value_objects/  # Immutable domain concepts  
+│   │   ├── services/       # Domain business rules
+│   │   └── repositories/   # Repository interfaces (abstractions)
+│   ├── application/        # 🎯 Application Layer (use cases)
+│   │   ├── services/       # Application services (orchestration)
+│   │   └── handlers/       # Slack webhook handlers
+│   ├── infrastructure/     # 🔧 Infrastructure Layer (external concerns)
+│   │   ├── slack/          # Slack API implementations
+│   │   ├── openai/         # OpenAI API implementations
+│   │   └── aws/            # AWS service integrations
+│   ├── app.py             # FastAPI application factory
+│   ├── lambda_handler.py   # AWS Lambda entrypoint
+│   └── dev_server.py       # Local development server
+├── tests/                  # 🧪 Test Suite (TDD)
+│   ├── unit/              # Domain and application logic tests
+│   ├── integration/       # Infrastructure integration tests
+│   └── fixtures/          # Test data and mocks
+├── infra/                 # ☁️  AWS CDK Infrastructure
+├── .github/workflows/     # 🚀 CI/CD Pipeline
+└── docs/                  # 📚 Documentation
 ```
 
 ## 🤝 Contributing
