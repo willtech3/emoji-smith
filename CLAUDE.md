@@ -24,6 +24,9 @@ uv venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 uv pip install -r requirements-dev.lock
 
+# CRITICAL: Always activate virtual environment before any commands
+source .venv/bin/activate  # Must be activated for correct Python version (3.12)
+
 # Code quality checks (run before committing)
 black --check src/ tests/
 flake8 src/ tests/
