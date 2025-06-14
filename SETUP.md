@@ -98,10 +98,23 @@ SLACK_SIGNING_SECRET=your-signing-secret-here
 # OpenAI API Configuration  
 OPENAI_API_KEY=your-openai-api-key         # Required for emoji generation
 
+# SQS Background Job Queue (Lambda only)
+SQS_QUEUE_URL=https://sqs.<region>.amazonaws.com/<account-id>/<queue-name>
+
 # Development Settings
 LOG_LEVEL=DEBUG
 ENVIRONMENT=development
 ```
+
+## SQS Background Job Queue Setup
+
+In production (AWS Lambda), Emoji Smith uses Amazon SQS for background job processing. Ensure you have:
+
+- Created an SQS queue (FIFO recommended) with appropriate permissions.
+- Configured `SQS_QUEUE_URL` in your environment.
+- Deployed with `aioboto3` available to connect to SQS.
+
+For local development without SQS, jobs are processed synchronously by the application.
 
 ### 4. Slack App Configuration (4 minutes)
 

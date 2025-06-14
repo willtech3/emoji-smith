@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 from fastapi import FastAPI
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from slack_sdk.web.async_client import AsyncWebClient
 from emojismith.application.handlers.slack_webhook import SlackWebhookHandler
 from emojismith.application.services.emoji_service import EmojiCreationService
@@ -12,6 +12,7 @@ from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 from emojismith.infrastructure.image.processing import PillowImageProcessor
 from emojismith.domain.services.generation_service import EmojiGenerationService
+from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 from openai import AsyncOpenAI
 
 
@@ -30,11 +31,40 @@ def create_webhook_handler() -> SlackWebhookHandler:
     generator = EmojiGenerationService(
         openai_repo=openai_repo, image_processor=image_processor
     )
+
+    # Configure job queue based on environment
+    job_queue: Optional[JobQueueRepository] = None
+    if os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        # Running in Lambda - configure SQS job queue
+        job_queue = _create_sqs_job_queue()
+
     emoji_service = EmojiCreationService(
-        slack_repo=slack_repo, emoji_generator=generator
+        slack_repo=slack_repo, emoji_generator=generator, job_queue=job_queue
     )
 
     return SlackWebhookHandler(emoji_service=emoji_service)
+
+
+def _create_sqs_job_queue() -> JobQueueRepository:
+    """Create SQS job queue for Lambda environment."""
+    try:
+        import aioboto3  # type: ignore[import-untyped]
+        from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
+
+        session = aioboto3.Session()
+        sqs_client = session.client("sqs")
+        queue_url = os.getenv("SQS_QUEUE_URL")
+
+        if not queue_url:
+            raise ValueError(
+                "SQS_QUEUE_URL environment variable is required for Lambda"
+            )
+
+        return SQSJobQueue(sqs_client=sqs_client, queue_url=queue_url)
+    except ImportError:
+        raise RuntimeError(
+            "aioboto3 is required for SQS job queue in Lambda environment"
+        )
 
 
 def create_app() -> FastAPI:
