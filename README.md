@@ -27,7 +27,7 @@ graph LR
 
 **Tech Stack:**
 - **Backend**: Python 3.12 + FastAPI + Slack Bolt
-- **AI Services**: OpenAI GPT-4 (prompt enhancement) + DALL-E (image generation)
+- **AI Services**: OpenAI o3 (prompt enhancement) + DALL-E (image generation)
 - **Infrastructure**: AWS Lambda + API Gateway + Secrets Manager
 - **Deployment**: AWS CDK + GitHub Actions
 - **Security**: Bandit SAST scanning + least-privilege IAM
