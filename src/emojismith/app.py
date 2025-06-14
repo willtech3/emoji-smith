@@ -2,18 +2,18 @@
 
 from fastapi import FastAPI
 from typing import Dict, Any
+from slack_sdk.web.async_client import AsyncWebClient
 from emojismith.application.handlers.slack_webhook import SlackWebhookHandler
 from emojismith.application.services.emoji_service import EmojiCreationService
+from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 
 
 def create_webhook_handler() -> SlackWebhookHandler:
     """Create webhook handler with dependencies."""
-    # TODO: Implement proper dependency injection in future iterations
-    # For now, use mocked dependencies to make tests pass
-    from unittest.mock import AsyncMock
-
-    mock_slack_repo = AsyncMock()
-    emoji_service = EmojiCreationService(slack_repo=mock_slack_repo)
+    # Initialize real Slack repository and service
+    slack_client = AsyncWebClient()
+    slack_repo = SlackAPIRepository(slack_client)
+    emoji_service = EmojiCreationService(slack_repo=slack_repo)
 
     return SlackWebhookHandler(emoji_service=emoji_service)
 

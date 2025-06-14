@@ -104,4 +104,3 @@ class TestEmojiCreationService:
         # 2. Upload emoji to Slack workspace
         # 3. Add reaction to original message
         # For now, just verify the method completes without error
-        assert True  # Placeholder assertion

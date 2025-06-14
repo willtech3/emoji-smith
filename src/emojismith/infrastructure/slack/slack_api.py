@@ -16,8 +16,8 @@ class SlackAPIRepository:
 
     async def upload_emoji(self, name: str, image_data: bytes) -> bool:
         """Upload custom emoji to Slack workspace."""
-        # Note: admin_emoji_add requires admin privileges
-        # In practice, this might need to use emoji.add instead
+        # Note: admin_emoji_add requires admin privileges and expects either a
+        # URL or image file. The current call may need adjustment once Phase 3 lands
         response = await self._client.admin_emoji_add(
             name=name, url="", image=image_data
         )
