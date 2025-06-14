@@ -1,0 +1,122 @@
+"""SQS-based job queue implementation."""
+
+import json
+import logging
+from typing import Dict, Any, Optional
+from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+
+
+class SQSJobQueue(JobQueueRepository):
+    """SQS-based implementation of job queue."""
+
+    def __init__(self, sqs_client: Any, queue_url: str) -> None:
+        self._sqs_client = sqs_client
+        self._queue_url = queue_url
+        self._logger = logging.getLogger(__name__)
+
+    async def enqueue_job(self, job_data: Dict[str, Any]) -> str:
+        """Enqueue a new emoji generation job."""
+        # Create job entity
+        job = EmojiGenerationJob.create_new(
+            message_text=job_data["message_text"],
+            user_description=job_data["user_description"],
+            user_id=job_data["user_id"],
+            channel_id=job_data["channel_id"],
+            timestamp=job_data["timestamp"],
+            team_id=job_data["team_id"],
+        )
+
+        # Send message to SQS
+        message_body = json.dumps(job.to_dict())
+
+        response = await self._sqs_client.send_message(
+            QueueUrl=self._queue_url,
+            MessageBody=message_body,
+            MessageGroupId="emoji-generation",  # For FIFO queues
+            MessageDeduplicationId=job.job_id,  # For FIFO queues
+        )
+
+        self._logger.info(
+            "Enqueued emoji generation job",
+            extra={
+                "job_id": job.job_id,
+                "message_id": response["MessageId"],
+                "user_id": job.user_id,
+            },
+        )
+
+        return job.job_id
+
+    async def dequeue_job(self) -> Optional[EmojiGenerationJob]:
+        """Dequeue the next pending job for processing."""
+        response = await self._sqs_client.receive_message(
+            QueueUrl=self._queue_url,
+            MaxNumberOfMessages=1,
+            WaitTimeSeconds=20,  # Long polling for efficiency
+            MessageAttributeNames=["All"],
+        )
+
+        messages = response.get("Messages", [])
+        if not messages:
+            return None
+
+        message = messages[0]
+
+        try:
+            # Parse job data from message body
+            job_data = json.loads(message["Body"])
+            job = EmojiGenerationJob.from_dict(job_data)
+
+            # Store receipt handle for deletion after processing
+            job._receipt_handle = message["ReceiptHandle"]
+
+            self._logger.info(
+                "Dequeued emoji generation job",
+                extra={"job_id": job.job_id, "user_id": job.user_id},
+            )
+
+            return job
+
+        except (json.JSONDecodeError, KeyError) as e:
+            self._logger.error(
+                "Failed to parse job message",
+                extra={"message_id": message.get("MessageId"), "error": str(e)},
+            )
+            # Delete malformed message
+            await self._delete_message(message["ReceiptHandle"])
+            return None
+
+    async def complete_job(self, job: EmojiGenerationJob) -> None:
+        """Mark job as completed and remove from queue."""
+        if hasattr(job, "_receipt_handle"):
+            await self._delete_message(job._receipt_handle)
+            self._logger.info(
+                "Completed and removed job from queue", extra={"job_id": job.job_id}
+            )
+
+    async def _delete_message(self, receipt_handle: str) -> None:
+        """Delete message from SQS queue."""
+        await self._sqs_client.delete_message(
+            QueueUrl=self._queue_url, ReceiptHandle=receipt_handle
+        )
+
+    async def get_job_status(self, job_id: str) -> Optional[str]:
+        """Get the current status of a job."""
+        # For SQS implementation, we'll rely on message visibility
+        # In production, you might want to use DynamoDB for status tracking
+        return None
+
+    async def update_job_status(self, job_id: str, status: str) -> None:
+        """Update the status of a job."""
+        # For SQS implementation, status is managed by queue visibility
+        # In production, you might want to use DynamoDB for status tracking
+        self._logger.info(
+            "Job status updated", extra={"job_id": job_id, "status": status}
+        )
+
+    async def retry_failed_jobs(self, max_retries: int = 3) -> int:
+        """Retry failed jobs that haven't exceeded max retries."""
+        # SQS handles retries through Dead Letter Queues and redrive policies
+        # This would be configured in the infrastructure setup
+        return 0

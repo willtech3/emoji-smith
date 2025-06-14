@@ -2,9 +2,11 @@
 
 import json
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from emojismith.domain.entities.slack_message import SlackMessage
+from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 from emojismith.domain.repositories.slack_repository import SlackRepository
+from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 
@@ -15,10 +17,14 @@ class EmojiCreationService:
     _logger = logging.getLogger(__name__)
 
     def __init__(
-        self, slack_repo: SlackRepository, emoji_generator: EmojiGenerationService
+        self,
+        slack_repo: SlackRepository,
+        emoji_generator: EmojiGenerationService,
+        job_queue: Optional[JobQueueRepository] = None,
     ) -> None:
         self._slack_repo = slack_repo
         self._emoji_generator = emoji_generator
+        self._job_queue = job_queue
 
     async def initiate_emoji_creation(
         self, message: SlackMessage, trigger_id: str
@@ -85,7 +91,7 @@ class EmojiCreationService:
         state = view.get("state", {}).get("values", {})
         try:
             description = state["emoji_description"]["description"]["value"]
-            # metadata = json.loads(view.get("private_metadata", "{}"))
+            metadata = json.loads(view.get("private_metadata", "{}"))
         except (KeyError, json.JSONDecodeError) as exc:
             self._logger.exception("Malformed modal submission payload")
             raise ValueError("Malformed modal submission payload") from exc
@@ -94,15 +100,63 @@ class EmojiCreationService:
             "Processing modal submission", extra={"description": description}
         )
 
-        # TODO: Queue job for async processing when background worker is available
-        # e.g., await self._queue_emoji_generation_job({
-        #     **metadata, "user_description": description
-        # })
+        # Extract metadata from modal
+        if self._job_queue:
+            # Queue job for background processing
+            job_data = {
+                **metadata,
+                "user_description": description,
+            }
+            job_id = await self._job_queue.enqueue_job(job_data)
+            self._logger.info(
+                "Queued emoji generation job",
+                extra={"job_id": job_id, "description": description},
+            )
+        else:
+            # Fallback to synchronous processing for development
+            await self.process_emoji_generation_job_dict(
+                {
+                    **metadata,
+                    "user_description": description,
+                }
+            )
 
         return {"response_action": "clear"}
 
-    async def process_emoji_generation_job(self, job_data: Dict[str, Any]) -> None:
-        """Generate emoji, upload to Slack, and add reaction."""
+    async def process_emoji_generation_job(self, job: EmojiGenerationJob) -> None:
+        """Process emoji generation job from background worker."""
+        self._logger.info(
+            "Processing emoji generation job",
+            extra={"job_id": job.job_id, "user_id": job.user_id},
+        )
+
+        spec = EmojiSpecification(
+            description=job.user_description,
+            context=job.message_text,
+        )
+        # Generate emoji name from description, max 32 chars for Slack
+        name = job.user_description.replace(" ", "_").lower()[:32]
+        emoji = await self._emoji_generator.generate(spec, name)
+
+        uploaded = await self._slack_repo.upload_emoji(
+            name=name, image_data=emoji.image_data
+        )
+        if not uploaded:
+            raise RuntimeError("Failed to upload emoji to Slack workspace")
+
+        await self._slack_repo.add_emoji_reaction(
+            emoji_name=name,
+            channel_id=job.channel_id,
+            timestamp=job.timestamp,
+        )
+
+        self._logger.info(
+            "Successfully processed emoji generation job",
+            extra={"job_id": job.job_id, "emoji_name": name},
+        )
+
+    async def process_emoji_generation_job_dict(self, job_data: Dict[str, Any]) -> None:
+        """Generate emoji, upload to Slack, and add reaction (legacy dict-based)."""
         spec = EmojiSpecification(
             description=job_data["user_description"],
             context=job_data["message_text"],

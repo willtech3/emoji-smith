@@ -116,7 +116,7 @@ class TestEmojiCreationService:
             image_data=buf.getvalue(), name="facepalm"
         )
 
-        await emoji_service.process_emoji_generation_job(job_data)
+        await emoji_service.process_emoji_generation_job_dict(job_data)
 
         mock_emoji_generator.generate.assert_called_once()
         mock_slack_repo.upload_emoji.assert_called_once()
