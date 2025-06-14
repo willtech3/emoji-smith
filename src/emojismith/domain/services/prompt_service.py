@@ -5,7 +5,7 @@ from emojismith.domain.value_objects.emoji_specification import EmojiSpecificati
 
 
 class AIPromptService:
-    """Enhance prompts using OpenAI's o3 model."""
+    """Enhance prompts using OpenAI's chat models with fallback."""
 
     def __init__(self, openai_repo: OpenAIRepository) -> None:
         self._repo = openai_repo
