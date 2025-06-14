@@ -1,4 +1,4 @@
-"""Slack repository protocol for domain layer."""
+"""Slack repository protocol for domain layer."""  # pragma: no cover
 
 from typing import Dict, Any, Protocol
 

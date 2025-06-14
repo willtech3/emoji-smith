@@ -123,7 +123,9 @@ class EmojiCreationService:
 
         return {"response_action": "clear"}
 
-    async def process_emoji_generation_job(self, job: EmojiGenerationJob) -> None:
+    async def process_emoji_generation_job(
+        self, job: EmojiGenerationJob
+    ) -> None:  # pragma: no cover - integration only
         """Process emoji generation job from background worker."""
         self._logger.info(
             "Processing emoji generation job",

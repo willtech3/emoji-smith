@@ -26,7 +26,8 @@ def create_webhook_handler() -> SlackWebhookHandler:
 
     openai_api_key = os.getenv("OPENAI_API_KEY")
     openai_client = AsyncOpenAI(api_key=openai_api_key)
-    openai_repo = OpenAIAPIRepository(openai_client)
+    chat_model = os.getenv("OPENAI_CHAT_MODEL", "o3")
+    openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
     image_processor = PillowImageProcessor()
     generator = EmojiGenerationService(
         openai_repo=openai_repo, image_processor=image_processor
@@ -48,7 +49,7 @@ def create_webhook_handler() -> SlackWebhookHandler:
 def _create_sqs_job_queue() -> JobQueueRepository:
     """Create SQS job queue for Lambda environment."""
     try:
-        import aioboto3  # type: ignore[import-untyped]
+        import aioboto3  # type: ignore[import-not-found]
         from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 
         session = aioboto3.Session()
