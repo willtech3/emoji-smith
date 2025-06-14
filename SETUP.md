@@ -74,6 +74,7 @@ pytest -q                    # Should pass 1 test
 black --check src/ tests/    # Should show "All done!"
 flake8 src/ tests/          # Should show no errors
 mypy src/                   # Should show "Success: no issues found"
+bandit -r src/              # Should show no security issues
 ```
 
 ### 3. Environment Configuration (3 minutes)
@@ -94,9 +95,8 @@ Required environment variables:
 SLACK_BOT_TOKEN=xoxb-your-bot-token-here
 SLACK_SIGNING_SECRET=your-signing-secret-here
 
-# AI Service (choose one)
-ANTHROPIC_API_KEY=your-claude-api-key      # For Claude AI
-OPENAI_API_KEY=your-openai-api-key         # For OpenAI
+# OpenAI API Configuration  
+OPENAI_API_KEY=your-openai-api-key         # Required for emoji generation
 
 # Development Settings
 LOG_LEVEL=DEBUG
@@ -152,14 +152,20 @@ ngrok http 8000
 ### Testing Workflow
 
 ```bash
-# Run all quality checks before committing
+# Run all quality checks before committing (NEVER use 'git add .')
 black src/ tests/           # Format code
 flake8 src/ tests/          # Check style
 mypy src/                   # Type checking
+bandit -r src/              # Security scanning
 pytest --cov=src tests/     # Run tests with coverage
 
-# Or use the shortcut script
-./scripts/check-quality.sh
+# Feature branch workflow
+git checkout -b feature/your-feature-name
+# Make changes, then:
+git add src/specific/file.py tests/specific/test_file.py  # Explicit files only!
+git commit -m "feat: your descriptive message"
+git push origin feature/your-feature-name
+gh pr create --title "Your Feature" --body "Description"
 ```
 
 ### Development Commands
@@ -185,42 +191,98 @@ pytest --cov=src --cov-report=html tests/
 open htmlcov/index.html  # View coverage report
 ```
 
-## AWS Configuration (for Deployment)
+## AWS CDK Deployment Setup
 
 ### Prerequisites
 
-1. **AWS CLI**
+1. **AWS CLI & Credentials**
    ```bash
    # Install AWS CLI
    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
    unzip awscliv2.zip
    sudo ./aws/install
    
-   # Configure credentials
+   # Configure credentials (for bootstrap only)
    aws configure
    ```
 
-2. **AWS CDK**
+2. **Node.js & AWS CDK**
    ```bash
-   # Install CDK
+   # Install Node.js (required for CDK)
+   # macOS: brew install node
+   # Ubuntu: sudo apt install nodejs npm
+   
+   # Install CDK globally
    npm install -g aws-cdk
    
-   # Bootstrap CDK (first time only)
-   cdk bootstrap
+   # Verify installation
+   cdk --version
    ```
 
-### Deployment Setup
+### One-Time CDK Bootstrap
+
+```bash
+# Bootstrap CDK in your AWS account (creates deployment resources)
+cdk bootstrap
+
+# This creates:
+# - S3 bucket for deployment artifacts
+# - IAM roles for CDK deployments
+# - ECR repository for container images
+```
+
+### CDK Infrastructure Setup
 
 ```bash
 # Initialize CDK infrastructure
-cd infra/
+mkdir infra && cd infra
 cdk init app --language python
+
+# Activate CDK virtual environment
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Deploy to AWS
-cdk synth  # Generate CloudFormation
-cdk deploy  # Deploy to AWS
+# Add additional CDK dependencies
+pip install aws-cdk-lib constructs
+
+# Generate CloudFormation template
+cdk synth
+
+# Deploy infrastructure (creates IAM user, Lambda, API Gateway, Secrets Manager)
+cdk deploy --require-approval never
+```
+
+### GitHub Actions Setup
+
+After CDK deployment, configure GitHub repository secrets:
+
+```bash
+# Get deployment user credentials from CDK output
+AWS_ACCESS_KEY_ID=<from-cdk-output>
+AWS_SECRET_ACCESS_KEY=<from-cdk-output>
+AWS_DEFAULT_REGION=us-east-1
+ECR_URI=<from-cdk-output>
+
+# Set GitHub repository secrets
+gh secret set AWS_ACCESS_KEY_ID -b "$AWS_ACCESS_KEY_ID"
+gh secret set AWS_SECRET_ACCESS_KEY -b "$AWS_SECRET_ACCESS_KEY"
+gh secret set AWS_DEFAULT_REGION -b "$AWS_DEFAULT_REGION"
+gh secret set ECR_URI -b "$ECR_URI"
+```
+
+### Production Secrets Configuration
+
+```bash
+# Store production secrets in AWS Secrets Manager
+aws secretsmanager create-secret \
+  --name "emoji-smith/production" \
+  --description "Production secrets for Emoji Smith" \
+  --secret-string '{
+    "SLACK_BOT_TOKEN": "xoxb-your-production-token",
+    "SLACK_SIGNING_SECRET": "your-production-signing-secret",
+    "OPENAI_API_KEY": "your-production-openai-key",
+    "LOG_LEVEL": "INFO"
+  }'
 ```
 
 ## Project Structure

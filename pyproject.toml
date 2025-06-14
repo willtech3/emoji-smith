@@ -17,6 +17,8 @@ dependencies = [
     "httpx>=0.25.0",
     "pillow>=10.0.0",
     "pydantic>=2.5.0",
+    "openai>=1.0.0",
+    "mangum>=0.17.0",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +29,7 @@ dev = [
     "black>=23.0.0",
     "flake8>=6.0.0",
     "mypy>=1.7.0",
+    "bandit>=1.7.0",
     "pre-commit>=3.5.0",
     "types-requests>=2.31.0",
     "types-boto3>=1.0.0",
@@ -105,3 +108,8 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B101"]  # Skip assert_used test (pytest uses asserts)
+severity = "medium"

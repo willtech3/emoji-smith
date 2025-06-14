@@ -14,6 +14,7 @@ Emoji Smith is a Slack bot that generates custom emojis using AI based on messag
 - **Formatter**: `black` - PEP 8 compliant code formatting
 - **Linter**: `flake8` - code style and error checking
 - **Type Checker**: `mypy` - static type analysis
+- **Security Scanner**: `bandit` - SAST security analysis
 - **Testing**: `pytest` with coverage reporting
 
 ### Development Commands
@@ -27,6 +28,7 @@ uv pip install -r requirements-dev.lock
 black --check src/ tests/
 flake8 src/ tests/
 mypy src/
+bandit -r src/
 pytest --cov=src tests/
 
 # Local development
@@ -146,8 +148,8 @@ class TestEmojiGenerator:
 ### Why Repository Pattern & Dependency Injection
 
 **Repository Pattern Benefits:**
-- **Testability** - Mock `SlackRepository` and `AIServiceRepository` in unit tests without real API calls
-- **Flexibility** - Easy to swap AI providers (Claude → OpenAI → local model) without changing business logic  
+- **Testability** - Mock `SlackRepository` and `OpenAIRepository` in unit tests without real API calls
+- **Flexibility** - Easy to swap between OpenAI models (GPT-4, DALL-E) without changing business logic  
 - **Clean boundaries** - Domain logic doesn't know about HTTP clients, API specifics, or external service details
 
 **Dependency Injection Benefits:**
@@ -243,10 +245,15 @@ class SlackRepository(ABC):
         """Add emoji reaction to message."""
         pass
 
-class AIServiceRepository(ABC):
+class OpenAIRepository(ABC):
     @abstractmethod
     async def generate_emoji_image(self, prompt: str, style_params: Dict) -> bytes:
-        """Generate emoji image from text prompt."""
+        """Generate emoji image using OpenAI DALL-E."""
+        pass
+    
+    @abstractmethod 
+    async def enhance_prompt(self, context: str, description: str) -> str:
+        """Use GPT-4 to enhance emoji generation prompt."""
         pass
 ```
 
@@ -281,6 +288,55 @@ class SlackIntegrationError(EmojiSmithError):
     pass
 ```
 
+## Security Guidelines
+
+### Critical Security Rules
+
+1. **NEVER use `git add .`** - Always specify files explicitly
+   ```bash
+   # ✅ CORRECT - Explicit file specification
+   git add src/emojismith/new_feature.py tests/unit/test_new_feature.py
+   
+   # ❌ WRONG - Could accidentally commit secrets
+   git add .
+   ```
+
+2. **Never commit secrets or sensitive information**
+   - API keys, tokens, passwords
+   - `.env` files (always in `.gitignore`)
+   - AWS credentials or IAM keys
+   - Personal information or internal URLs
+
+3. **Security Scanning with Bandit**
+   ```bash
+   # Run bandit security scan (must pass)
+   bandit -r src/
+   
+   # Check for high-severity issues
+   bandit -r src/ -ll
+   ```
+
+4. **Pre-commit Security Checks**
+   - Always run security scan before committing
+   - Review bandit output for security vulnerabilities
+   - Fix any medium/high severity issues immediately
+
+5. **Environment Variable Security**
+   ```python
+   # ✅ CORRECT - Secure environment loading
+   api_key = os.environ.get("OPENAI_API_KEY")
+   if not api_key:
+       raise ValueError("OPENAI_API_KEY environment variable required")
+   
+   # ❌ WRONG - Hardcoded secrets
+   api_key = "sk-1234567890abcdef"  # Never do this!
+   ```
+
+6. **AWS Secrets Management**
+   - Local development: Use `.env` files (never committed)
+   - Production: AWS Secrets Manager only
+   - CDK manages IAM permissions with least privilege
+
 ## Configuration & Secrets Management
 
 ### Local Development (.env files)
@@ -289,7 +345,7 @@ class SlackIntegrationError(EmojiSmithError):
 class Config:
     slack_bot_token: str
     slack_signing_secret: str
-    ai_api_key: str
+    openai_api_key: str
     log_level: str = "INFO"
     
     @classmethod
@@ -298,7 +354,7 @@ class Config:
         return cls(
             slack_bot_token=os.environ["SLACK_BOT_TOKEN"],
             slack_signing_secret=os.environ["SLACK_SIGNING_SECRET"],
-            ai_api_key=os.environ["AI_API_KEY"],
+            openai_api_key=os.environ["OPENAI_API_KEY"],
             log_level=os.environ.get("LOG_LEVEL", "INFO")
         )
 ```
@@ -319,7 +375,7 @@ class Config:
         return cls(
             slack_bot_token=secrets["SLACK_BOT_TOKEN"],
             slack_signing_secret=secrets["SLACK_SIGNING_SECRET"], 
-            ai_api_key=secrets["AI_API_KEY"],
+            openai_api_key=secrets["OPENAI_API_KEY"],
             log_level=secrets.get("LOG_LEVEL", "INFO")
         )
 ```
@@ -350,17 +406,116 @@ async def create_config() -> Config:
 3. **Local Development** - Use ngrok tunnel for Slack webhook testing
 4. **Manual Testing** - Deploy to production Lambda and verify functionality
 
-### Development Workflow
+### Development Workflow - Feature Branch Model
 ```bash
-# Local development with webhook testing
+# 1. Create feature branch from main
+git checkout main
+git pull origin main
+git checkout -b feature/your-feature-name
+
+# 2. Local development with webhook testing
 ngrok http 8000  # Expose local server
 # Update Slack app webhook URL to ngrok URL
 python -m src.emojismith.dev_server
 
-# Deploy to production for testing
-cdk deploy
-# Test in production Slack workspace
-# Monitor CloudWatch logs for issues
+# 3. Commit changes to feature branch
+git add src/specific/files.py tests/specific/test_files.py  # NEVER use 'git add .'
+git commit -m "feat: your descriptive commit message"
+git push origin feature/your-feature-name
+
+# 4. Create pull request for review
+gh pr create --title "Your PR Title" --body "Description of changes"
+
+# 5. After PR approval and merge, main branch auto-deploys
+# Monitor CloudWatch logs for deployment issues
+```
+
+## CDK Infrastructure & Deployment
+
+### CDK Bootstrap (One-time Setup)
+
+```bash
+# 1. Install AWS CDK
+npm install -g aws-cdk
+
+# 2. Configure AWS credentials
+aws configure
+
+# 3. Bootstrap CDK in your AWS account (one-time)
+cdk bootstrap
+
+# 4. Initialize CDK infrastructure
+mkdir infra && cd infra
+cdk init app --language python
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### CDK Stack Components
+
+1. **IAM Deployment User** (created by CDK)
+   - Least privilege permissions for GitHub Actions
+   - Policies for Lambda, API Gateway, Secrets Manager
+   - Access keys stored in GitHub Secrets
+
+2. **Lambda Function**
+   - Container image from ECR
+   - Environment variables from Secrets Manager
+   - Appropriate memory and timeout settings
+
+3. **API Gateway**
+   - HTTP API for Slack webhook endpoints
+   - Custom domain (optional)
+   - Request validation and CORS
+
+4. **AWS Secrets Manager**
+   - Production secrets (Slack tokens, OpenAI API key)
+   - Automatic rotation capabilities
+   - IAM access control
+
+### GitHub Actions Staged Pipeline
+
+**Stage 1: Code Quality**
+```yaml
+- name: Code Formatting
+  run: black --check src/ tests/
+- name: Linting
+  run: flake8 src/ tests/
+- name: Type Checking
+  run: mypy src/
+```
+
+**Stage 2: Security Scanning**
+```yaml
+- name: Security Analysis
+  run: bandit -r src/
+```
+
+**Stage 3: Testing**
+```yaml
+- name: Unit Tests
+  run: pytest --cov=src tests/
+- name: Coverage Check
+  run: pytest --cov=src --cov-fail-under=90 tests/
+```
+
+**Stage 4: Lambda Build** (main branch only)
+```yaml
+- name: Build Docker Image
+  run: docker build -t emoji-smith .
+- name: Push to ECR
+  run: |
+    aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_URI
+    docker tag emoji-smith:latest $ECR_URI:$GITHUB_SHA
+    docker push $ECR_URI:$GITHUB_SHA
+```
+
+**Stage 5: CDK Deploy** (main branch only)
+```yaml
+- name: CDK Deploy
+  run: |
+    cd infra
+    cdk deploy --require-approval never
 ```
 
 ## Deployment & Infrastructure
@@ -388,23 +543,31 @@ def is_development() -> bool:
 
 ## Development Workflow
 
-1. **Feature Development**
+1. **Feature Development (Feature Branch)**
+   - Create feature branch from main
    - Write failing tests first (TDD)
    - Implement domain logic with dependency injection
    - Add integration layer
    - Test locally with ngrok webhook tunnel
    - Run full test suite
 
-2. **Code Quality**
-   - Run `black`, `flake8`, `mypy` before commits
+2. **Code Quality & Security**
+   - Run `black`, `flake8`, `mypy`, `bandit` before commits
    - Ensure test coverage > 90%
    - Update type hints and docstrings
+   - **NEVER use `git add .`** - always specify files explicitly
 
-3. **Deployment**
-   - CI runs all quality checks
-   - CDK deploys to AWS Lambda
+3. **Pull Request Process**
+   - Create PR from feature branch to main
+   - GitHub Actions runs all quality stages
+   - Required: Code review and approval
+   - Squash merge to main (preserves clean history)
+
+4. **Deployment (Automatic on Main)**
+   - Main branch triggers full CI/CD pipeline
+   - CDK deploys to AWS Lambda automatically
    - Manual verification in production Slack workspace
-   - Monitor CloudWatch logs for issues
+   - Monitor CloudWatch logs for deployment issues
 
 ## Notes for Claude Code Assistant
 
