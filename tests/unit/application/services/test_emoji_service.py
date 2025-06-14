@@ -121,3 +121,30 @@ class TestEmojiCreationService:
         mock_emoji_generator.generate.assert_called_once()
         mock_slack_repo.upload_emoji.assert_called_once()
         mock_slack_repo.add_emoji_reaction.assert_called_once()
+
+    async def test_process_emoji_generation_job_upload_failure(
+        self, emoji_service, mock_slack_repo, mock_emoji_generator
+    ):
+        """Upload failure raises RuntimeError."""
+        from emojismith.domain.entities.emoji_generation_job import (
+            EmojiGenerationJob,
+        )
+
+        job = EmojiGenerationJob.create_new(
+            message_text="fail",
+            user_description="desc",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="1",
+            team_id="T1",
+        )
+
+        buf = BytesIO()
+        Image.new("RGBA", (128, 128), "red").save(buf, format="PNG")
+        mock_emoji_generator.generate.return_value = GeneratedEmoji(
+            image_data=buf.getvalue(), name="desc"
+        )
+        mock_slack_repo.upload_emoji.return_value = False
+
+        with pytest.raises(RuntimeError, match="Failed to upload"):
+            await emoji_service.process_emoji_generation_job(job)
