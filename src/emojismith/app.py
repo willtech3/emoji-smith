@@ -1,5 +1,8 @@
 """FastAPI application factory."""
 
+import os
+from dotenv import load_dotenv
+
 from fastapi import FastAPI
 from typing import Dict, Any
 from slack_sdk.web.async_client import AsyncWebClient
@@ -10,8 +13,10 @@ from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 
 def create_webhook_handler() -> SlackWebhookHandler:
     """Create webhook handler with dependencies."""
-    # Initialize real Slack repository and service
-    slack_client = AsyncWebClient()
+    # Load environment variables and initialize real Slack repository and service
+    load_dotenv()
+    slack_token = os.getenv("SLACK_BOT_TOKEN")
+    slack_client = AsyncWebClient(token=slack_token)
     slack_repo = SlackAPIRepository(slack_client)
     emoji_service = EmojiCreationService(slack_repo=slack_repo)
 
@@ -35,14 +40,16 @@ def create_app() -> FastAPI:
 
     @app.post("/slack/events")
     async def slack_events(payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle Slack webhook events."""
-        event_type = payload.get("type")
+        """Handle Slack webhook events, including URL verification."""
+        # Handle Slack URL verification challenge
+        if payload.get("type") == "url_verification":
+            return {"challenge": payload.get("challenge")}
 
+        event_type = payload.get("type")
         if event_type == "message_action":
             return await webhook_handler.handle_message_action(payload)
-        elif event_type == "view_submission":
+        if event_type == "view_submission":
             return await webhook_handler.handle_modal_submission(payload)
-        else:
-            return {"status": "ignored"}
+        return {"status": "ignored"}
 
     return app

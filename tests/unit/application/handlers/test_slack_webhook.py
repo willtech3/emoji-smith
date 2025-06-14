@@ -130,3 +130,56 @@ class TestSlackWebhookHandler:
             ValueError, match="Invalid callback_id for modal submission"
         ):
             await webhook_handler.handle_modal_submission(invalid_modal_payload)
+
+    async def test_handle_message_action_exception(
+        self, webhook_handler, mock_emoji_service
+    ):
+        """If the emoji service raises, the handler returns an error response."""
+        # Arrange
+        payload = {
+            "type": "message_action",
+            "callback_id": "create_emoji_reaction",
+            "message": {"text": "test", "user": "U1", "ts": "123.456"},
+            "channel": {"id": "C1"},
+            "team": {"id": "T1"},
+            "trigger_id": "TRIG",
+        }
+        mock_emoji_service.initiate_emoji_creation.side_effect = Exception("boom")
+
+        # Act
+        result = await webhook_handler.handle_message_action(payload)
+
+        # Assert
+        assert result["status"] == "error"
+        assert "Failed to create emoji" in result["error"]
+
+    async def test_handle_message_action_invalid_callback(self, webhook_handler):
+        """Test invalid callback_id for message action raises ValueError."""
+        payload = {
+            "type": "message_action",
+            "callback_id": "wrong",
+            "message": {},
+            "channel": {"id": "C"},
+            "team": {"id": "T"},
+            "trigger_id": "TRIG",
+        }
+        with pytest.raises(ValueError, match="Invalid callback_id"):
+            await webhook_handler.handle_message_action(payload)
+
+    async def test_handle_modal_submission_exception(
+        self, webhook_handler, mock_emoji_service
+    ):
+        """If handle_modal_submission raises, the handler returns an error response."""
+        # Arrange
+        modal_payload = {
+            "type": "view_submission",
+            "view": {"callback_id": "emoji_creation_modal", "state": {"values": {}}},
+        }
+        mock_emoji_service.handle_modal_submission.side_effect = Exception("boom")
+
+        # Act
+        result = await webhook_handler.handle_modal_submission(modal_payload)
+
+        # Assert
+        assert result["status"] == "error"
+        assert "internal error" in result["error"].lower()

@@ -60,3 +60,42 @@ class TestFastAPIApp:
         response = client.get("/slack/events")
 
         assert response.status_code == 405  # Method Not Allowed
+
+    def test_slack_events_url_verification(self, client):
+        """Test Slack URL verification challenge is echoed back."""
+        payload = {"type": "url_verification", "challenge": "XYZ"}
+        response = client.post("/slack/events", json=payload)
+
+        assert response.status_code == 200
+        assert response.json() == {"challenge": "XYZ"}
+
+    def test_slack_events_view_submission(self, client, mock_webhook_handler):
+        """Test Slack events handler delegates view_submission."""
+        mock_webhook_handler.handle_modal_submission.return_value = {"status": "ok"}
+        payload = {"type": "view_submission"}
+        response = client.post("/slack/events", json=payload)
+
+        assert response.status_code == 200
+        mock_webhook_handler.handle_modal_submission.assert_called_once_with(payload)
+
+    def test_slack_events_unknown_type(self, client):
+        """Test Slack events handler ignores unknown event types."""
+        payload = {"type": "unknown"}
+        response = client.post("/slack/events", json=payload)
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "ignored"}
+
+
+@patch("src.emojismith.app.AsyncWebClient")
+def test_create_webhook_handler_initializes_slack_client(
+    mock_async_client, monkeypatch
+):
+    """Test create_webhook_handler sets up Slack client with token."""
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "test-token")
+    from src.emojismith.app import create_webhook_handler
+
+    handler = create_webhook_handler()
+    mock_async_client.assert_called_once_with(token="test-token")
+    # Handler exposes the message action handling interface
+    assert hasattr(handler, "handle_message_action")

@@ -103,4 +103,8 @@ class EmojiCreationService:
         # 1. Generate emoji using AI service
         # 2. Upload emoji to Slack workspace
         # 3. Add reaction to original message
-        pass
+        # This method is a placeholder for Phase 3 AI integration.
+        # It should generate the emoji, upload it, and add the reaction.
+        raise NotImplementedError(
+            "Emoji generation job processing is not implemented yet."
+        )

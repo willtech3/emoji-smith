@@ -78,6 +78,12 @@ class TestEmojiCreationService:
         assert response["response_action"] == "clear"
         # In real implementation, this would queue a background job
 
+    async def test_handle_modal_submission_malformed_payload(self, emoji_service):
+        """Test handle_modal_submission raises ValueError on malformed payload."""
+        bad_payload = {"view": {"callback_id": "emoji_creation_modal", "state": {}}}
+        with pytest.raises(ValueError, match="Malformed modal submission payload"):
+            await emoji_service.handle_modal_submission(bad_payload)
+
     async def test_processes_emoji_generation_job_end_to_end(
         self, emoji_service, mock_slack_repo
     ):
@@ -95,12 +101,6 @@ class TestEmojiCreationService:
         # Mock successful emoji upload and reaction
         mock_slack_repo.upload_emoji.return_value = True
 
-        # Act
-        await emoji_service.process_emoji_generation_job(job_data)
-
-        # Assert
-        # In real implementation, this would:
-        # 1. Generate emoji using AI service
-        # 2. Upload emoji to Slack workspace
-        # 3. Add reaction to original message
-        # For now, just verify the method completes without error
+        # Act / Assert: placeholder not yet implemented
+        with pytest.raises(NotImplementedError):
+            await emoji_service.process_emoji_generation_job(job_data)
