@@ -2,9 +2,7 @@
 
 import pytest
 from unittest.mock import AsyncMock
-from src.emojismith.application.handlers.slack_webhook import (
-    SlackWebhookHandler,
-)
+from emojismith.application.handlers.slack_webhook import SlackWebhookHandler
 
 
 class TestSlackWebhookHandler:
@@ -15,14 +13,8 @@ class TestSlackWebhookHandler:
         return AsyncMock()
 
     @pytest.fixture
-    def mock_slack_repo(self):
-        return AsyncMock()
-
-    @pytest.fixture
-    def webhook_handler(self, mock_emoji_service, mock_slack_repo):
-        return SlackWebhookHandler(
-            emoji_service=mock_emoji_service, slack_repo=mock_slack_repo
-        )
+    def webhook_handler(self, mock_emoji_service):
+        return SlackWebhookHandler(emoji_service=mock_emoji_service)
 
     async def test_handles_message_action_payload(
         self, webhook_handler, mock_emoji_service
@@ -50,22 +42,35 @@ class TestSlackWebhookHandler:
         assert result is not None
         mock_emoji_service.initiate_emoji_creation.assert_called_once()
 
-    async def test_opens_modal_dialog_for_user_input(
-        self, webhook_handler, mock_slack_repo
+    async def test_handles_modal_submission_payload(
+        self, webhook_handler, mock_emoji_service
     ):
-        """Test webhook handler opens modal dialog for emoji description."""
+        """Test webhook handler processes modal submission payload."""
         # Arrange
-        trigger_id = "123456789.987654321.abcdefghijklmnopqrstuvwxyz"
-        message_context = "Just deployed on Friday afternoon!"
+        modal_payload = {
+            "type": "view_submission",
+            "view": {
+                "callback_id": "emoji_creation_modal",
+                "state": {
+                    "values": {
+                        "emoji_description": {"description": {"value": "facepalm"}}
+                    }
+                },
+                "private_metadata": '{"message_text": "test", "user_id": "U123"}',
+            },
+        }
+        mock_emoji_service.handle_modal_submission.return_value = {
+            "response_action": "clear"
+        }
 
         # Act
-        await webhook_handler.open_emoji_creation_modal(trigger_id, message_context)
+        result = await webhook_handler.handle_modal_submission(modal_payload)
 
         # Assert
-        mock_slack_repo.open_modal.assert_called_once()
-        call_args = mock_slack_repo.open_modal.call_args
-        assert call_args[1]["trigger_id"] == trigger_id
-        assert "Friday afternoon" in str(call_args)
+        assert result["response_action"] == "clear"
+        mock_emoji_service.handle_modal_submission.assert_called_once_with(
+            modal_payload
+        )
 
     async def test_validates_callback_id_in_payload(self, webhook_handler):
         """Test webhook handler validates correct callback ID."""
@@ -111,3 +116,17 @@ class TestSlackWebhookHandler:
         assert slack_message.channel_id == "C67890"
         assert slack_message.timestamp == "1234567890.123456"
         assert slack_message.team_id == "T11111"
+
+    async def test_validates_modal_submission_callback_id(self, webhook_handler):
+        """Test webhook handler validates modal submission callback ID."""
+        # Arrange
+        invalid_modal_payload = {
+            "type": "view_submission",
+            "view": {"callback_id": "wrong_callback_id"},
+        }
+
+        # Act & Assert
+        with pytest.raises(
+            ValueError, match="Invalid callback_id for modal submission"
+        ):
+            await webhook_handler.handle_modal_submission(invalid_modal_payload)
