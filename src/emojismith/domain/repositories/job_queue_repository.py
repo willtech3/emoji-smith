@@ -1,4 +1,4 @@
-"""Job queue repository protocol for domain layer."""  # pragma: no cover
+"""Job queue repository protocol for domain layer."""
 
 from typing import Dict, Any, Optional, Protocol
 from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob

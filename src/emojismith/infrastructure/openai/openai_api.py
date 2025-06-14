@@ -31,14 +31,23 @@ class OpenAIAPIRepository(OpenAIRepository):
     async def _ensure_model(self) -> None:
         if self._checked_model:
             return
+
+        original_model = self._model
         for name in [self._model, *self._fallback_models]:
             try:
                 await self._client.models.retrieve(name)
-            except Exception as exc:  # pragma: no cover - openai error
+                self._model = name
+                if name != original_model:
+                    self._logger.info(
+                        "Using fallback model '%s' (primary model '%s' unavailable)",
+                        name,
+                        original_model,
+                    )
+                break
+            except Exception as exc:
                 self._logger.warning("Model %s unavailable: %s", name, exc)
                 continue
-            self._model = name
-            break
+
         self._checked_model = True
 
     async def enhance_prompt(self, context: str, description: str) -> str:

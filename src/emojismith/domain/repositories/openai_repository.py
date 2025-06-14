@@ -1,4 +1,4 @@
-"""OpenAI repository protocol for AI operations."""  # pragma: no cover
+"""OpenAI repository protocol for AI operations."""
 
 from typing import Protocol
 

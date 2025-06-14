@@ -25,7 +25,7 @@ class BackgroundWorker:
         self._running = False
         self._semaphore = asyncio.Semaphore(max_concurrent_jobs)
 
-    async def start(self) -> None:  # pragma: no cover - integration only
+    async def start(self) -> None:
         """Start the background worker."""
         self._running = True
         self._logger.info("Starting background worker")
@@ -36,12 +36,12 @@ class BackgroundWorker:
             self._logger.exception("Background worker crashed", extra={"error": str(e)})
             raise
 
-    async def stop(self) -> None:  # pragma: no cover - integration only
+    async def stop(self) -> None:
         """Stop the background worker."""
         self._running = False
         self._logger.info("Stopping background worker")
 
-    async def _process_jobs(self) -> None:  # pragma: no cover - integration only
+    async def _process_jobs(self) -> None:
         """Main processing loop."""
         while self._running:
             try:
@@ -61,9 +61,7 @@ class BackgroundWorker:
                 )
                 await asyncio.sleep(self._poll_interval)
 
-    async def _process_single_job(
-        self, job: Any
-    ) -> None:  # pragma: no cover - integration only
+    async def _process_single_job(self, job: Any) -> None:
         """Process a single emoji generation job."""
         async with self._semaphore:
             self._logger.info(
