@@ -95,8 +95,10 @@ class SQSJobQueue(JobQueueRepository):
                 "Completed and removed job from queue", extra={"job_id": job.job_id}
             )
 
-    async def _delete_message(self, receipt_handle: str) -> None:
-        """Delete message from SQS queue."""
+    async def _delete_message(self, receipt_handle: Optional[str]) -> None:
+        """Delete message from SQS queue if a receipt handle is present."""
+        if not receipt_handle:
+            return
         await self._sqs_client.delete_message(
             QueueUrl=self._queue_url, ReceiptHandle=receipt_handle
         )

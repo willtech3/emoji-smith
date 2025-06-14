@@ -156,7 +156,7 @@ class EmojiCreationService:
         )
 
     async def process_emoji_generation_job_dict(self, job_data: Dict[str, Any]) -> None:
-        """Generate emoji, upload to Slack, and add reaction (legacy dict-based)."""
+        """Generate emoji using dict payload, upload to Slack, and add reaction."""
         spec = EmojiSpecification(
             description=job_data["user_description"],
             context=job_data["message_text"],

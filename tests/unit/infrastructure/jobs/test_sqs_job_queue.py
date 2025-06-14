@@ -81,3 +81,51 @@ class TestSQSJobQueue:
         mock_sqs_client.receive_message.assert_called_once()
         assert job is not None
         assert job.job_id == "job_123"
+
+    async def test_complete_job_deletes_message(self, sqs_queue, mock_sqs_client):
+        """Test complete_job calls delete_message when receipt_handle is present."""
+        # Arrange: create dummy job with receipt_handle
+        from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+
+        job = EmojiGenerationJob.create_new(
+            message_text="x",
+            user_description="y",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="ts",
+            team_id="T1",
+        )
+        job._receipt_handle = "rh"
+
+        # Act
+        await sqs_queue.complete_job(job)
+
+        # Assert
+        mock_sqs_client.delete_message.assert_called_once_with(
+            QueueUrl=sqs_queue._queue_url, ReceiptHandle="rh"
+        )
+
+    async def test_get_and_update_job_status_and_retry(self, sqs_queue):
+        """get_job_status, update_job_status, retry_failed_jobs no-ops or defaults."""
+        status = await sqs_queue.get_job_status("jid")
+        assert status is None
+
+        # update_job_status should not error
+        await sqs_queue.update_job_status("jid", "processing")
+
+        # retry_failed_jobs returns 0
+        count = await sqs_queue.retry_failed_jobs(max_retries=5)
+        assert count == 0
+
+    async def test_dequeue_malformed_message_deletes_it(
+        self, sqs_queue, mock_sqs_client
+    ):
+        """Malformed JSON body triggers deletion and returns None."""
+        malformed = {"Messages": [{"ReceiptHandle": "rh", "Body": "not a json"}]}
+        mock_sqs_client.receive_message.return_value = malformed
+
+        job = await sqs_queue.dequeue_job()
+        assert job is None
+        mock_sqs_client.delete_message.assert_called_once_with(
+            QueueUrl=sqs_queue._queue_url, ReceiptHandle="rh"
+        )
