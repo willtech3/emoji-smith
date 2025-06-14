@@ -541,33 +541,97 @@ def is_development() -> bool:
     return not is_lambda_environment()
 ```
 
-## Development Workflow
+## Development Workflow - TDD & DDD First
 
-1. **Feature Development (Feature Branch)**
-   - Create feature branch from main
-   - Write failing tests first (TDD)
-   - Implement domain logic with dependency injection
-   - Add integration layer
+### Test-Driven Development Cycle
+
+**Red-Green-Refactor for every feature:**
+
+1. **🔴 RED: Write Failing Tests**
+   ```bash
+   # Write domain model tests first
+   pytest tests/unit/test_emoji_generation.py::test_emoji_specification_validation -v
+   # Test should fail - domain models don't exist yet
+   ```
+
+2. **🟢 GREEN: Make Tests Pass**
+   ```bash
+   # Implement minimal domain logic to pass tests
+   # Focus on business rules and domain invariants
+   ```
+
+3. **🔵 REFACTOR: Improve Design**
+   ```bash
+   # Clean up code while keeping tests green
+   # Apply DDD patterns and dependency injection
+   ```
+
+### Domain-Driven Design Implementation
+
+**Start with Domain Models (Inside-Out):**
+1. **Domain Entities** - Core business objects (EmojiRequest, GeneratedEmoji)
+2. **Value Objects** - Immutable concepts (StylePreferences, EmojiSpecification)
+3. **Domain Services** - Business logic that doesn't fit in entities
+4. **Repository Interfaces** - Abstract external dependencies
+5. **Application Services** - Orchestrate use cases
+6. **Infrastructure** - Implement repository interfaces
+
+### Feature Development Process
+
+1. **Design Session (5-10 min)**
+   - Identify bounded context and aggregates
+   - Define domain models and their relationships
+   - Plan repository interfaces for external dependencies
+
+2. **Domain Layer (TDD)**
+   - Write tests for domain entities and value objects
+   - Implement pure business logic (no external dependencies)
+   - Write tests for domain services
+   - Implement business rules and validation
+
+3. **Application Layer (TDD)**
+   - Write tests for use case orchestration
+   - Implement application services
+   - Define repository interfaces (abstractions)
+
+4. **Infrastructure Layer (TDD)**
+   - Write tests for repository implementations
+   - Implement external service integrations
+   - Add framework-specific code (FastAPI, Slack SDK, etc.)
+
+5. **Integration & Deployment**
    - Test locally with ngrok webhook tunnel
-   - Run full test suite
+   - Run full test suite with coverage validation
+   - Create PR following security guidelines
 
-2. **Code Quality & Security**
-   - Run `black`, `flake8`, `mypy`, `bandit` before commits
-   - Ensure test coverage > 90%
-   - Update type hints and docstrings
-   - **NEVER use `git add .`** - always specify files explicitly
+### Code Quality & Security
 
-3. **Pull Request Process**
-   - Create PR from feature branch to main
-   - GitHub Actions runs all quality stages
-   - Required: Code review and approval
-   - Squash merge to main (preserves clean history)
+```bash
+# Pre-commit workflow (never use 'git add .')
+black src/ tests/                    # Format code
+flake8 src/ tests/                  # Lint code
+mypy src/                           # Type checking  
+bandit -r src/                      # Security scan
+pytest --cov=src --cov-fail-under=90 tests/  # Tests with coverage
 
-4. **Deployment (Automatic on Main)**
-   - Main branch triggers full CI/CD pipeline
-   - CDK deploys to AWS Lambda automatically
-   - Manual verification in production Slack workspace
-   - Monitor CloudWatch logs for deployment issues
+# Explicit file staging
+git add src/emojismith/specific_file.py tests/unit/test_specific.py
+git commit -m "feat: implement emoji generation domain model"
+```
+
+### Pull Request Process
+
+1. **Feature Branch Development** (TDD/DDD cycle)
+2. **Quality Gates** - All tools must pass
+3. **Code Review** - Focus on domain design and test coverage
+4. **Integration** - Squash merge to main
+5. **Deployment** - Automatic CI/CD pipeline
+
+### Production Deployment
+
+- **Automatic on main** - CDK deploys to AWS Lambda
+- **Monitoring** - CloudWatch logs with structured correlation IDs
+- **Rollback** - Lambda versioning for quick recovery
 
 ## Notes for Claude Code Assistant
 
