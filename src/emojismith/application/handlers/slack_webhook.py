@@ -40,7 +40,7 @@ class SlackWebhookHandler:
             self._logger.exception("Failed to initiate emoji creation")
             return {
                 "status": "error",
-                "error": "Failed to create emoji. Please try again later."
+                "error": "Failed to create emoji. Please try again later.",
             }
 
     async def handle_modal_submission(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -55,7 +55,4 @@ class SlackWebhookHandler:
             return await self._emoji_service.handle_modal_submission(payload)
         except Exception:
             self._logger.exception("Failed to handle modal submission")
-            return {
-                "status": "error",
-                "error": "Invalid submission or internal error."
-            }
+            return {"status": "error", "error": "Invalid submission or internal error."}
