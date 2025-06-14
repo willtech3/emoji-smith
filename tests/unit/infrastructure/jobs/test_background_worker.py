@@ -1,6 +1,8 @@
 """Tests for BackgroundWorker job processing loop."""
 
 import pytest
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from emojismith.infrastructure.jobs.background_worker import BackgroundWorker
 
@@ -56,3 +58,16 @@ async def test_worker_stop_sets_running_false():
     worker._running = True
     await worker.stop()
     assert not worker._running
+
+
+@pytest.mark.asyncio
+async def test_process_single_job_success():
+    job_queue = AsyncMock()
+    service = AsyncMock()
+    worker = BackgroundWorker(job_queue, service)
+    job = SimpleNamespace(job_id="1", user_id="u")
+    await worker._process_single_job(job)
+    job_queue.update_job_status.assert_any_call("1", "processing")
+    job_queue.complete_job.assert_awaited_once_with(job)
+    job_queue.update_job_status.assert_called_with("1", "completed")
+    service.process_emoji_generation_job.assert_awaited_once_with(job)

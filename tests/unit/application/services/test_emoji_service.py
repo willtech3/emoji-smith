@@ -8,6 +8,7 @@ from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.domain.entities.slack_message import SlackMessage
 from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 
 
 class TestEmojiCreationService:
@@ -121,3 +122,27 @@ class TestEmojiCreationService:
         mock_emoji_generator.generate.assert_called_once()
         mock_slack_repo.upload_emoji.assert_called_once()
         mock_slack_repo.add_emoji_reaction.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_process_job_upload_failure(
+        self, emoji_service, mock_slack_repo, mock_emoji_generator
+    ) -> None:
+        """Process job raises if Slack upload fails."""
+        job = EmojiGenerationJob.create_new(
+            message_text="oops",
+            user_description="shrug",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="0",
+            team_id="T1",
+        )
+        mock_slack_repo.upload_emoji.return_value = False
+        img = Image.new("RGBA", (128, 128), "blue")
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        mock_emoji_generator.generate.return_value = GeneratedEmoji(
+            image_data=buf.getvalue(), name="shrug"
+        )
+
+        with pytest.raises(RuntimeError):
+            await emoji_service.process_emoji_generation_job(job)
