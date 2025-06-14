@@ -48,7 +48,7 @@ def create_webhook_handler() -> SlackWebhookHandler:
 def _create_sqs_job_queue() -> JobQueueRepository:
     """Create SQS job queue for Lambda environment."""
     try:
-        import aioboto3  # type: ignore[import-untyped]
+        import aioboto3  # type: ignore
         from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 
         session = aioboto3.Session()

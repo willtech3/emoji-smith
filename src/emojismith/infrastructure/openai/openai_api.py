@@ -9,15 +9,34 @@ from emojismith.domain.repositories.openai_repository import OpenAIRepository
 
 
 class OpenAIAPIRepository(OpenAIRepository):
-    """Concrete OpenAI repository using openai package."""
+    """Concrete OpenAI repository using openai package with model fallback."""
 
     def __init__(self, client: AsyncOpenAI) -> None:
         self._client = client
         self._logger = logging.getLogger(__name__)
+        self._preferred_models = ["o3", "gpt-4o", "gpt-4", "gpt-3.5-turbo"]
+        self._model: str | None = None
+
+    async def _select_model(self) -> str:
+        if self._model:
+            return self._model
+
+        for name in self._preferred_models:
+            try:
+                await self._client.models.retrieve(name)
+            except Exception as exc:  # pragma: no cover - network errors
+                self._logger.info("Model %s unavailable: %s", name, exc)
+                continue
+            self._model = name
+            self._logger.info("Using OpenAI model: %s", name)
+            return name
+
+        raise RuntimeError("No available OpenAI model for prompt enhancement")
 
     async def enhance_prompt(self, context: str, description: str) -> str:
+        model = await self._select_model()
         response = await self._client.chat.completions.create(
-            model="o3",
+            model=model,
             messages=[
                 {"role": "system", "content": "Enhance emoji prompt"},
                 {
