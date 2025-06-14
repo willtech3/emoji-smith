@@ -2,6 +2,7 @@
 
 from typing import Dict, Any, Protocol
 from emojismith.domain.entities.slack_message import SlackMessage
+from emojismith.domain.repositories import SlackRepository
 
 
 class EmojiService(Protocol):
@@ -11,14 +12,6 @@ class EmojiService(Protocol):
         self, message: SlackMessage, trigger_id: str
     ) -> None:
         """Initiate emoji creation process."""
-        ...
-
-
-class SlackRepository(Protocol):
-    """Protocol for Slack API operations."""
-
-    async def open_modal(self, trigger_id: str, view: Dict[str, Any]) -> None:
-        """Open modal dialog in Slack."""
         ...
 
 
