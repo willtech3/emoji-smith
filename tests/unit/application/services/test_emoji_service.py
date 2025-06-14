@@ -2,8 +2,12 @@
 
 import pytest
 from unittest.mock import AsyncMock
+from io import BytesIO
+from PIL import Image
 from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.domain.entities.slack_message import SlackMessage
+from emojismith.domain.services.generation_service import EmojiGenerationService
+from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 
 
 class TestEmojiCreationService:
@@ -15,9 +19,15 @@ class TestEmojiCreationService:
         return AsyncMock()
 
     @pytest.fixture
-    def emoji_service(self, mock_slack_repo):
+    def mock_emoji_generator(self):
+        return AsyncMock(spec=EmojiGenerationService)
+
+    @pytest.fixture
+    def emoji_service(self, mock_slack_repo, mock_emoji_generator):
         """Emoji creation service with mocked dependencies."""
-        return EmojiCreationService(slack_repo=mock_slack_repo)
+        return EmojiCreationService(
+            slack_repo=mock_slack_repo, emoji_generator=mock_emoji_generator
+        )
 
     async def test_initiates_emoji_creation_opens_modal(
         self, emoji_service, mock_slack_repo
@@ -85,10 +95,9 @@ class TestEmojiCreationService:
             await emoji_service.handle_modal_submission(bad_payload)
 
     async def test_processes_emoji_generation_job_end_to_end(
-        self, emoji_service, mock_slack_repo
+        self, emoji_service, mock_slack_repo, mock_emoji_generator
     ):
         """Test complete emoji generation job processing."""
-        # Arrange
         job_data = {
             "message_text": "The deployment failed again 😭",
             "user_description": "facepalm reaction",
@@ -96,11 +105,19 @@ class TestEmojiCreationService:
             "channel_id": "C67890",
             "timestamp": "1234567890.123456",
             "team_id": "T11111",
+            "emoji_name": "facepalm",
         }
 
-        # Mock successful emoji upload and reaction
         mock_slack_repo.upload_emoji.return_value = True
+        img = Image.new("RGBA", (128, 128), "red")
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        mock_emoji_generator.generate.return_value = GeneratedEmoji(
+            image_data=buf.getvalue(), name="facepalm"
+        )
 
-        # Act / Assert: placeholder not yet implemented
-        with pytest.raises(NotImplementedError):
-            await emoji_service.process_emoji_generation_job(job_data)
+        await emoji_service.process_emoji_generation_job(job_data)
+
+        mock_emoji_generator.generate.assert_called_once()
+        mock_slack_repo.upload_emoji.assert_called_once()
+        mock_slack_repo.add_emoji_reaction.assert_called_once()

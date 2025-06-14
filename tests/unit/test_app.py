@@ -87,15 +87,18 @@ class TestFastAPIApp:
         assert response.json() == {"status": "ignored"}
 
 
+@patch("src.emojismith.app.AsyncOpenAI")
 @patch("src.emojismith.app.AsyncWebClient")
 def test_create_webhook_handler_initializes_slack_client(
-    mock_async_client, monkeypatch
+    mock_slack_client, mock_openai_client, monkeypatch
 ):
     """Test create_webhook_handler sets up Slack client with token."""
     monkeypatch.setenv("SLACK_BOT_TOKEN", "test-token")
     from src.emojismith.app import create_webhook_handler
 
+    monkeypatch.setenv("OPENAI_API_KEY", "openai")
     handler = create_webhook_handler()
-    mock_async_client.assert_called_once_with(token="test-token")
+    mock_slack_client.assert_called_once_with(token="test-token")
+    mock_openai_client.assert_called_once_with(api_key="openai")
     # Handler exposes the message action handling interface
     assert hasattr(handler, "handle_message_action")

@@ -5,6 +5,8 @@ import logging
 from typing import Dict, Any
 from emojismith.domain.entities.slack_message import SlackMessage
 from emojismith.domain.repositories.slack_repository import SlackRepository
+from emojismith.domain.services.generation_service import EmojiGenerationService
+from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 
 
 class EmojiCreationService:
@@ -12,8 +14,11 @@ class EmojiCreationService:
 
     _logger = logging.getLogger(__name__)
 
-    def __init__(self, slack_repo: SlackRepository) -> None:
+    def __init__(
+        self, slack_repo: SlackRepository, emoji_generator: EmojiGenerationService
+    ) -> None:
         self._slack_repo = slack_repo
+        self._emoji_generator = emoji_generator
 
     async def initiate_emoji_creation(
         self, message: SlackMessage, trigger_id: str
@@ -97,14 +102,21 @@ class EmojiCreationService:
         return {"response_action": "clear"}
 
     async def process_emoji_generation_job(self, job_data: Dict[str, Any]) -> None:
-        """Process emoji generation job (would be called by background worker)."""
-        # TODO: This will be implemented when we add AI integration
-        # For now, just a placeholder that could:
-        # 1. Generate emoji using AI service
-        # 2. Upload emoji to Slack workspace
-        # 3. Add reaction to original message
-        # This method is a placeholder for Phase 3 AI integration.
-        # It should generate the emoji, upload it, and add the reaction.
-        raise NotImplementedError(
-            "Emoji generation job processing is not implemented yet."
+        """Generate emoji, upload to Slack, and add reaction."""
+        spec = EmojiSpecification(
+            description=job_data["user_description"],
+            context=job_data["message_text"],
+        )
+        name = job_data.get("emoji_name") or spec.description.replace(" ", "_")[:32]
+        emoji = await self._emoji_generator.generate(spec, name)
+
+        uploaded = await self._slack_repo.upload_emoji(
+            name=name, image_data=emoji.image_data
+        )
+        if not uploaded:
+            raise RuntimeError("Failed to upload emoji")
+        await self._slack_repo.add_emoji_reaction(
+            emoji_name=name,
+            channel_id=job_data["channel_id"],
+            timestamp=job_data["timestamp"],
         )
