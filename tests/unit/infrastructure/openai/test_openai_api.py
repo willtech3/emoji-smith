@@ -1,0 +1,29 @@
+"""Tests for OpenAIAPIRepository."""
+
+import pytest
+from unittest.mock import AsyncMock
+from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
+
+
+@pytest.mark.asyncio
+async def test_enhance_prompt_calls_client() -> None:
+    client = AsyncMock()
+    client.chat.completions.create.return_value = AsyncMock(
+        choices=[AsyncMock(message=AsyncMock(content="ok"))]
+    )
+    repo = OpenAIAPIRepository(client)
+    result = await repo.enhance_prompt("ctx", "desc")
+    assert result == "ok"
+    client.chat.completions.create.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_generate_image_calls_client() -> None:
+    client = AsyncMock()
+    client.images.generate.return_value = AsyncMock(
+        data=[AsyncMock(b64_json="aGVsbG8=")]
+    )
+    repo = OpenAIAPIRepository(client)
+    data = await repo.generate_image("prompt")
+    assert isinstance(data, bytes)
+    client.images.generate.assert_called_once()

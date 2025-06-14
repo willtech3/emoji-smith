@@ -9,6 +9,10 @@ from slack_sdk.web.async_client import AsyncWebClient
 from emojismith.application.handlers.slack_webhook import SlackWebhookHandler
 from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
+from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
+from emojismith.infrastructure.image.processing import PillowImageProcessor
+from emojismith.domain.services.generation_service import EmojiGenerationService
+from openai import AsyncOpenAI
 
 
 def create_webhook_handler() -> SlackWebhookHandler:
@@ -18,7 +22,17 @@ def create_webhook_handler() -> SlackWebhookHandler:
     slack_token = os.getenv("SLACK_BOT_TOKEN")
     slack_client = AsyncWebClient(token=slack_token)
     slack_repo = SlackAPIRepository(slack_client)
-    emoji_service = EmojiCreationService(slack_repo=slack_repo)
+
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    openai_client = AsyncOpenAI(api_key=openai_api_key)
+    openai_repo = OpenAIAPIRepository(openai_client)
+    image_processor = PillowImageProcessor()
+    generator = EmojiGenerationService(
+        openai_repo=openai_repo, image_processor=image_processor
+    )
+    emoji_service = EmojiCreationService(
+        slack_repo=slack_repo, emoji_generator=generator
+    )
 
     return SlackWebhookHandler(emoji_service=emoji_service)
 
