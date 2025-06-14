@@ -46,7 +46,19 @@ def test_logs_metrics(caplog) -> None:
     processor = PillowImageProcessor()
     with caplog.at_level(logging.INFO):
         processor.process(_create_image())
-    assert any("image processed" in r.message for r in caplog.records)
+
+    # Find the "image processed" log record
+    processed_record = None
+    for record in caplog.records:
+        if "image processed" in record.message:
+            processed_record = record
+            break
+
+    assert processed_record is not None
+    assert "original" in processed_record.__dict__
+    assert "final" in processed_record.__dict__
+    assert "compression_ratio" in processed_record.__dict__
+    assert "colors_used" in processed_record.__dict__
 
 
 def test_raises_when_image_too_large(monkeypatch) -> None:
