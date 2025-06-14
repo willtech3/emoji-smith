@@ -149,7 +149,7 @@ class TestEmojiGenerator:
 
 **Repository Pattern Benefits:**
 - **Testability** - Mock `SlackRepository` and `OpenAIRepository` in unit tests without real API calls
-- **Flexibility** - Easy to swap between OpenAI models (GPT-4, DALL-E) without changing business logic  
+- **Flexibility** - Easy to swap between OpenAI models (o3, DALL-E) without changing business logic  
 - **Clean boundaries** - Domain logic doesn't know about HTTP clients, API specifics, or external service details
 
 **Dependency Injection Benefits:**
@@ -253,7 +253,7 @@ class OpenAIRepository(ABC):
     
     @abstractmethod 
     async def enhance_prompt(self, context: str, description: str) -> str:
-        """Use GPT-4 to enhance emoji generation prompt."""
+        """Use o3 to enhance emoji generation prompt."""
         pass
 ```
 
