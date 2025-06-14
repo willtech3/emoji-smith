@@ -20,11 +20,10 @@ class PillowImageProcessor:
         with Image.open(BytesIO(image_data)) as img:
             img = img.convert("RGBA")
             img = img.resize((128, 128))
+            img = img.quantize(colors=256)
             output = BytesIO()
             img.save(output, format="PNG", optimize=True)
             data = output.getvalue()
             if len(data) >= 64 * 1024:
-                output = BytesIO()
-                img.save(output, format="PNG", optimize=True)
-                data = output.getvalue()
+                raise ValueError("processed image too large")
             return data

@@ -29,12 +29,21 @@ class OpenAIAPIRepository(OpenAIRepository):
         return response.choices[0].message.content
 
     async def generate_image(self, prompt: str) -> bytes:
-        response = await self._client.images.generate(
-            model="dall-e-3",
-            prompt=prompt,
-            n=1,
-            size="128x128",
-        )
+        """Generate an image using DALL-E 3 and return raw bytes."""
+        try:
+            response = await self._client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                n=1,
+                size="1024x1024",
+            )
+        except Exception as exc:  # pragma: no cover - passthrough logging
+            self._logger.error("OpenAI image generation failed: %s", exc)
+            raise
+
+        if not response.data:
+            raise ValueError("OpenAI did not return image data")
+
         b64 = response.data[0].b64_json
         if isinstance(b64, str):
             return base64.b64decode(b64)
