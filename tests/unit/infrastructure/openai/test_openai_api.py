@@ -38,3 +38,28 @@ async def test_generate_image_raises_on_missing_data() -> None:
     repo = OpenAIAPIRepository(client)
     with pytest.raises(ValueError):
         await repo.generate_image("p")
+
+
+@pytest.mark.asyncio
+async def test_enhance_prompt_falls_back() -> None:
+    client = AsyncMock()
+    client.chat.completions.create.side_effect = [
+        Exception("model not found"),
+        AsyncMock(choices=[AsyncMock(message=AsyncMock(content="ok"))]),
+    ]
+    repo = OpenAIAPIRepository(client, model="o3", fallback_models=["gpt-4"])
+    result = await repo.enhance_prompt("ctx", "desc")
+    assert result == "ok"
+    assert client.chat.completions.create.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_enhance_prompt_prefers_primary() -> None:
+    client = AsyncMock()
+    client.chat.completions.create.return_value = AsyncMock(
+        choices=[AsyncMock(message=AsyncMock(content="good"))]
+    )
+    repo = OpenAIAPIRepository(client, model="o3", fallback_models=["gpt-4"])
+    result = await repo.enhance_prompt("ctx", "desc")
+    assert result == "good"
+    client.chat.completions.create.assert_called_once()

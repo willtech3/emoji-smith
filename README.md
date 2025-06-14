@@ -53,6 +53,8 @@ uv pip install -e ".[dev]"
 # Configure environment
 cp .env.example .env
 # Edit .env with your Slack and OpenAI credentials
+# Optional: set `OPENAI_PROMPT_MODEL` and `OPENAI_FALLBACK_MODELS`
+# to control which OpenAI models are used for prompt enhancement
 
 # Verify setup
 pytest -q && black --check src/ && bandit -r src/
