@@ -26,4 +26,15 @@ async def test_generate_image_calls_client() -> None:
     repo = OpenAIAPIRepository(client)
     data = await repo.generate_image("prompt")
     assert isinstance(data, bytes)
-    client.images.generate.assert_called_once()
+    client.images.generate.assert_called_once_with(
+        model="dall-e-3", prompt="prompt", n=1, size="1024x1024"
+    )
+
+
+@pytest.mark.asyncio
+async def test_generate_image_raises_on_missing_data() -> None:
+    client = AsyncMock()
+    client.images.generate.return_value = AsyncMock(data=[])
+    repo = OpenAIAPIRepository(client)
+    with pytest.raises(ValueError):
+        await repo.generate_image("p")

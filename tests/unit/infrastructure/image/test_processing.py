@@ -5,7 +5,7 @@ from PIL import Image
 from emojismith.infrastructure.image.processing import PillowImageProcessor
 
 
-def _create_image(size=(256, 256)) -> bytes:
+def _create_image(size=(1024, 1024)) -> bytes:
     img = Image.new("RGBA", size, "green")
     bio = BytesIO()
     img.save(bio, format="PNG")
