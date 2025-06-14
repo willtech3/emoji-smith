@@ -1,7 +1,9 @@
 """Tests for PillowImageProcessor."""
 
 from io import BytesIO
+import logging
 from PIL import Image
+import pytest
 from emojismith.infrastructure.image.processing import PillowImageProcessor
 
 
@@ -21,3 +23,39 @@ def test_processor_resizes_and_compresses() -> None:
         assert img.height == 128
         assert img.format == "PNG"
     assert len(out) < 64 * 1024
+
+
+def test_iterative_compression(monkeypatch) -> None:
+    processor = PillowImageProcessor()
+
+    calls: list[int] = []
+
+    def fake_quantize(img, colors):
+        calls.append(colors)
+        return b"x" * (70 * 1024 if colors == 256 else 1024)
+
+    monkeypatch.setattr(processor, "_quantize_and_save", fake_quantize)
+
+    out = processor.process(_create_image())
+
+    assert len(out) == 1024
+    assert calls == [256, 128]
+
+
+def test_logs_metrics(caplog) -> None:
+    processor = PillowImageProcessor()
+    with caplog.at_level(logging.INFO):
+        processor.process(_create_image())
+    assert any("image processed" in r.message for r in caplog.records)
+
+
+def test_raises_when_image_too_large(monkeypatch) -> None:
+    processor = PillowImageProcessor()
+
+    def always_big(img, colors):
+        return b"y" * (70 * 1024)
+
+    monkeypatch.setattr(processor, "_quantize_and_save", always_big)
+
+    with pytest.raises(ValueError):
+        processor.process(_create_image())
