@@ -1,6 +1,6 @@
 """Domain service for webhook security validation."""
 
-from emojismith.domain.repositories.signature_validator import SignatureValidator
+from emojismith.domain.protocols.signature_validator import SignatureValidator
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
 
 
