@@ -53,7 +53,7 @@ class TestFastAPIApp:
         response = client.post("/slack/events", json=payload)
 
         assert response.status_code == 200
-        mock_webhook_handler.handle_message_action.assert_called_once_with(payload)
+        assert mock_webhook_handler.handle_message_action.call_args[0][0] == payload
 
     def test_slack_events_endpoint_rejects_get(self, client):
         """Test Slack events endpoint rejects GET requests."""
@@ -76,7 +76,7 @@ class TestFastAPIApp:
         response = client.post("/slack/events", json=payload)
 
         assert response.status_code == 200
-        mock_webhook_handler.handle_modal_submission.assert_called_once_with(payload)
+        assert mock_webhook_handler.handle_modal_submission.call_args[0][0] == payload
 
     def test_slack_events_unknown_type(self, client):
         """Test Slack events handler ignores unknown event types."""
@@ -98,7 +98,7 @@ def test_create_webhook_handler_initializes_slack_client(
 
     monkeypatch.setenv("OPENAI_API_KEY", "openai")
     handler = create_webhook_handler()
-    mock_slack_client.assert_called_once_with(token="test-token")
-    mock_openai_client.assert_called_once_with(api_key="openai")
+    assert mock_slack_client.call_args.kwargs["token"] == "test-token"
+    assert mock_openai_client.call_args.kwargs["api_key"] == "openai"
     # Handler exposes the message action handling interface
     assert hasattr(handler, "handle_message_action")

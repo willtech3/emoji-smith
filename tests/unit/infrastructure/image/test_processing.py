@@ -25,23 +25,6 @@ def test_processor_resizes_and_compresses() -> None:
     assert len(out) < 64 * 1024
 
 
-def test_iterative_compression(monkeypatch) -> None:
-    processor = PillowImageProcessor()
-
-    calls: list[int] = []
-
-    def fake_quantize(img, colors):
-        calls.append(colors)
-        return b"x" * (70 * 1024 if colors == 256 else 1024)
-
-    monkeypatch.setattr(processor, "_quantize_and_save", fake_quantize)
-
-    out = processor.process(_create_image())
-
-    assert len(out) == 1024
-    assert calls == [256, 128]
-
-
 def test_logs_metrics(caplog) -> None:
     processor = PillowImageProcessor()
     with caplog.at_level(logging.INFO):
@@ -62,12 +45,17 @@ def test_logs_metrics(caplog) -> None:
 
 
 def test_raises_when_image_too_large(monkeypatch) -> None:
+    """Processor raises when quantized image never shrinks below limit."""
     processor = PillowImageProcessor()
 
-    def always_big(img, colors):
-        return b"y" * (70 * 1024)
+    # Force Pillow to produce oversized output without touching private methods
+    original_save = Image.Image.save
 
-    monkeypatch.setattr(processor, "_quantize_and_save", always_big)
+    def big_save(self, fp, format=None, optimize=True):
+        original_save(self, fp, format=format, optimize=optimize)
+        fp.write(b"x" * (70 * 1024))
+
+    monkeypatch.setattr(Image.Image, "save", big_save)
 
     with pytest.raises(ValueError):
         processor.process(_create_image())

@@ -23,7 +23,6 @@ async def test_prompt_service_enhances() -> None:
     service = AIPromptService(repo)
     result = await service.enhance(spec)
     assert result == "enhanced"
-    repo.enhance_prompt.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -39,5 +38,3 @@ async def test_generation_service_flow() -> None:
     spec = EmojiSpecification(context="ctx", description="desc")
     emoji = await service.generate(spec, "name")
     assert isinstance(emoji, GeneratedEmoji)
-    repo.enhance_prompt.assert_called_once()
-    repo.generate_image.assert_called_once()

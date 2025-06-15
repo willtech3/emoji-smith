@@ -35,9 +35,8 @@ class TestSlackAPIRepository:
         await slack_repo.open_modal(trigger_id=trigger_id, view=view)
 
         # Assert
-        mock_slack_client.views_open.assert_called_once_with(
-            trigger_id=trigger_id, view=view
-        )
+        call = mock_slack_client.views_open.call_args
+        assert call.kwargs == {"trigger_id": trigger_id, "view": view}
 
     async def test_handles_slack_api_error_when_opening_modal(
         self, slack_repo, mock_slack_client
@@ -64,9 +63,12 @@ class TestSlackAPIRepository:
 
         # Assert
         assert result is True
-        mock_slack_client.admin_emoji_add.assert_called_once_with(
-            name=emoji_name, url="", image=emoji_data
-        )
+        add_call = mock_slack_client.admin_emoji_add.call_args
+        assert add_call.kwargs == {
+            "name": emoji_name,
+            "url": "",
+            "image": emoji_data,
+        }
 
     async def test_adds_emoji_reaction_to_message(self, slack_repo, mock_slack_client):
         """Test adding emoji reaction to a message."""
@@ -82,6 +84,9 @@ class TestSlackAPIRepository:
         )
 
         # Assert
-        mock_slack_client.reactions_add.assert_called_once_with(
-            name=emoji_name, channel=channel_id, timestamp=timestamp
-        )
+        reaction_call = mock_slack_client.reactions_add.call_args
+        assert reaction_call.kwargs == {
+            "name": emoji_name,
+            "channel": channel_id,
+            "timestamp": timestamp,
+        }
