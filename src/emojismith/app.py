@@ -3,8 +3,10 @@
 import os
 from dotenv import load_dotenv
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from typing import Dict, Any, Optional
+import json
+import urllib.parse
 from slack_sdk.web.async_client import AsyncWebClient
 from emojismith.application.handlers.slack_webhook import SlackWebhookHandler
 from emojismith.application.services.emoji_service import EmojiCreationService
@@ -15,14 +17,24 @@ from emojismith.infrastructure.image.pil_image_validator import PILImageValidato
 from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from emojismith.domain.services.webhook_security_service import WebhookSecurityService
+from emojismith.domain.value_objects.webhook_request import WebhookRequest
+from emojismith.infrastructure.security.slack_signature_validator import (
+    SlackSignatureValidator,
+)
 from openai import AsyncOpenAI
 
 
-def create_webhook_handler() -> SlackWebhookHandler:
+def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityService]:
     """Create webhook handler with dependencies."""
     # Load environment variables and initialize real Slack repository and service
     load_dotenv()
     slack_token = os.getenv("SLACK_BOT_TOKEN")
+    slack_signing_secret = os.getenv("SLACK_SIGNING_SECRET")
+
+    if not slack_signing_secret:
+        raise ValueError("SLACK_SIGNING_SECRET environment variable is required")
+
     slack_client = AsyncWebClient(token=slack_token)
     slack_repo = SlackAPIRepository(slack_client)
 
@@ -62,7 +74,11 @@ def create_webhook_handler() -> SlackWebhookHandler:
         file_sharing_repo=file_sharing_repo,
     )
 
-    return SlackWebhookHandler(emoji_service=emoji_service)
+    # Create webhook security service
+    signature_validator = SlackSignatureValidator(signing_secret=slack_signing_secret)
+    security_service = WebhookSecurityService(signature_validator)
+
+    return SlackWebhookHandler(emoji_service=emoji_service), security_service
 
 
 def _create_sqs_job_queue() -> JobQueueRepository:
@@ -95,7 +111,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
     )
 
-    webhook_handler = create_webhook_handler()
+    webhook_handler, security_service = create_webhook_handler()
 
     @app.get("/health")
     async def health_check() -> Dict[str, str]:
@@ -103,8 +119,44 @@ def create_app() -> FastAPI:
         return {"status": "healthy"}
 
     @app.post("/slack/events")
-    async def slack_events(payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle Slack webhook events, including URL verification."""
+    async def slack_events(request: Request) -> Dict[str, Any]:
+        """Handle Slack webhook events with security and form data parsing."""
+        # Get raw body and headers for security validation
+        body = await request.body()
+        timestamp = request.headers.get("X-Slack-Request-Timestamp")
+        signature = request.headers.get("X-Slack-Signature")
+
+        # Create webhook request for security validation
+        webhook_request = WebhookRequest(
+            body=body, timestamp=timestamp, signature=signature
+        )
+
+        # Validate webhook authenticity (skip for URL verification)
+        if not body.startswith(b'{"type":"url_verification"'):
+            if not security_service.is_authentic_webhook(webhook_request):
+                raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+        # Parse payload based on content type
+        content_type = request.headers.get("content-type", "")
+
+        if "application/x-www-form-urlencoded" in content_type:
+            # Slack interactive components send form data
+            # Parse form data from raw body since we already consumed it for security
+            form_data = urllib.parse.parse_qs(body.decode("utf-8"))
+            payload_str = form_data.get("payload", ["{}"])[0]
+            payload = json.loads(payload_str)
+        elif "application/json" in content_type:
+            # Events API sends JSON
+            payload = json.loads(body.decode("utf-8"))
+        else:
+            # Try JSON first, fallback to form
+            try:
+                payload = json.loads(body.decode("utf-8"))
+            except Exception:
+                form_data = urllib.parse.parse_qs(body.decode("utf-8"))
+                payload_str = form_data.get("payload", ["{}"])[0]
+                payload = json.loads(payload_str)
+
         # Handle Slack URL verification challenge
         if payload.get("type") == "url_verification":
             return {"challenge": payload.get("challenge")}

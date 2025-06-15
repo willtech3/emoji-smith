@@ -48,6 +48,8 @@ class SlackFileSharingRepository:
     ) -> FileSharingResult:
         """Share emoji as a file with upload instructions."""
         try:
+            # Try to join the channel first to avoid 'not_in_channel' errors
+            await self._ensure_bot_in_channel(channel_id)
             # Prepare image data
             image_data = await self._prepare_image_data(emoji, preferences.image_size)
 
@@ -65,7 +67,9 @@ class SlackFileSharingRepository:
             # Determine upload parameters based on share location
             upload_params: Dict[str, Any] = {
                 "filename": f"{emoji.name}.png",
-                "channels": channel_id,
+                "channels": [
+                    channel_id
+                ],  # files_upload_v2 expects a list of channel IDs
                 "file": image_data,
                 "title": f"Custom Emoji: :{emoji.name}:",
                 "initial_comment": self._build_initial_comment(emoji.name, preferences),
@@ -205,3 +209,39 @@ class SlackFileSharingRepository:
             "5. Click 'Save'\n\n"
             f"Then use it by typing `:{emoji_name}:` anywhere! 🚀"
         )
+
+    async def _ensure_bot_in_channel(self, channel_id: str) -> None:
+        """Ensure the bot is a member of the channel before uploading files."""
+        try:
+            # Try to join the channel - this will succeed if bot has permission
+            # and the channel is public, or fail gracefully if already a member
+            await self._client.conversations_join(channel=channel_id)
+        except SlackApiError as e:
+            error_code = e.response.get("error")
+
+            # These errors are acceptable - bot is already in channel or has access
+            if error_code in [
+                "already_in_channel",
+                "is_archived",
+                "method_not_supported_for_channel_type",
+            ]:
+                return
+
+            # For private channels, the bot needs to be invited manually
+            if error_code in ["channel_not_found", "not_allowed", "restricted_action"]:
+                self._logger.warning(
+                    f"Bot cannot join channel {channel_id}: {error_code}. "
+                    "Bot may need to be manually invited to private channels."
+                )
+                # Don't fail here - the file upload might still work if bot was previously added
+                return
+
+            # For other errors, log but continue - the upload might still work
+            self._logger.warning(
+                f"Could not join channel {channel_id}: {error_code}"
+            )
+        except Exception as e:
+            # Log unexpected errors but don't fail the file sharing operation
+            self._logger.warning(
+                f"Unexpected error joining channel {channel_id}: {e}"
+            )
