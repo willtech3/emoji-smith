@@ -11,7 +11,9 @@ from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 from emojismith.infrastructure.image.processing import PillowImageProcessor
+from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
 from emojismith.domain.services.generation_service import EmojiGenerationService
+from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 from openai import AsyncOpenAI
 
@@ -29,8 +31,15 @@ def create_webhook_handler() -> SlackWebhookHandler:
     chat_model = os.getenv("OPENAI_CHAT_MODEL", "o3")
     openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
     image_processor = PillowImageProcessor()
+
+    # Create validation service with image validator
+    image_validator = PILImageValidator()
+    emoji_validation_service = EmojiValidationService(image_validator)
+
     generator = EmojiGenerationService(
-        openai_repo=openai_repo, image_processor=image_processor
+        openai_repo=openai_repo,
+        image_processor=image_processor,
+        emoji_validator=emoji_validation_service,
     )
 
     # Configure job queue based on environment

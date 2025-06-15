@@ -1,11 +1,12 @@
 """Tests for AIPromptService and EmojiGenerationService."""
 
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from io import BytesIO
 from PIL import Image
 from emojismith.domain.value_objects import EmojiSpecification
 from emojismith.domain.services import AIPromptService, EmojiGenerationService
+from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.repositories.image_processor import ImageProcessor
 
@@ -33,11 +34,20 @@ async def test_generation_service_flow() -> None:
     img = Image.new("RGBA", (128, 128), "red")
     bio = BytesIO()
     img.save(bio, format="PNG")
-    repo.generate_image.return_value = bio.getvalue()
+    image_data = bio.getvalue()
+    repo.generate_image.return_value = image_data
     processor = DummyProcessor()
-    service = EmojiGenerationService(repo, processor)
+
+    # Create mock validation service that returns valid GeneratedEmoji
+    mock_validator = Mock()
+    validation_service = EmojiValidationService(mock_validator)
+    mock_validator.validate_emoji_format.return_value = None
+
+    service = EmojiGenerationService(repo, processor, validation_service)
     spec = EmojiSpecification(context="ctx", description="desc")
     emoji = await service.generate(spec, "name")
     assert isinstance(emoji, GeneratedEmoji)
+    assert emoji.name == "name"
     repo.enhance_prompt.assert_called_once()
     repo.generate_image.assert_called_once()
+    mock_validator.validate_emoji_format.assert_called_once_with(image_data)
