@@ -102,15 +102,20 @@ class EmojiCreationService:
 
         # Extract metadata from modal
         if self._job_queue:
+            # Create job entity in application service
+            job = EmojiGenerationJob.create_new(
+                message_text=metadata["message_text"],
+                user_description=description,
+                user_id=metadata["user_id"],
+                channel_id=metadata["channel_id"],
+                timestamp=metadata["timestamp"],
+                team_id=metadata["team_id"],
+            )
             # Queue job for background processing
-            job_data = {
-                **metadata,
-                "user_description": description,
-            }
-            job_id = await self._job_queue.enqueue_job(job_data)
+            await self._job_queue.enqueue_job(job)
             self._logger.info(
                 "Queued emoji generation job",
-                extra={"job_id": job_id, "description": description},
+                extra={"job_id": job.job_id, "description": description},
             )
         else:
             # Fallback to synchronous processing for development

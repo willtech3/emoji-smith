@@ -1,13 +1,13 @@
 """Job queue repository protocol for domain layer."""
 
-from typing import Dict, Any, Optional, Protocol, Tuple
+from typing import Optional, Protocol, Tuple
 from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 
 
 class JobQueueRepository(Protocol):
     """Protocol for job queue operations."""
 
-    async def enqueue_job(self, job_data: Dict[str, Any]) -> str:
+    async def enqueue_job(self, job: EmojiGenerationJob) -> str:
         """Enqueue a new emoji generation job."""
         ...
 

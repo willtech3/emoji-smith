@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Dict, Any, Optional, Tuple
+from typing import Any, Optional, Tuple
 from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 
@@ -15,18 +15,8 @@ class SQSJobQueue(JobQueueRepository):
         self._queue_url = queue_url
         self._logger = logging.getLogger(__name__)
 
-    async def enqueue_job(self, job_data: Dict[str, Any]) -> str:
+    async def enqueue_job(self, job: EmojiGenerationJob) -> str:
         """Enqueue a new emoji generation job."""
-        # Create job entity
-        job = EmojiGenerationJob.create_new(
-            message_text=job_data["message_text"],
-            user_description=job_data["user_description"],
-            user_id=job_data["user_id"],
-            channel_id=job_data["channel_id"],
-            timestamp=job_data["timestamp"],
-            team_id=job_data["team_id"],
-        )
-
         # Send message to SQS
         message_body = json.dumps(job.to_dict())
 

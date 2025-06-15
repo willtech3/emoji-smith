@@ -24,24 +24,26 @@ class TestSQSJobQueue:
     async def test_enqueue_job_sends_message_to_sqs(self, sqs_queue, mock_sqs_client):
         """Test enqueuing job sends message to SQS."""
         # Arrange
-        job_data = {
-            "message_text": "Just deployed on Friday!",
-            "user_description": "facepalm reaction",
-            "user_id": "U12345",
-            "channel_id": "C67890",
-            "timestamp": "1234567890.123456",
-            "team_id": "T11111",
-        }
+        from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+
+        job = EmojiGenerationJob.create_new(
+            message_text="Just deployed on Friday!",
+            user_description="facepalm reaction",
+            user_id="U12345",
+            channel_id="C67890",
+            timestamp="1234567890.123456",
+            team_id="T11111",
+        )
         mock_sqs_client.send_message.return_value = {
             "MessageId": "msg_123",
             "MD5OfBody": "abc123",
         }
 
         # Act
-        job_id = await sqs_queue.enqueue_job(job_data)
+        job_id = await sqs_queue.enqueue_job(job)
 
         # Assert
-        assert job_id is not None
+        assert job_id == job.job_id
         mock_sqs_client.send_message.assert_called_once()
         call_args = mock_sqs_client.send_message.call_args
         assert call_args[1]["QueueUrl"] == sqs_queue._queue_url
