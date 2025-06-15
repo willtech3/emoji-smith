@@ -4,7 +4,7 @@ from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.services.prompt_service import AIPromptService
-from emojismith.infrastructure.image.processing import ImageProcessor
+from emojismith.domain.repositories.image_processor import ImageProcessor
 
 
 class EmojiGenerationService:
