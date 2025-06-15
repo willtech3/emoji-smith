@@ -195,10 +195,34 @@ class TestSlackFileSharingRepository:
 
         # Assert - instructions are in the file upload initial comment
         upload_args = mock_slack_client.files_upload_v2.call_args[1]
-        initial_comment = upload_args["initial_comment"]
-        assert "test_emoji" in initial_comment
-        assert "upload" in initial_comment.lower()
-        assert "workspace" in initial_comment.lower()
+        initial_comment = upload_args["initial_comment"].lower()
+        assert all(term in initial_comment for term in ["test_emoji", "upload", "workspace"])
+
+    async def test_rejects_file_exceeding_size_limit(
+        self, file_sharing_repo, mock_slack_client
+    ):
+        """Test early rejection when image exceeds Slack file size limit."""
+        # Arrange – create payload larger than 8 MiB to trigger early rejection
+        oversized_bytes = b"0" * (9 * 1024 * 1024)  # 9 MiB
+        large_emoji = GeneratedEmoji(name="huge", image_data=oversized_bytes)
+
+        prefs = EmojiSharingPreferences(
+            share_location=ShareLocation.NEW_THREAD,
+            instruction_visibility=InstructionVisibility.EVERYONE,
+        )
+
+        # Act
+        result = await file_sharing_repo.share_emoji_file(
+            emoji=large_emoji,
+            channel_id="C123",
+            preferences=prefs,
+            requester_user_id="U123",
+        )
+
+        # Assert – should fail fast before Slack API call
+        assert result.success is False
+        assert result.error == "file_too_large"
+        mock_slack_client.files_upload_v2.assert_not_called()
 
     async def test_handles_file_upload_failure_gracefully(
         self, file_sharing_repo, mock_slack_client, sample_emoji

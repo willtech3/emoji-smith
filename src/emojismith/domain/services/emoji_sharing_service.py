@@ -73,7 +73,26 @@ class EmojiSharingService:
             return FileSharingFallbackStrategy(preferences=context.preferences)
 
     async def detect_workspace_type(self) -> WorkspaceType:
-        """Detect workspace type from available permissions."""
-        # This would check API permissions in real implementation
-        # For now, we'll default to STANDARD
-        return WorkspaceType.STANDARD
+        """Detect workspace type from available permissions.
+
+        If detection fails (e.g. missing scopes or API error), we log a warning and
+        gracefully fall back to a `STANDARD` workspace assumption so that the
+        application continues using the file-sharing strategy instead of
+        crashing.
+        """
+        try:
+            # TODO: Implement real permission introspection once method is chosen.
+            # For now we pessimise to ENTERPRISE_GRID only if an explicit env var is set.
+            import os
+
+            if os.getenv("EMOJISMITH_FORCE_ENTERPRISE", "false").lower() == "true":
+                return WorkspaceType.ENTERPRISE_GRID
+            return WorkspaceType.STANDARD
+        except Exception as exc:  # pragma: no cover – defensive safety net
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Unable to auto-detect workspace type – defaulting to STANDARD: %s",
+                exc,
+            )
+            return WorkspaceType.STANDARD

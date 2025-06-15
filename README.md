@@ -132,6 +132,21 @@ git push origin feature/your-feature-name
 gh pr create --title "Your Feature" --body "Description"
 ```
 
+### Dependency Injection Quickstart
+
+When embedding Emoji Smith in another FastAPI or async context, simply provide your own Slack client and inject a `SlackFileSharingRepository`:
+
+```python
+from slack_sdk.web.async_client import AsyncWebClient
+from emojismith.infrastructure.slack.slack_file_sharing import SlackFileSharingRepository
+
+slack_client = AsyncWebClient(token="xoxb-…")
+file_sharing_repo = SlackFileSharingRepository(slack_client)
+# pass `file_sharing_repo` into `EmojiCreationService`
+```
+
+If you don’t provide one, `create_app()` auto-constructs a default instance for the dev server.
+
 ### Quality Checks
 
 All code must pass these checks before merging:
