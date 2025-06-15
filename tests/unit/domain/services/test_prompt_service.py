@@ -7,7 +7,7 @@ from PIL import Image
 from emojismith.domain.value_objects import EmojiSpecification
 from emojismith.domain.services import AIPromptService, EmojiGenerationService
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
-from emojismith.infrastructure.image.processing import ImageProcessor
+from emojismith.domain.repositories.image_processor import ImageProcessor
 
 
 class DummyProcessor(ImageProcessor):

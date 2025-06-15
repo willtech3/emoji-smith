@@ -2,19 +2,11 @@
 
 from io import BytesIO
 import logging
-from typing import Protocol
 from PIL import Image
+from emojismith.domain.repositories.image_processor import ImageProcessor  # noqa: F401
 
 # Use LANCZOS if available, fall back to BICUBIC for older stubs
 RESAMPLE = getattr(Image, "LANCZOS", Image.BICUBIC)  # type: ignore[attr-defined]
-
-
-class ImageProcessor(Protocol):
-    """Protocol for image processing implementations."""
-
-    def process(self, image_data: bytes) -> bytes:
-        """Process raw image data and return optimized PNG."""
-        ...
 
 
 class PillowImageProcessor:
