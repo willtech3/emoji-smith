@@ -32,7 +32,9 @@ class TestFastAPIApp:
         assert response.status_code == 200
         assert response.json() == {"status": "healthy"}
 
-    def test_slack_events_endpoint_accepts_post(self, client, mock_webhook_handler):
+    def test_processes_slack_emoji_creation_requests(
+        self, client, mock_webhook_handler
+    ):
         """Test Slack events endpoint accepts POST requests."""
         mock_webhook_handler.handle_message_action.return_value = {"status": "ok"}
 
@@ -55,7 +57,7 @@ class TestFastAPIApp:
         assert response.status_code == 200
         mock_webhook_handler.handle_message_action.assert_called_once_with(payload)
 
-    def test_slack_events_endpoint_rejects_get(self, client):
+    def test_requires_post_method_for_slack_events(self, client):
         """Test Slack events endpoint rejects GET requests."""
         response = client.get("/slack/events")
 
@@ -69,7 +71,7 @@ class TestFastAPIApp:
         assert response.status_code == 200
         assert response.json() == {"challenge": "XYZ"}
 
-    def test_slack_events_view_submission(self, client, mock_webhook_handler):
+    def test_processes_modal_form_submissions(self, client, mock_webhook_handler):
         """Test Slack events handler delegates view_submission."""
         mock_webhook_handler.handle_modal_submission.return_value = {"status": "ok"}
         payload = {"type": "view_submission"}
@@ -78,7 +80,7 @@ class TestFastAPIApp:
         assert response.status_code == 200
         mock_webhook_handler.handle_modal_submission.assert_called_once_with(payload)
 
-    def test_slack_events_unknown_type(self, client):
+    def test_ignores_unsupported_slack_event_types(self, client):
         """Test Slack events handler ignores unknown event types."""
         payload = {"type": "unknown"}
         response = client.post("/slack/events", json=payload)
@@ -89,7 +91,7 @@ class TestFastAPIApp:
 
 @patch("src.emojismith.app.AsyncOpenAI")
 @patch("src.emojismith.app.AsyncWebClient")
-def test_create_webhook_handler_initializes_slack_client(
+def test_configures_webhook_handler_with_environment_credentials(
     mock_slack_client, mock_openai_client, monkeypatch
 ):
     """Test create_webhook_handler sets up Slack client with token."""
