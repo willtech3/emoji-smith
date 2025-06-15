@@ -2,14 +2,9 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any, Dict
 from io import BytesIO
-from typing import Any, Dict
 from PIL import Image
-
-# Slack limits file uploads to 1–10 MB depending on plan; we use a safe lower bound.
-MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024  # 8 MiB
-
 
 from slack_sdk.web.async_client import AsyncWebClient
 from slack_sdk.errors import SlackApiError
@@ -21,6 +16,9 @@ from emojismith.domain.value_objects.emoji_sharing_preferences import (
     InstructionVisibility,
     ImageSize,
 )
+
+# Slack limits file uploads to 1–10 MB depending on plan; use safe lower bound.
+MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024  # 8 MiB
 
 
 @dataclass
@@ -57,12 +55,12 @@ class SlackFileSharingRepository:
             file_size = image_data.getbuffer().nbytes
             if file_size > MAX_FILE_SIZE_BYTES:
                 self._logger.warning(
-                    "Image size (%d bytes) exceeds Slack limit (%d bytes). Aborting upload.",
+                    "Image size (%d bytes) exceeds Slack limit (%d bytes). "
+                    "Aborting upload.",
                     file_size,
                     MAX_FILE_SIZE_BYTES,
                 )
                 return FileSharingResult(success=False, error="file_too_large")
-
 
             # Determine upload parameters based on share location
             upload_params: Dict[str, Any] = {

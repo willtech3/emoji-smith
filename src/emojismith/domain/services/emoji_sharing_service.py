@@ -82,10 +82,12 @@ class EmojiSharingService:
         """
         try:
             # TODO: Implement real permission introspection once method is chosen.
-            # For now we pessimise to ENTERPRISE_GRID only if an explicit env var is set.
+            # For now we pessimise to ENTERPRISE_GRID only if an explicit env
+            # var is set.
             import os
 
-            if os.getenv("EMOJISMITH_FORCE_ENTERPRISE", "false").lower() == "true":
+            force_enterprise = os.getenv("EMOJISMITH_FORCE_ENTERPRISE", "false")
+            if force_enterprise.lower() == "true":
                 return WorkspaceType.ENTERPRISE_GRID
             return WorkspaceType.STANDARD
         except Exception as exc:  # pragma: no cover – defensive safety net

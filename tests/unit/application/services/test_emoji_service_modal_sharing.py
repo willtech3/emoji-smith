@@ -54,6 +54,7 @@ class TestEmojiServiceModalSharing:
         block_ids = [block.get("block_id") for block in view["blocks"]]
         assert "share_location" in block_ids
         assert "instruction_visibility" in block_ids
+        assert "image_size" in block_ids
 
         # Check private metadata contains necessary info
         metadata = json.loads(view["private_metadata"])
@@ -82,6 +83,9 @@ class TestEmojiServiceModalSharing:
                             "visibility_select": {
                                 "selected_option": {"value": "everyone"}
                             }
+                        },
+                        "image_size": {
+                            "size_select": {"selected_option": {"value": "emoji_size"}}
                         },
                     }
                 },
@@ -115,8 +119,9 @@ class TestEmojiServiceModalSharing:
             channel_id="C67890",
             timestamp="1234567890.123456",
             team_id="T11111",
-            thread_ts="1234567890.123456",  # Message is in a thread
         )
+        # Set thread_ts attribute dynamically to simulate message in thread
+        object.__setattr__(message, "thread_ts", "1234567890.123456")
         trigger_id = "12345.98765"
 
         # Act

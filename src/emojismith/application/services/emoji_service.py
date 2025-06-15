@@ -13,9 +13,14 @@ from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingContext,
     WorkspaceType,
 )
-from emojismith.infrastructure.slack.slack_file_sharing import (
-    SlackFileSharingRepository,
-)
+
+try:
+    from emojismith.infrastructure.slack.slack_file_sharing import (
+        SlackFileSharingRepository,
+    )
+except ImportError:
+    # For tests when aiohttp is not available
+    SlackFileSharingRepository = None  # type: ignore
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from emojismith.domain.value_objects.emoji_sharing_preferences import (
     EmojiSharingPreferences,
@@ -35,7 +40,7 @@ class EmojiCreationService:
         slack_repo: SlackRepository,
         emoji_generator: EmojiGenerationService,
         job_queue: Optional[JobQueueRepository] = None,
-        file_sharing_repo: Optional[SlackFileSharingRepository] = None,
+        file_sharing_repo: Optional[Any] = None,
         sharing_service: Optional[EmojiSharingService] = None,
     ) -> None:
         self._slack_repo = slack_repo

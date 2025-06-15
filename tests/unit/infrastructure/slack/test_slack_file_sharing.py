@@ -196,28 +196,39 @@ class TestSlackFileSharingRepository:
         # Assert - instructions are in the file upload initial comment
         upload_args = mock_slack_client.files_upload_v2.call_args[1]
         initial_comment = upload_args["initial_comment"].lower()
-        assert all(term in initial_comment for term in ["test_emoji", "upload", "workspace"])
+        assert all(
+            term in initial_comment for term in ["test_emoji", "upload", "workspace"]
+        )
 
     async def test_rejects_file_exceeding_size_limit(
         self, file_sharing_repo, mock_slack_client
     ):
         """Test early rejection when image exceeds Slack file size limit."""
-        # Arrange – create payload larger than 8 MiB to trigger early rejection
-        oversized_bytes = b"0" * (9 * 1024 * 1024)  # 9 MiB
-        large_emoji = GeneratedEmoji(name="huge", image_data=oversized_bytes)
+        # Arrange – We can't create a GeneratedEmoji larger than 64KB due to
+        # domain constraints, so we'll test this by mocking the
+        # _prepare_image_data method to return large data
+        import unittest.mock
+        from io import BytesIO
 
+        # Create normal emoji first
+        small_emoji = GeneratedEmoji(name="huge", image_data=b"small_data")
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.NEW_THREAD,
             instruction_visibility=InstructionVisibility.EVERYONE,
         )
 
-        # Act
-        result = await file_sharing_repo.share_emoji_file(
-            emoji=large_emoji,
-            channel_id="C123",
-            preferences=prefs,
-            requester_user_id="U123",
-        )
+        # Mock _prepare_image_data to return oversized data
+        oversized_data = BytesIO(b"0" * (9 * 1024 * 1024))  # 9 MiB
+        with unittest.mock.patch.object(
+            file_sharing_repo, "_prepare_image_data", return_value=oversized_data
+        ):
+            # Act
+            result = await file_sharing_repo.share_emoji_file(
+                emoji=small_emoji,
+                channel_id="C123",
+                preferences=prefs,
+                requester_user_id="U123",
+            )
 
         # Assert – should fail fast before Slack API call
         assert result.success is False
