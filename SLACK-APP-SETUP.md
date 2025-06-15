@@ -14,10 +14,15 @@
 Navigate to **"OAuth & Permissions"** and add these Bot Token Scopes:
 
 **Required Scopes:**
-- `emoji:write` - Upload custom emojis to workspace
+- `emoji:write` - Upload custom emojis to workspace (Enterprise Grid only)
 - `reactions:write` - Add emoji reactions to messages  
 - `commands` - Create slash commands
 - `chat:write` - Send messages (for notifications)
+- `chat:write.public` - Post messages to public channels
+- `files:write` - Upload emoji files for non-Enterprise workspaces
+- `files:read` - Read uploaded files
+
+**Note:** The `emoji:write` scope only works with Enterprise Grid workspaces. For standard workspaces, the app will automatically use file sharing with upload instructions.
 
 ## Step 3: Configure Message Actions
 

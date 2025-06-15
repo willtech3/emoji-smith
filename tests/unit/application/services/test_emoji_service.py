@@ -28,21 +28,35 @@ class TestEmojiCreationService:
         return AsyncMock()
 
     @pytest.fixture
-    def emoji_service(self, mock_slack_repo, mock_emoji_generator):
+    def mock_file_sharing_repo(self):
+        """Mock file sharing repository."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def emoji_service(
+        self, mock_slack_repo, mock_emoji_generator, mock_file_sharing_repo
+    ):
         """Emoji creation service with mocked dependencies."""
         return EmojiCreationService(
-            slack_repo=mock_slack_repo, emoji_generator=mock_emoji_generator
+            slack_repo=mock_slack_repo,
+            emoji_generator=mock_emoji_generator,
+            file_sharing_repo=mock_file_sharing_repo,
         )
 
     @pytest.fixture
     def emoji_service_with_queue(
-        self, mock_slack_repo, mock_emoji_generator, mock_job_queue
+        self,
+        mock_slack_repo,
+        mock_emoji_generator,
+        mock_job_queue,
+        mock_file_sharing_repo,
     ):
         """Emoji creation service with job queue enabled."""
         return EmojiCreationService(
             slack_repo=mock_slack_repo,
             emoji_generator=mock_emoji_generator,
             job_queue=mock_job_queue,
+            file_sharing_repo=mock_file_sharing_repo,
         )
 
     async def test_initiates_emoji_creation_opens_modal(
@@ -86,7 +100,20 @@ class TestEmojiCreationService:
                     "values": {
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
-                        }
+                        },
+                        "share_location": {
+                            "share_location_select": {
+                                "selected_option": {"value": "new_thread"}
+                            }
+                        },
+                        "instruction_visibility": {
+                            "visibility_select": {
+                                "selected_option": {"value": "everyone"}
+                            }
+                        },
+                        "image_size": {
+                            "size_select": {"selected_option": {"value": "emoji_size"}}
+                        },
                     }
                 },
                 "private_metadata": (
@@ -117,7 +144,20 @@ class TestEmojiCreationService:
                     "values": {
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
-                        }
+                        },
+                        "share_location": {
+                            "share_location_select": {
+                                "selected_option": {"value": "new_thread"}
+                            }
+                        },
+                        "instruction_visibility": {
+                            "visibility_select": {
+                                "selected_option": {"value": "everyone"}
+                            }
+                        },
+                        "image_size": {
+                            "size_select": {"selected_option": {"value": "emoji_size"}}
+                        },
                     }
                 },
                 "private_metadata": (
@@ -148,7 +188,11 @@ class TestEmojiCreationService:
             await emoji_service.handle_modal_submission(bad_payload)
 
     async def test_processes_emoji_generation_job_end_to_end(
-        self, emoji_service, mock_slack_repo, mock_emoji_generator
+        self,
+        emoji_service,
+        mock_slack_repo,
+        mock_emoji_generator,
+        mock_file_sharing_repo,
     ):
         """Test complete emoji generation job processing."""
         job_data = {
@@ -161,7 +205,15 @@ class TestEmojiCreationService:
             "emoji_name": "facepalm",
         }
 
-        mock_slack_repo.upload_emoji.return_value = True
+        # Mock successful file sharing for standard workspace
+        from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
+
+        mock_file_sharing_repo.share_emoji_file.return_value = FileSharingResult(
+            success=True,
+            thread_ts="1234567890.123456",
+            file_url="https://files.slack.com/test",
+        )
+
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
@@ -172,16 +224,22 @@ class TestEmojiCreationService:
         await emoji_service.process_emoji_generation_job_dict(job_data)
 
         mock_emoji_generator.generate.assert_called_once()
-        mock_slack_repo.upload_emoji.assert_called_once()
-        mock_slack_repo.add_emoji_reaction.assert_called_once()
+        # For standard workspace, should use file sharing instead of direct upload
+        mock_file_sharing_repo.share_emoji_file.assert_called_once()
+        mock_slack_repo.upload_emoji.assert_not_called()
 
     async def test_processes_emoji_generation_job_entity(
-        self, emoji_service, mock_slack_repo, mock_emoji_generator
+        self,
+        emoji_service,
+        mock_slack_repo,
+        mock_emoji_generator,
+        mock_file_sharing_repo,
     ):
         """Test processing emoji generation job from job entity."""
         # Arrange
         from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+        from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from io import BytesIO
         from PIL import Image
 
@@ -194,7 +252,13 @@ class TestEmojiCreationService:
             team_id="T11111",
         )
 
-        mock_slack_repo.upload_emoji.return_value = True
+        # Mock successful file sharing for standard workspace
+        mock_file_sharing_repo.share_emoji_file.return_value = FileSharingResult(
+            success=True,
+            thread_ts="1234567890.123456",
+            file_url="https://files.slack.com/test",
+        )
+
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
@@ -207,8 +271,9 @@ class TestEmojiCreationService:
 
         # Assert
         mock_emoji_generator.generate.assert_called_once()
-        mock_slack_repo.upload_emoji.assert_called_once()
-        mock_slack_repo.add_emoji_reaction.assert_called_once()
+        # For standard workspace, should use file sharing instead of direct upload
+        mock_file_sharing_repo.share_emoji_file.assert_called_once()
+        mock_slack_repo.upload_emoji.assert_not_called()
 
         # Verify the call arguments
         generate_call = mock_emoji_generator.generate.call_args
@@ -216,12 +281,18 @@ class TestEmojiCreationService:
         assert generate_call[0][0].context == "The deployment failed again 😭"
 
     async def test_process_emoji_generation_job_upload_failure(
-        self, emoji_service, mock_slack_repo, mock_emoji_generator, caplog
+        self,
+        emoji_service,
+        mock_slack_repo,
+        mock_emoji_generator,
+        mock_file_sharing_repo,
+        caplog,
     ):
-        """Test processing emoji generation job when upload fails gracefully."""
+        """Test processing emoji generation job when file sharing fails gracefully."""
         # Arrange
         from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+        from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from io import BytesIO
         from PIL import Image
 
@@ -234,8 +305,11 @@ class TestEmojiCreationService:
             team_id="T11111",
         )
 
-        mock_slack_repo.upload_emoji.return_value = False  # Simulate upload failure
-        mock_slack_repo.add_emoji_reaction.return_value = None  # Reaction succeeds
+        # Mock file sharing failure for standard workspace
+        mock_file_sharing_repo.share_emoji_file.return_value = FileSharingResult(
+            success=False, error="file_size_too_large"
+        )
+
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
@@ -246,17 +320,24 @@ class TestEmojiCreationService:
         # Act - should complete gracefully, not raise exception
         await emoji_service.process_emoji_generation_job(job)
 
-        # Assert - should log warning about upload failure but still try reaction
-        assert "Failed to upload emoji" in caplog.text
-        assert "insufficient permissions" in caplog.text
-        mock_slack_repo.add_emoji_reaction.assert_called_once()
+        # Assert - should log error about file sharing failure
+        assert "Failed to share emoji file" in caplog.text
+        mock_file_sharing_repo.share_emoji_file.assert_called_once()
+        # No direct upload attempted for standard workspace
+        mock_slack_repo.upload_emoji.assert_not_called()
 
     async def test_process_emoji_generation_job_dict_upload_failure(
-        self, emoji_service, mock_slack_repo, mock_emoji_generator, caplog
+        self,
+        emoji_service,
+        mock_slack_repo,
+        mock_emoji_generator,
+        mock_file_sharing_repo,
+        caplog,
     ):
-        """Test processing emoji generation job dict when upload fails gracefully."""
+        """Test processing emoji generation job dict when sharing fails."""
         # Arrange
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+        from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from io import BytesIO
         from PIL import Image
 
@@ -269,8 +350,11 @@ class TestEmojiCreationService:
             "team_id": "T11111",
         }
 
-        mock_slack_repo.upload_emoji.return_value = False  # Simulate upload failure
-        mock_slack_repo.add_emoji_reaction.return_value = None  # Reaction succeeds
+        # Mock file sharing failure for standard workspace
+        mock_file_sharing_repo.share_emoji_file.return_value = FileSharingResult(
+            success=False, error="file_size_too_large"
+        )
+
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
@@ -281,7 +365,8 @@ class TestEmojiCreationService:
         # Act - should complete gracefully, not raise exception
         await emoji_service.process_emoji_generation_job_dict(job_data)
 
-        # Assert - should log warning about upload failure but still try reaction
-        assert "Failed to upload emoji" in caplog.text
-        assert "insufficient permissions" in caplog.text
-        mock_slack_repo.add_emoji_reaction.assert_called_once()
+        # Assert - should log error about file sharing failure
+        assert "Failed to share emoji file" in caplog.text
+        mock_file_sharing_repo.share_emoji_file.assert_called_once()
+        # No direct upload attempted for standard workspace
+        mock_slack_repo.upload_emoji.assert_not_called()

@@ -99,9 +99,13 @@ aws secretsmanager create-secret --name "emoji-smith/production" --secret-string
 1. **Find a message** in Slack that needs a reaction
 2. **Right-click** the message → **More actions** → **Create Reaction**
 3. **Describe the emoji** you want in the modal dialog
-4. **Choose style** (cartoon, realistic, minimalist, pixel art)
+4. **Choose sharing options**:
+   - Where to share (new thread, existing thread, or direct message)
+   - Who sees instructions (everyone or just you)
+   - Image size (emoji size 128x128 or full size 1024x1024)
 5. **Submit** and wait 5-10 seconds for AI generation
-6. **Emoji appears** as a reaction on the original message!
+6. **For Enterprise Grid**: Emoji automatically uploaded and added as reaction
+7. **For Standard Workspaces**: Emoji shared as file with easy upload instructions
 
 ### Example Use Cases
 
@@ -127,6 +131,21 @@ git commit -m "feat: your descriptive message"
 git push origin feature/your-feature-name
 gh pr create --title "Your Feature" --body "Description"
 ```
+
+### Dependency Injection Quickstart
+
+When embedding Emoji Smith in another FastAPI or async context, simply provide your own Slack client and inject a `SlackFileSharingRepository`:
+
+```python
+from slack_sdk.web.async_client import AsyncWebClient
+from emojismith.infrastructure.slack.slack_file_sharing import SlackFileSharingRepository
+
+slack_client = AsyncWebClient(token="xoxb-…")
+file_sharing_repo = SlackFileSharingRepository(slack_client)
+# pass `file_sharing_repo` into `EmojiCreationService`
+```
+
+If you don’t provide one, `create_app()` auto-constructs a default instance for the dev server.
 
 ### Quality Checks
 

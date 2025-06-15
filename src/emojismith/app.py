@@ -48,8 +48,18 @@ def create_webhook_handler() -> SlackWebhookHandler:
         # Running in Lambda - configure SQS job queue
         job_queue = _create_sqs_job_queue()
 
+    # Create file sharing repository
+    from emojismith.infrastructure.slack.slack_file_sharing import (
+        SlackFileSharingRepository,
+    )
+
+    file_sharing_repo = SlackFileSharingRepository(slack_client)
+
     emoji_service = EmojiCreationService(
-        slack_repo=slack_repo, emoji_generator=generator, job_queue=job_queue
+        slack_repo=slack_repo,
+        emoji_generator=generator,
+        job_queue=job_queue,
+        file_sharing_repo=file_sharing_repo,
     )
 
     return SlackWebhookHandler(emoji_service=emoji_service)
@@ -58,7 +68,7 @@ def create_webhook_handler() -> SlackWebhookHandler:
 def _create_sqs_job_queue() -> JobQueueRepository:
     """Create SQS job queue for Lambda environment."""
     try:
-        import aioboto3  # type: ignore[import-untyped]
+        import aioboto3  # type: ignore[import-not-found]
         from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 
         session = aioboto3.Session()
