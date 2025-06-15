@@ -46,11 +46,12 @@ class BackgroundWorker:
         while self._running:
             try:
                 # Get next job from queue
-                job = await self._job_queue.dequeue_job()
+                result = await self._job_queue.dequeue_job()
 
-                if job:
+                if result:
+                    job, receipt_handle = result
                     # Process job concurrently within semaphore limits
-                    asyncio.create_task(self._process_single_job(job))
+                    asyncio.create_task(self._process_single_job(job, receipt_handle))
                 else:
                     # No jobs available, wait before polling again
                     await asyncio.sleep(self._poll_interval)
@@ -61,7 +62,7 @@ class BackgroundWorker:
                 )
                 await asyncio.sleep(self._poll_interval)
 
-    async def _process_single_job(self, job: Any) -> None:
+    async def _process_single_job(self, job: Any, receipt_handle: str) -> None:
         """Process a single emoji generation job."""
         async with self._semaphore:
             self._logger.info(
@@ -77,7 +78,7 @@ class BackgroundWorker:
                 await self._emoji_service.process_emoji_generation_job(job)
 
                 # Mark job as completed
-                await self._job_queue.complete_job(job)
+                await self._job_queue.complete_job(job, receipt_handle)
                 await self._job_queue.update_job_status(job.job_id, "completed")
 
                 self._logger.info(

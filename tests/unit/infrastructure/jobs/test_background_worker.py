@@ -21,7 +21,7 @@ class DummyJobQueue:
     async def update_job_status(self, job_id, status):
         pass
 
-    async def complete_job(self, job):
+    async def complete_job(self, job, receipt_handle):
         pass
 
 
