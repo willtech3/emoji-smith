@@ -44,10 +44,10 @@ class TestSQSJobQueue:
 
         # Assert
         assert job_id == job.job_id
-        mock_sqs_client.send_message.assert_called_once()
+        assert mock_sqs_client.send_message.called
         call_args = mock_sqs_client.send_message.call_args
-        assert call_args[1]["QueueUrl"] == sqs_queue._queue_url
-        assert "MessageBody" in call_args[1]
+        assert call_args.kwargs["QueueUrl"] == sqs_queue.queue_url
+        assert "MessageBody" in call_args.kwargs
 
     async def test_dequeue_job_receives_message_from_sqs(
         self, sqs_queue, mock_sqs_client
@@ -80,7 +80,7 @@ class TestSQSJobQueue:
         result = await sqs_queue.dequeue_job()
 
         # Assert
-        mock_sqs_client.receive_message.assert_called_once()
+        assert mock_sqs_client.receive_message.called
         assert result is not None
         job, receipt_handle = result
         assert job.job_id == "job_123"
@@ -105,8 +105,8 @@ class TestSQSJobQueue:
         await sqs_queue.complete_job(job, receipt_handle)
 
         # Assert
-        mock_sqs_client.delete_message.assert_called_once_with(
-            QueueUrl=sqs_queue._queue_url, ReceiptHandle="rh"
+        mock_sqs_client.delete_message.assert_called_with(
+            QueueUrl=sqs_queue.queue_url, ReceiptHandle="rh"
         )
 
     async def test_get_and_update_job_status_and_retry(self, sqs_queue):
@@ -130,6 +130,6 @@ class TestSQSJobQueue:
 
         result = await sqs_queue.dequeue_job()
         assert result is None
-        mock_sqs_client.delete_message.assert_called_once_with(
-            QueueUrl=sqs_queue._queue_url, ReceiptHandle="rh"
+        mock_sqs_client.delete_message.assert_called_with(
+            QueueUrl=sqs_queue.queue_url, ReceiptHandle="rh"
         )

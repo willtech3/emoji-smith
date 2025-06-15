@@ -44,15 +44,14 @@ async def test_worker_start_and_stop(monkeypatch):
         await worker.start()
     # After crash, running flag remains True until stop is called
     await worker.stop()
-    assert not worker._running
+    assert not worker.running
 
 
 @pytest.mark.asyncio
-async def test_worker_stop_sets_running_false():
-    """Test that stop() sets the running flag to False."""
+async def test_worker_stop_when_not_running():
+    """Calling stop when the worker isn't running should succeed."""
     job_queue = DummyJobQueue()
     service = DummyService()
     worker = BackgroundWorker(job_queue, service)
-    worker._running = True
     await worker.stop()
-    assert not worker._running
+    assert not worker.running

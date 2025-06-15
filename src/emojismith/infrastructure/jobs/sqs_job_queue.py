@@ -15,6 +15,11 @@ class SQSJobQueue(JobQueueRepository):
         self._queue_url = queue_url
         self._logger = logging.getLogger(__name__)
 
+    @property
+    def queue_url(self) -> str:
+        """Return the configured SQS queue URL."""
+        return self._queue_url
+
     async def enqueue_job(self, job: EmojiGenerationJob) -> str:
         """Enqueue a new emoji generation job."""
         # Send message to SQS

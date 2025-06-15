@@ -25,6 +25,11 @@ class BackgroundWorker:
         self._running = False
         self._semaphore = asyncio.Semaphore(max_concurrent_jobs)
 
+    @property
+    def running(self) -> bool:
+        """Return True if the worker is currently running."""
+        return self._running
+
     async def start(self) -> None:
         """Start the background worker."""
         self._running = True

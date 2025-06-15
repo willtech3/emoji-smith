@@ -30,11 +30,19 @@ def test_iterative_compression(monkeypatch) -> None:
 
     calls: list[int] = []
 
-    def fake_quantize(img, colors):
-        calls.append(colors)
-        return b"x" * (70 * 1024 if colors == 256 else 1024)
+    class DummyQuantized:
+        def __init__(self, colors: int) -> None:
+            self._colors = colors
 
-    monkeypatch.setattr(processor, "_quantize_and_save", fake_quantize)
+        def save(self, output: BytesIO, format: str, optimize: bool = True) -> None:
+            size = 70 * 1024 if self._colors == 256 else 1024
+            output.write(b"x" * size)
+
+    def fake_quantize(self, colors: int) -> DummyQuantized:
+        calls.append(colors)
+        return DummyQuantized(colors)
+
+    monkeypatch.setattr(Image.Image, "quantize", fake_quantize)
 
     out = processor.process(_create_image())
 
@@ -64,10 +72,14 @@ def test_logs_metrics(caplog) -> None:
 def test_raises_when_image_too_large(monkeypatch) -> None:
     processor = PillowImageProcessor()
 
-    def always_big(img, colors):
-        return b"y" * (70 * 1024)
+    class AlwaysBig:
+        def save(self, output: BytesIO, format: str, optimize: bool = True) -> None:
+            output.write(b"y" * (70 * 1024))
 
-    monkeypatch.setattr(processor, "_quantize_and_save", always_big)
+    def big_quantize(self, colors: int) -> AlwaysBig:
+        return AlwaysBig()
+
+    monkeypatch.setattr(Image.Image, "quantize", big_quantize)
 
     with pytest.raises(ValueError):
         processor.process(_create_image())
