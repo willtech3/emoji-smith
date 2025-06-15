@@ -8,7 +8,21 @@ from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 from emojismith.domain.repositories.slack_repository import SlackRepository
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 from emojismith.domain.services.generation_service import EmojiGenerationService
+from emojismith.domain.services.emoji_sharing_service import (
+    EmojiSharingService,
+    EmojiSharingContext,
+    WorkspaceType,
+)
+from emojismith.infrastructure.slack.slack_file_sharing import (
+    SlackFileSharingRepository,
+)
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
+from emojismith.domain.value_objects.emoji_sharing_preferences import (
+    EmojiSharingPreferences,
+    ShareLocation,
+    InstructionVisibility,
+    ImageSize,
+)
 
 
 class EmojiCreationService:
@@ -21,15 +35,74 @@ class EmojiCreationService:
         slack_repo: SlackRepository,
         emoji_generator: EmojiGenerationService,
         job_queue: Optional[JobQueueRepository] = None,
+        file_sharing_repo: Optional[SlackFileSharingRepository] = None,
+        sharing_service: Optional[EmojiSharingService] = None,
     ) -> None:
         self._slack_repo = slack_repo
         self._emoji_generator = emoji_generator
         self._job_queue = job_queue
+        self._file_sharing_repo = file_sharing_repo
+        self._sharing_service = sharing_service or EmojiSharingService()
 
     async def initiate_emoji_creation(
         self, message: SlackMessage, trigger_id: str
     ) -> None:
         """Initiate emoji creation process by opening modal dialog."""
+        # Prepare metadata including thread info if present
+        metadata = {
+            "message_text": message.text,
+            "user_id": message.user_id,
+            "channel_id": message.channel_id,
+            "timestamp": message.timestamp,
+            "team_id": message.team_id,
+        }
+
+        # Include thread timestamp if message is in a thread
+        if hasattr(message, "thread_ts") and message.thread_ts:
+            metadata["thread_ts"] = message.thread_ts
+
+        # Build share location options
+        share_options = []
+
+        # If in thread, default to sharing in that thread
+        if metadata.get("thread_ts"):
+            share_options.extend(
+                [
+                    {
+                        "text": {"type": "plain_text", "text": "This thread"},
+                        "value": "thread",
+                    },
+                    {
+                        "text": {"type": "plain_text", "text": "New thread"},
+                        "value": "new_thread",
+                    },
+                ]
+            )
+        else:
+            # Not in thread, default to new thread
+            share_options.append(
+                {
+                    "text": {"type": "plain_text", "text": "New thread"},
+                    "value": "new_thread",
+                }
+            )
+
+        share_options.extend(
+            [
+                {
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Original channel (no thread)",
+                    },
+                    "value": "original_channel",
+                },
+                {
+                    "text": {"type": "plain_text", "text": "Direct message"},
+                    "value": "dm",
+                },
+            ]
+        )
+
         # Create modal view with message context
         modal_view = {
             "type": "modal",
@@ -66,17 +139,108 @@ class EmojiCreationService:
                         "text": "Emoji Description",
                     },
                 },
+                {
+                    "type": "input",
+                    "block_id": "share_location",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "share_location_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Where to share",
+                        },
+                        "options": share_options,
+                        "initial_option": share_options[0],  # Default to channel
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Share Location",
+                    },
+                    "hint": {
+                        "type": "plain_text",
+                        "text": "Where the emoji file will be shared",
+                    },
+                },
+                {
+                    "type": "input",
+                    "block_id": "instruction_visibility",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "visibility_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Who sees instructions",
+                        },
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Everyone"},
+                                "value": "everyone",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Just me"},
+                                "value": "requester_only",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Everyone"},
+                            "value": "everyone",
+                        },
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Instruction Visibility",
+                    },
+                    "hint": {
+                        "type": "plain_text",
+                        "text": "Who can see the upload instructions",
+                    },
+                },
+                {
+                    "type": "input",
+                    "block_id": "image_size",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "size_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Choose image size",
+                        },
+                        "options": [
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Emoji size (128x128)",
+                                },
+                                "value": "emoji_size",
+                            },
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Full size (1024x1024)",
+                                },
+                                "value": "full_size",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Emoji size (128x128)",
+                            },
+                            "value": "emoji_size",
+                        },
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Image Size",
+                    },
+                    "hint": {
+                        "type": "plain_text",
+                        "text": "Size of the shared image file",
+                    },
+                },
             ],
             "submit": {"type": "plain_text", "text": "Generate Emoji"},
-            "private_metadata": json.dumps(
-                {
-                    "message_text": message.text,
-                    "user_id": message.user_id,
-                    "channel_id": message.channel_id,
-                    "timestamp": message.timestamp,
-                    "team_id": message.team_id,
-                }
-            ),
+            "private_metadata": json.dumps(metadata),
         }
 
         self._logger.info(
@@ -91,13 +255,35 @@ class EmojiCreationService:
         state = view.get("state", {}).get("values", {})
         try:
             description = state["emoji_description"]["description"]["value"]
+            share_location = state["share_location"]["share_location_select"][
+                "selected_option"
+            ]["value"]
+            visibility = state["instruction_visibility"]["visibility_select"][
+                "selected_option"
+            ]["value"]
+            image_size = state["image_size"]["size_select"]["selected_option"]["value"]
             metadata = json.loads(view.get("private_metadata", "{}"))
         except (KeyError, json.JSONDecodeError) as exc:
             self._logger.exception("Malformed modal submission payload")
             raise ValueError("Malformed modal submission payload") from exc
 
         self._logger.info(
-            "Processing modal submission", extra={"description": description}
+            "Processing modal submission",
+            extra={
+                "description": description,
+                "share_location": share_location,
+                "visibility": visibility,
+                "image_size": image_size,
+            },
+        )
+
+        # Create sharing preferences from user selections
+        thread_ts = metadata.get("thread_ts") if share_location == "thread" else None
+        sharing_preferences = EmojiSharingPreferences(
+            share_location=ShareLocation(share_location),
+            instruction_visibility=InstructionVisibility(visibility),
+            image_size=ImageSize(image_size),
+            thread_ts=thread_ts,
         )
 
         # Extract metadata from modal
@@ -110,6 +296,8 @@ class EmojiCreationService:
                 channel_id=metadata["channel_id"],
                 timestamp=metadata["timestamp"],
                 team_id=metadata["team_id"],
+                sharing_preferences=sharing_preferences,
+                thread_ts=metadata.get("thread_ts"),
             )
             # Queue job for background processing
             await self._job_queue.enqueue_job(job)
@@ -123,6 +311,7 @@ class EmojiCreationService:
                 {
                     **metadata,
                     "user_description": description,
+                    "sharing_preferences": sharing_preferences,
                 }
             )
 
@@ -143,60 +332,101 @@ class EmojiCreationService:
         name = job.user_description.replace(" ", "_").lower()[:32]
         emoji = await self._emoji_generator.generate(spec, name)
 
-        uploaded = await self._slack_repo.upload_emoji(
-            name=name, image_data=emoji.image_data
-        )
-        if not uploaded:
-            self._logger.warning(
-                f"Failed to upload emoji '{name}' to Slack workspace. "
-                "This may be due to insufficient permissions (Enterprise Grid) "
-                "or network issues. Attempting to add reaction anyway."
-            )
+        # Determine workspace type (could be cached or configured)
+        workspace_type = await self._detect_workspace_type()
 
-        # Always attempt to add reaction - emoji might already exist or upload
-        # might have succeeded despite returning False (eventually consistent)
-        try:
-            await self._slack_repo.add_emoji_reaction(
-                emoji_name=name,
-                channel_id=job.channel_id,
-                timestamp=job.timestamp,
+        # Create sharing context
+        from emojismith.domain.entities.slack_message import SlackMessage
+
+        original_message = SlackMessage(
+            text=job.message_text,
+            user_id=job.user_id,
+            channel_id=job.channel_id,
+            timestamp=job.timestamp,
+            team_id=job.team_id,
+        )
+
+        context = EmojiSharingContext(
+            emoji=emoji,
+            original_message=original_message,
+            preferences=job.sharing_preferences
+            or EmojiSharingPreferences.default_for_context(
+                is_in_thread=bool(
+                    job.sharing_preferences and job.sharing_preferences.thread_ts
+                ),
+                thread_ts=(
+                    job.sharing_preferences.thread_ts
+                    if job.sharing_preferences
+                    else None
+                ),
+            ),
+            workspace_type=workspace_type,
+        )
+
+        # Determine sharing strategy (for future use with strategy pattern)
+        _ = self._sharing_service.determine_sharing_strategy(context)
+
+        if workspace_type == WorkspaceType.ENTERPRISE_GRID:
+            # Try direct upload for Enterprise Grid
+            uploaded = await self._slack_repo.upload_emoji(
+                name=name, image_data=emoji.image_data
             )
-        except Exception as e:
-            self._logger.error(f"Failed to add emoji reaction: {e}")
-            # Don't crash the entire process for reaction failures
+            if uploaded:
+                # Add reaction if upload succeeded
+                try:
+                    await self._slack_repo.add_emoji_reaction(
+                        emoji_name=name,
+                        channel_id=job.channel_id,
+                        timestamp=job.timestamp,
+                    )
+                except Exception as e:
+                    self._logger.error(f"Failed to add emoji reaction: {e}")
+        else:
+            # Use file sharing for non-Enterprise workspaces
+            if self._file_sharing_repo:
+                result = await self._file_sharing_repo.share_emoji_file(
+                    emoji=emoji,
+                    channel_id=job.channel_id,
+                    preferences=context.preferences,
+                    requester_user_id=job.user_id,
+                    original_message_ts=job.timestamp,
+                )
+                if result.success:
+                    self._logger.info(
+                        "Successfully shared emoji file",
+                        extra={
+                            "emoji_name": name,
+                            "thread_ts": result.thread_ts,
+                            "file_url": result.file_url,
+                        },
+                    )
+                else:
+                    self._logger.error(f"Failed to share emoji file: {result.error}")
 
         self._logger.info(
             "Successfully processed emoji generation job",
             extra={"job_id": job.job_id, "emoji_name": name},
         )
 
+    async def _detect_workspace_type(self) -> WorkspaceType:
+        """Detect workspace type based on available permissions."""
+        # For now, we assume standard workspace since Enterprise Grid is rare
+        # In production, this could check API permissions or be configured
+        return WorkspaceType.STANDARD
+
     async def process_emoji_generation_job_dict(self, job_data: Dict[str, Any]) -> None:
         """Generate emoji using dict payload, upload to Slack, and add reaction."""
-        spec = EmojiSpecification(
-            description=job_data["user_description"],
-            context=job_data["message_text"],
+        # Convert dict to job entity for consistent processing
+        job = EmojiGenerationJob.create_new(
+            message_text=job_data["message_text"],
+            user_description=job_data["user_description"],
+            user_id=job_data["user_id"],
+            channel_id=job_data["channel_id"],
+            timestamp=job_data["timestamp"],
+            team_id=job_data["team_id"],
+            sharing_preferences=job_data.get("sharing_preferences"),
+            thread_ts=job_data.get("thread_ts"),
         )
-        name = job_data.get("emoji_name") or spec.description.replace(" ", "_")[:32]
-        emoji = await self._emoji_generator.generate(spec, name)
 
-        uploaded = await self._slack_repo.upload_emoji(
-            name=name, image_data=emoji.image_data
-        )
-        if not uploaded:
-            self._logger.warning(
-                f"Failed to upload emoji '{name}' to Slack workspace. "
-                "This may be due to insufficient permissions (Enterprise Grid) "
-                "or network issues. Attempting to add reaction anyway."
-            )
-
-        # Always attempt to add reaction - emoji might already exist or upload
-        # might have succeeded despite returning False (eventually consistent)
-        try:
-            await self._slack_repo.add_emoji_reaction(
-                emoji_name=name,
-                channel_id=job_data["channel_id"],
-                timestamp=job_data["timestamp"],
-            )
-        except Exception as e:
-            self._logger.error(f"Failed to add emoji reaction: {e}")
-            # Don't crash the entire process for reaction failures
+        # Process using the main method
+        await self.process_emoji_generation_job(job)
