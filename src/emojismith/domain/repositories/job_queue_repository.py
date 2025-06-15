@@ -1,6 +1,6 @@
 """Job queue repository protocol for domain layer."""
 
-from typing import Dict, Any, Optional, Protocol
+from typing import Dict, Any, Optional, Protocol, Tuple
 from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 
 
@@ -11,12 +11,16 @@ class JobQueueRepository(Protocol):
         """Enqueue a new emoji generation job."""
         ...
 
-    async def dequeue_job(self) -> Optional[EmojiGenerationJob]:
-        """Dequeue the next pending job for processing."""
+    async def dequeue_job(self) -> Optional[Tuple[EmojiGenerationJob, str]]:
+        """Dequeue the next pending job for processing.
+
+        Returns a tuple of the job and an opaque receipt handle used for
+        acknowledging completion.
+        """
         ...
 
-    async def complete_job(self, job: EmojiGenerationJob) -> None:
-        """Mark job as completed and remove from queue."""
+    async def complete_job(self, job: EmojiGenerationJob, receipt_handle: str) -> None:
+        """Mark job as completed and remove from queue using the receipt handle."""
         ...
 
     async def get_job_status(self, job_id: str) -> Optional[str]:

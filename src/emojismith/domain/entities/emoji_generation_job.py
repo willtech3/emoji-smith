@@ -1,10 +1,10 @@
 """EmojiGenerationJob domain entity."""
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 
 class JobStatus(Enum):
@@ -29,7 +29,6 @@ class EmojiGenerationJob:
     team_id: str
     status: JobStatus
     created_at: datetime
-    _receipt_handle: Optional[str] = field(default=None, init=False)
 
     @classmethod
     def create_new(

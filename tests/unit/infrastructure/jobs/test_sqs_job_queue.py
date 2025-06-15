@@ -75,12 +75,14 @@ class TestSQSJobQueue:
         }
 
         # Act
-        job = await sqs_queue.dequeue_job()
+        result = await sqs_queue.dequeue_job()
 
         # Assert
         mock_sqs_client.receive_message.assert_called_once()
-        assert job is not None
+        assert result is not None
+        job, receipt_handle = result
         assert job.job_id == "job_123"
+        assert receipt_handle == "receipt_123"
 
     async def test_complete_job_deletes_message(self, sqs_queue, mock_sqs_client):
         """Test complete_job calls delete_message when receipt_handle is present."""
@@ -95,10 +97,10 @@ class TestSQSJobQueue:
             timestamp="ts",
             team_id="T1",
         )
-        job._receipt_handle = "rh"
+        receipt_handle = "rh"
 
         # Act
-        await sqs_queue.complete_job(job)
+        await sqs_queue.complete_job(job, receipt_handle)
 
         # Assert
         mock_sqs_client.delete_message.assert_called_once_with(
@@ -124,8 +126,8 @@ class TestSQSJobQueue:
         malformed = {"Messages": [{"ReceiptHandle": "rh", "Body": "not a json"}]}
         mock_sqs_client.receive_message.return_value = malformed
 
-        job = await sqs_queue.dequeue_job()
-        assert job is None
+        result = await sqs_queue.dequeue_job()
+        assert result is None
         mock_sqs_client.delete_message.assert_called_once_with(
             QueueUrl=sqs_queue._queue_url, ReceiptHandle="rh"
         )
