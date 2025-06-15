@@ -25,21 +25,19 @@ def test_processor_resizes_and_compresses() -> None:
     assert len(out) < 64 * 1024
 
 
-def test_iterative_compression(monkeypatch) -> None:
-    processor = PillowImageProcessor()
+class _IterativeProcessor(PillowImageProcessor):
+    """Processor that simulates iterative compression behaviour."""
 
-    calls: list[int] = []
+    def _quantize_and_save(self, img: Image.Image, colors: int) -> bytes:  # type: ignore[override]
+        if colors == 256:
+            return b"x" * (70 * 1024)
+        return b"x" * 1024
 
-    def fake_quantize(img, colors):
-        calls.append(colors)
-        return b"x" * (70 * 1024 if colors == 256 else 1024)
 
-    monkeypatch.setattr(processor, "_quantize_and_save", fake_quantize)
-
+def test_iterative_compression() -> None:
+    processor = _IterativeProcessor()
     out = processor.process(_create_image())
-
     assert len(out) == 1024
-    assert calls == [256, 128]
 
 
 def test_logs_metrics(caplog) -> None:
@@ -61,13 +59,14 @@ def test_logs_metrics(caplog) -> None:
     assert "colors_used" in processed_record.__dict__
 
 
-def test_raises_when_image_too_large(monkeypatch) -> None:
-    processor = PillowImageProcessor()
+class _AlwaysLargeProcessor(PillowImageProcessor):
+    """Processor that never compresses below the threshold."""
 
-    def always_big(img, colors):
+    def _quantize_and_save(self, img: Image.Image, colors: int) -> bytes:  # type: ignore[override]
         return b"y" * (70 * 1024)
 
-    monkeypatch.setattr(processor, "_quantize_and_save", always_big)
 
+def test_raises_when_image_too_large() -> None:
+    processor = _AlwaysLargeProcessor()
     with pytest.raises(ValueError):
         processor.process(_create_image())

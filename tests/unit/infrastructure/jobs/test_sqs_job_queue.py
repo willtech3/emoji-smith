@@ -4,6 +4,8 @@ import pytest
 from unittest.mock import AsyncMock
 from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 
+QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123456789/emoji-jobs"
+
 
 class TestSQSJobQueue:
     """Test SQS job queue implementation."""
@@ -16,10 +18,7 @@ class TestSQSJobQueue:
     @pytest.fixture
     def sqs_queue(self, mock_sqs_client):
         """SQS job queue with mocked client."""
-        return SQSJobQueue(
-            sqs_client=mock_sqs_client,
-            queue_url="https://sqs.us-east-1.amazonaws.com/123456789/emoji-jobs",
-        )
+        return SQSJobQueue(sqs_client=mock_sqs_client, queue_url=QUEUE_URL)
 
     async def test_enqueue_job_sends_message_to_sqs(self, sqs_queue, mock_sqs_client):
         """Test enqueuing job sends message to SQS."""
@@ -46,8 +45,8 @@ class TestSQSJobQueue:
         assert job_id == job.job_id
         mock_sqs_client.send_message.assert_called_once()
         call_args = mock_sqs_client.send_message.call_args
-        assert call_args[1]["QueueUrl"] == sqs_queue._queue_url
-        assert "MessageBody" in call_args[1]
+        assert call_args.kwargs["QueueUrl"] == QUEUE_URL
+        assert "MessageBody" in call_args.kwargs
 
     async def test_dequeue_job_receives_message_from_sqs(
         self, sqs_queue, mock_sqs_client
@@ -106,7 +105,7 @@ class TestSQSJobQueue:
 
         # Assert
         mock_sqs_client.delete_message.assert_called_once_with(
-            QueueUrl=sqs_queue._queue_url, ReceiptHandle="rh"
+            QueueUrl=QUEUE_URL, ReceiptHandle="rh"
         )
 
     async def test_get_and_update_job_status_and_retry(self, sqs_queue):
@@ -131,5 +130,5 @@ class TestSQSJobQueue:
         result = await sqs_queue.dequeue_job()
         assert result is None
         mock_sqs_client.delete_message.assert_called_once_with(
-            QueueUrl=sqs_queue._queue_url, ReceiptHandle="rh"
+            QueueUrl=QUEUE_URL, ReceiptHandle="rh"
         )
