@@ -73,9 +73,7 @@ class SlackSignatureValidator(SignatureValidator):
             return False
 
         if abs(time.time() - request.timestamp_int) > self._replay_window:
-            self._logger.warning(
-                "Webhook request timestamp outside replay window"
-            )
+            self._logger.warning("Webhook request timestamp outside replay window")
             return False
 
         # Create signature basestring using raw bytes (not decoded)
