@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 
@@ -48,8 +48,12 @@ class SQSJobQueue(JobQueueRepository):
 
         return job.job_id
 
-    async def dequeue_job(self) -> Optional[EmojiGenerationJob]:
-        """Dequeue the next pending job for processing."""
+    async def dequeue_job(self) -> Optional[Tuple[EmojiGenerationJob, str]]:
+        """Dequeue the next pending job for processing.
+
+        Returns a tuple containing the job and the SQS receipt handle used
+        to acknowledge completion.
+        """
         response = await self._sqs_client.receive_message(
             QueueUrl=self._queue_url,
             MaxNumberOfMessages=1,
@@ -67,16 +71,14 @@ class SQSJobQueue(JobQueueRepository):
             # Parse job data from message body
             job_data = json.loads(message["Body"])
             job = EmojiGenerationJob.from_dict(job_data)
-
-            # Store receipt handle for deletion after processing
-            job._receipt_handle = message["ReceiptHandle"]
+            receipt_handle = message["ReceiptHandle"]
 
             self._logger.info(
                 "Dequeued emoji generation job",
                 extra={"job_id": job.job_id, "user_id": job.user_id},
             )
 
-            return job
+            return job, receipt_handle
 
         except (json.JSONDecodeError, KeyError) as e:
             self._logger.error(
@@ -87,13 +89,12 @@ class SQSJobQueue(JobQueueRepository):
             await self._delete_message(message["ReceiptHandle"])
             return None
 
-    async def complete_job(self, job: EmojiGenerationJob) -> None:
+    async def complete_job(self, job: EmojiGenerationJob, receipt_handle: str) -> None:
         """Mark job as completed and remove from queue."""
-        if hasattr(job, "_receipt_handle"):
-            await self._delete_message(job._receipt_handle)
-            self._logger.info(
-                "Completed and removed job from queue", extra={"job_id": job.job_id}
-            )
+        await self._delete_message(receipt_handle)
+        self._logger.info(
+            "Completed and removed job from queue", extra={"job_id": job.job_id}
+        )
 
     async def _delete_message(self, receipt_handle: Optional[str]) -> None:
         """Delete message from SQS queue if a receipt handle is present."""
