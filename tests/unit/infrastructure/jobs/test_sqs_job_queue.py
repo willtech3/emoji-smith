@@ -14,14 +14,17 @@ class TestSQSJobQueue:
         return AsyncMock()
 
     @pytest.fixture
-    def sqs_queue(self, mock_sqs_client):
-        """SQS job queue with mocked client."""
-        return SQSJobQueue(
-            sqs_client=mock_sqs_client,
-            queue_url="https://sqs.us-east-1.amazonaws.com/123456789/emoji-jobs",
-        )
+    def queue_url(self) -> str:
+        return "https://sqs.us-east-1.amazonaws.com/123456789/emoji-jobs"
 
-    async def test_enqueue_job_sends_message_to_sqs(self, sqs_queue, mock_sqs_client):
+    @pytest.fixture
+    def sqs_queue(self, mock_sqs_client, queue_url):
+        """SQS job queue with mocked client."""
+        return SQSJobQueue(sqs_client=mock_sqs_client, queue_url=queue_url)
+
+    async def test_enqueue_job_sends_message_to_sqs(
+        self, sqs_queue, mock_sqs_client, queue_url
+    ):
         """Test enqueuing job sends message to SQS."""
         # Arrange
         from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
@@ -46,7 +49,7 @@ class TestSQSJobQueue:
         assert job_id == job.job_id
         mock_sqs_client.send_message.assert_called_once()
         call_args = mock_sqs_client.send_message.call_args
-        assert call_args[1]["QueueUrl"] == sqs_queue._queue_url
+        assert call_args[1]["QueueUrl"] == queue_url
         assert "MessageBody" in call_args[1]
 
     async def test_dequeue_job_receives_message_from_sqs(
@@ -86,7 +89,9 @@ class TestSQSJobQueue:
         assert job.job_id == "job_123"
         assert receipt_handle == "receipt_123"
 
-    async def test_complete_job_deletes_message(self, sqs_queue, mock_sqs_client):
+    async def test_complete_job_deletes_message(
+        self, sqs_queue, mock_sqs_client, queue_url
+    ):
         """Test complete_job calls delete_message when receipt_handle is present."""
         # Arrange: create dummy job with receipt_handle
         from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
@@ -106,7 +111,7 @@ class TestSQSJobQueue:
 
         # Assert
         mock_sqs_client.delete_message.assert_called_once_with(
-            QueueUrl=sqs_queue._queue_url, ReceiptHandle="rh"
+            QueueUrl=queue_url, ReceiptHandle="rh"
         )
 
     async def test_get_and_update_job_status_and_retry(self, sqs_queue):
@@ -122,7 +127,7 @@ class TestSQSJobQueue:
         assert count == 0
 
     async def test_dequeue_malformed_message_deletes_it(
-        self, sqs_queue, mock_sqs_client
+        self, sqs_queue, mock_sqs_client, queue_url
     ):
         """Malformed JSON body triggers deletion and returns None."""
         malformed = {"Messages": [{"ReceiptHandle": "rh", "Body": "not a json"}]}
@@ -131,5 +136,5 @@ class TestSQSJobQueue:
         result = await sqs_queue.dequeue_job()
         assert result is None
         mock_sqs_client.delete_message.assert_called_once_with(
-            QueueUrl=sqs_queue._queue_url, ReceiptHandle="rh"
+            QueueUrl=queue_url, ReceiptHandle="rh"
         )

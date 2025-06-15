@@ -25,21 +25,25 @@ def test_processor_resizes_and_compresses() -> None:
     assert len(out) < 64 * 1024
 
 
-def test_iterative_compression(monkeypatch) -> None:
-    processor = PillowImageProcessor()
+class RecordingProcessor(PillowImageProcessor):
+    """Test helper that records color attempts and returns preset sizes."""
 
-    calls: list[int] = []
+    def __init__(self, sizes: list[int]) -> None:
+        super().__init__()
+        self._sizes = sizes
+        self.calls: list[int] = []
 
-    def fake_quantize(img, colors):
-        calls.append(colors)
-        return b"x" * (70 * 1024 if colors == 256 else 1024)
+    def _quantize_and_save(self, img: Image.Image, colors: int) -> bytes:  # type: ignore[override]
+        self.calls.append(colors)
+        size = self._sizes[len(self.calls) - 1]
+        return b"x" * size
 
-    monkeypatch.setattr(processor, "_quantize_and_save", fake_quantize)
 
+def test_iterative_compression() -> None:
+    processor = RecordingProcessor([70 * 1024, 1024])
     out = processor.process(_create_image())
-
     assert len(out) == 1024
-    assert calls == [256, 128]
+    assert processor.calls == [256, 128]
 
 
 def test_logs_metrics(caplog) -> None:
@@ -61,13 +65,7 @@ def test_logs_metrics(caplog) -> None:
     assert "colors_used" in processed_record.__dict__
 
 
-def test_raises_when_image_too_large(monkeypatch) -> None:
-    processor = PillowImageProcessor()
-
-    def always_big(img, colors):
-        return b"y" * (70 * 1024)
-
-    monkeypatch.setattr(processor, "_quantize_and_save", always_big)
-
+def test_raises_when_image_too_large() -> None:
+    processor = RecordingProcessor([70 * 1024] * 4)
     with pytest.raises(ValueError):
         processor.process(_create_image())

@@ -42,9 +42,10 @@ async def test_worker_start_and_stop(monkeypatch):
     )
     with pytest.raises(KeyboardInterrupt):
         await worker.start()
-    # After crash, running flag remains True until stop is called
+    # After crash, worker should still report running until stopped
+    assert worker.is_running
     await worker.stop()
-    assert not worker._running
+    assert not worker.is_running
 
 
 @pytest.mark.asyncio
@@ -53,6 +54,8 @@ async def test_worker_stop_sets_running_false():
     job_queue = DummyJobQueue()
     service = DummyService()
     worker = BackgroundWorker(job_queue, service)
-    worker._running = True
+    # Simulate running state by calling start and catching the interruption
+    with pytest.raises(KeyboardInterrupt):
+        await worker.start()
     await worker.stop()
-    assert not worker._running
+    assert not worker.is_running
