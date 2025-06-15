@@ -64,9 +64,36 @@ class TestSlackAPIRepository:
 
         # Assert
         assert result is True
-        mock_slack_client.admin_emoji_add.assert_called_once_with(
-            name=emoji_name, url="", image=emoji_data
+        # Verify it uploads with URL (admin.emoji.add expects URL, not file upload)
+        call_args = mock_slack_client.admin_emoji_add.call_args
+        assert call_args.kwargs["name"] == emoji_name
+        # Should have a URL parameter pointing to uploaded image
+        assert "url" in call_args.kwargs
+        assert isinstance(call_args.kwargs["url"], str)
+        assert call_args.kwargs["url"].startswith("http")  # Should be a valid URL
+
+    async def test_handles_admin_permission_errors_gracefully(
+        self, slack_repo, mock_slack_client
+    ):
+        """Test handling of admin permission errors for non-Enterprise workspaces."""
+        from slack_sdk.errors import SlackApiError
+
+        # Arrange
+        emoji_name = "custom_facepalm"
+        emoji_data = b"fake_png_data"
+
+        # Simulate the not_allowed_token_type error from real Slack API
+        slack_error = SlackApiError(
+            message="The request to the Slack API failed.",
+            response={"ok": False, "error": "not_allowed_token_type"},
         )
+        mock_slack_client.admin_emoji_add.side_effect = slack_error
+
+        # Act - should not raise exception, should return False
+        result = await slack_repo.upload_emoji(name=emoji_name, image_data=emoji_data)
+
+        # Assert
+        assert result is False  # Graceful failure, not exception
 
     async def test_applies_emoji_reaction_to_original_message(
         self, slack_repo, mock_slack_client

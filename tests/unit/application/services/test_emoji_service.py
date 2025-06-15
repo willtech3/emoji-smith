@@ -216,9 +216,9 @@ class TestEmojiCreationService:
         assert generate_call[0][0].context == "The deployment failed again 😭"
 
     async def test_process_emoji_generation_job_upload_failure(
-        self, emoji_service, mock_slack_repo, mock_emoji_generator
+        self, emoji_service, mock_slack_repo, mock_emoji_generator, caplog
     ):
-        """Test processing emoji generation job when upload fails."""
+        """Test processing emoji generation job when upload fails gracefully."""
         # Arrange
         from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
@@ -235,6 +235,7 @@ class TestEmojiCreationService:
         )
 
         mock_slack_repo.upload_emoji.return_value = False  # Simulate upload failure
+        mock_slack_repo.add_emoji_reaction.return_value = None  # Reaction succeeds
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
@@ -242,16 +243,18 @@ class TestEmojiCreationService:
             image_data=buf.getvalue(), name="test_emoji"
         )
 
-        # Act & Assert
-        with pytest.raises(
-            RuntimeError, match="Failed to upload emoji to Slack workspace"
-        ):
-            await emoji_service.process_emoji_generation_job(job)
+        # Act - should complete gracefully, not raise exception
+        await emoji_service.process_emoji_generation_job(job)
+
+        # Assert - should log warning about upload failure but still try reaction
+        assert "Failed to upload emoji" in caplog.text
+        assert "insufficient permissions" in caplog.text
+        mock_slack_repo.add_emoji_reaction.assert_called_once()
 
     async def test_process_emoji_generation_job_dict_upload_failure(
-        self, emoji_service, mock_slack_repo, mock_emoji_generator
+        self, emoji_service, mock_slack_repo, mock_emoji_generator, caplog
     ):
-        """Test processing emoji generation job dict when upload fails."""
+        """Test processing emoji generation job dict when upload fails gracefully."""
         # Arrange
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from io import BytesIO
@@ -267,6 +270,7 @@ class TestEmojiCreationService:
         }
 
         mock_slack_repo.upload_emoji.return_value = False  # Simulate upload failure
+        mock_slack_repo.add_emoji_reaction.return_value = None  # Reaction succeeds
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
@@ -274,6 +278,10 @@ class TestEmojiCreationService:
             image_data=buf.getvalue(), name="test_emoji"
         )
 
-        # Act & Assert
-        with pytest.raises(RuntimeError, match="Failed to upload emoji"):
-            await emoji_service.process_emoji_generation_job_dict(job_data)
+        # Act - should complete gracefully, not raise exception
+        await emoji_service.process_emoji_generation_job_dict(job_data)
+
+        # Assert - should log warning about upload failure but still try reaction
+        assert "Failed to upload emoji" in caplog.text
+        assert "insufficient permissions" in caplog.text
+        mock_slack_repo.add_emoji_reaction.assert_called_once()

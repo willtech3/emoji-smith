@@ -65,22 +65,40 @@ class OpenAIAPIRepository(OpenAIRepository):
         return response.choices[0].message.content
 
     async def generate_image(self, prompt: str) -> bytes:
-        """Generate an image using DALL-E 3 and return raw bytes."""
+        """Generate an image using DALL-E 3 with fallback to DALL-E 2."""
+        # Try DALL-E 3 first
         try:
             response = await self._client.images.generate(
                 model="dall-e-3",
                 prompt=prompt,
                 n=1,
                 size="1024x1024",
+                response_format="b64_json",
+                quality="standard",
             )
-        except Exception as exc:  # pragma: no cover - passthrough logging
-            self._logger.error("OpenAI image generation failed: %s", exc)
-            raise
+        except Exception as exc:
+            self._logger.warning("DALL-E 3 failed, falling back to DALL-E 2: %s", exc)
+            # Fallback to DALL-E 2
+            try:
+                response = await self._client.images.generate(
+                    model="dall-e-2",
+                    prompt=prompt,
+                    n=1,
+                    size="512x512",  # DALL-E 2 max size
+                    response_format="b64_json",
+                )
+            except Exception as fallback_exc:
+                self._logger.error(
+                    "Both DALL-E 3 and DALL-E 2 failed: %s", fallback_exc
+                )
+                raise fallback_exc
 
         if not response.data:
             raise ValueError("OpenAI did not return image data")
 
         b64 = response.data[0].b64_json
+        if b64 is None:
+            raise ValueError("OpenAI did not return valid image data")
         if isinstance(b64, str):
             return base64.b64decode(b64)
         return b64

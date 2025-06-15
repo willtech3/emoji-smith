@@ -76,3 +76,65 @@ async def test_rejects_image_generation_when_no_data_returned() -> None:
     repo = OpenAIAPIRepository(client)
     with pytest.raises(ValueError):
         await repo.generate_image("p")
+
+
+@pytest.mark.asyncio
+async def test_rejects_image_generation_when_b64_json_is_none() -> None:
+    """Test that None b64_json is handled gracefully."""
+    client = AsyncMock()
+    client.images.generate.return_value = AsyncMock(data=[AsyncMock(b64_json=None)])
+    repo = OpenAIAPIRepository(client)
+    with pytest.raises(ValueError, match="OpenAI did not return valid image data"):
+        await repo.generate_image("prompt")
+
+
+@pytest.mark.asyncio
+async def test_requests_base64_format_from_openai() -> None:
+    """Test that image generation requests base64 format explicitly."""
+    client = AsyncMock()
+    client.images.generate.return_value = AsyncMock(
+        data=[AsyncMock(b64_json="aGVsbG8=")]
+    )
+    repo = OpenAIAPIRepository(client)
+
+    await repo.generate_image("test prompt")
+
+    # Verify the API call includes response_format parameter
+    client.images.generate.assert_called_once_with(
+        model="dall-e-3",
+        prompt="test prompt",
+        n=1,
+        size="1024x1024",
+        response_format="b64_json",
+        quality="standard",
+    )
+
+
+@pytest.mark.asyncio
+async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
+    """Test that image generation falls back to DALL-E 2 when DALL-E 3 fails."""
+    client = AsyncMock()
+
+    # First call (DALL-E 3) fails
+    client.images.generate.side_effect = [
+        Exception("DALL-E 3 not available"),
+        AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # DALL-E 2 succeeds
+    ]
+
+    repo = OpenAIAPIRepository(client)
+    result = await repo.generate_image("test prompt")
+
+    # Should have called both models
+    assert client.images.generate.call_count == 2
+
+    # First call should be DALL-E 3
+    first_call = client.images.generate.call_args_list[0]
+    assert first_call.kwargs["model"] == "dall-e-3"
+
+    # Second call should be DALL-E 2
+    second_call = client.images.generate.call_args_list[1]
+    assert second_call.kwargs["model"] == "dall-e-2"
+    assert second_call.kwargs["size"] == "512x512"  # DALL-E 2 max size
+
+    # Should return the result
+    assert isinstance(result, bytes)

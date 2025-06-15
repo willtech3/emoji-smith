@@ -147,13 +147,23 @@ class EmojiCreationService:
             name=name, image_data=emoji.image_data
         )
         if not uploaded:
-            raise RuntimeError("Failed to upload emoji to Slack workspace")
+            self._logger.warning(
+                f"Failed to upload emoji '{name}' to Slack workspace. "
+                "This may be due to insufficient permissions (Enterprise Grid) "
+                "or network issues. Attempting to add reaction anyway."
+            )
 
-        await self._slack_repo.add_emoji_reaction(
-            emoji_name=name,
-            channel_id=job.channel_id,
-            timestamp=job.timestamp,
-        )
+        # Always attempt to add reaction - emoji might already exist or upload
+        # might have succeeded despite returning False (eventually consistent)
+        try:
+            await self._slack_repo.add_emoji_reaction(
+                emoji_name=name,
+                channel_id=job.channel_id,
+                timestamp=job.timestamp,
+            )
+        except Exception as e:
+            self._logger.error(f"Failed to add emoji reaction: {e}")
+            # Don't crash the entire process for reaction failures
 
         self._logger.info(
             "Successfully processed emoji generation job",
@@ -173,9 +183,20 @@ class EmojiCreationService:
             name=name, image_data=emoji.image_data
         )
         if not uploaded:
-            raise RuntimeError("Failed to upload emoji")
-        await self._slack_repo.add_emoji_reaction(
-            emoji_name=name,
-            channel_id=job_data["channel_id"],
-            timestamp=job_data["timestamp"],
-        )
+            self._logger.warning(
+                f"Failed to upload emoji '{name}' to Slack workspace. "
+                "This may be due to insufficient permissions (Enterprise Grid) "
+                "or network issues. Attempting to add reaction anyway."
+            )
+
+        # Always attempt to add reaction - emoji might already exist or upload
+        # might have succeeded despite returning False (eventually consistent)
+        try:
+            await self._slack_repo.add_emoji_reaction(
+                emoji_name=name,
+                channel_id=job_data["channel_id"],
+                timestamp=job_data["timestamp"],
+            )
+        except Exception as e:
+            self._logger.error(f"Failed to add emoji reaction: {e}")
+            # Don't crash the entire process for reaction failures

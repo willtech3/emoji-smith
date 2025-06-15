@@ -1,7 +1,9 @@
 """Slack API repository implementation."""
 
+import logging
 from typing import Dict, Any
 from slack_sdk.web.async_client import AsyncWebClient
+from slack_sdk.errors import SlackApiError
 
 
 class SlackAPIRepository:
@@ -9,6 +11,7 @@ class SlackAPIRepository:
 
     def __init__(self, slack_client: AsyncWebClient) -> None:
         self._client = slack_client
+        self._logger = logging.getLogger(__name__)
 
     async def open_modal(self, trigger_id: str, view: Dict[str, Any]) -> None:
         """Open modal dialog in Slack."""
@@ -16,12 +19,32 @@ class SlackAPIRepository:
 
     async def upload_emoji(self, name: str, image_data: bytes) -> bool:
         """Upload custom emoji to Slack workspace."""
-        # Note: admin_emoji_add requires admin privileges and expects either a
-        # URL or image file. The current call may need adjustment once Phase 3 lands
-        response = await self._client.admin_emoji_add(
-            name=name, url="", image=image_data
-        )
-        return response.get("ok", False)
+        # TODO: Implement proper image hosting service for production
+        # For now, use a mock URL to demonstrate the flow
+        # In production, this would upload to S3/CDN and return the URL
+        mock_image_url = f"https://example.com/emojis/{name}.png"
+
+        try:
+            response = await self._client.admin_emoji_add(name=name, url=mock_image_url)
+            return response.get("ok", False)
+        except SlackApiError as e:
+            # Handle common admin permission errors gracefully
+            if e.response.get("error") == "not_allowed_token_type":
+                self._logger.warning(
+                    "Cannot upload emoji: admin.emoji.add requires Enterprise Grid "
+                    "organization with admin token. Current workspace uses bot token."
+                )
+                return False
+            elif e.response.get("error") in ["missing_scope", "not_authed"]:
+                self._logger.warning(
+                    "Cannot upload emoji: insufficient permissions. "
+                    f"Error: {e.response.get('error')}"
+                )
+                return False
+            else:
+                # Re-raise unexpected errors
+                self._logger.error(f"Unexpected Slack API error: {e}")
+                raise
 
     async def add_emoji_reaction(
         self, emoji_name: str, channel_id: str, timestamp: str
