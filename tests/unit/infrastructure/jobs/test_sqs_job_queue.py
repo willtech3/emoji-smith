@@ -3,6 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock
 from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
+from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 
 
 class TestSQSJobQueue:
@@ -75,17 +76,18 @@ class TestSQSJobQueue:
         }
 
         # Act
-        job = await sqs_queue.dequeue_job()
+        result = await sqs_queue.dequeue_job()
 
         # Assert
         mock_sqs_client.receive_message.assert_called_once()
-        assert job is not None
+        assert result is not None
+        job, receipt_handle = result
         assert job.job_id == "job_123"
+        assert receipt_handle == "receipt_123"
 
     async def test_complete_job_deletes_message(self, sqs_queue, mock_sqs_client):
         """Test complete_job calls delete_message when receipt_handle is present."""
         # Arrange: create dummy job with receipt_handle
-        from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 
         job = EmojiGenerationJob.create_new(
             message_text="x",
@@ -95,10 +97,9 @@ class TestSQSJobQueue:
             timestamp="ts",
             team_id="T1",
         )
-        job._receipt_handle = "rh"
 
         # Act
-        await sqs_queue.complete_job(job)
+        await sqs_queue.complete_job(job, "rh")
 
         # Assert
         mock_sqs_client.delete_message.assert_called_once_with(
