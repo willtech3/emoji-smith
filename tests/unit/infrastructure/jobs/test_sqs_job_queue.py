@@ -21,7 +21,9 @@ class TestSQSJobQueue:
             queue_url="https://sqs.us-east-1.amazonaws.com/123456789/emoji-jobs",
         )
 
-    async def test_enqueue_job_sends_message_to_sqs(self, sqs_queue, mock_sqs_client):
+    async def test_queues_emoji_generation_for_background_processing(
+        self, sqs_queue, mock_sqs_client
+    ):
         """Test enqueuing job sends message to SQS."""
         # Arrange
         from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
@@ -49,7 +51,7 @@ class TestSQSJobQueue:
         assert call_args.kwargs["QueueUrl"] == sqs_queue.queue_url
         assert "MessageBody" in call_args.kwargs
 
-    async def test_dequeue_job_receives_message_from_sqs(
+    async def test_retrieves_next_emoji_job_for_processing(
         self, sqs_queue, mock_sqs_client
     ):
         """Test dequeuing job receives message from SQS."""
@@ -86,7 +88,7 @@ class TestSQSJobQueue:
         assert job.job_id == "job_123"
         assert receipt_handle == "receipt_123"
 
-    async def test_complete_job_deletes_message(self, sqs_queue, mock_sqs_client):
+    async def test_removes_completed_job_from_queue(self, sqs_queue, mock_sqs_client):
         """Test complete_job calls delete_message when receipt_handle is present."""
         # Arrange: create dummy job with receipt_handle
         from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
@@ -109,7 +111,7 @@ class TestSQSJobQueue:
             QueueUrl=sqs_queue.queue_url, ReceiptHandle="rh"
         )
 
-    async def test_get_and_update_job_status_and_retry(self, sqs_queue):
+    async def test_provides_job_status_tracking_methods(self, sqs_queue):
         """get_job_status, update_job_status, retry_failed_jobs no-ops or defaults."""
         status = await sqs_queue.get_job_status("jid")
         assert status is None
@@ -121,7 +123,7 @@ class TestSQSJobQueue:
         count = await sqs_queue.retry_failed_jobs(max_retries=5)
         assert count == 0
 
-    async def test_dequeue_malformed_message_deletes_it(
+    async def test_handles_corrupted_job_data_gracefully(
         self, sqs_queue, mock_sqs_client
     ):
         """Malformed JSON body triggers deletion and returns None."""

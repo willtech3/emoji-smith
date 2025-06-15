@@ -18,7 +18,7 @@ class TestSlackAPIRepository:
         """Slack repository with mocked client."""
         return SlackAPIRepository(slack_client=mock_slack_client)
 
-    async def test_opens_modal_with_correct_parameters(
+    async def test_displays_emoji_creation_dialog_to_user(
         self, slack_repo, mock_slack_client
     ):
         """Test opening modal dialog calls Slack API correctly."""
@@ -39,7 +39,7 @@ class TestSlackAPIRepository:
             trigger_id=trigger_id, view=view
         )
 
-    async def test_handles_slack_api_error_when_opening_modal(
+    async def test_reports_error_when_modal_cannot_be_displayed(
         self, slack_repo, mock_slack_client
     ):
         """Test error handling when Slack API fails."""
@@ -52,7 +52,7 @@ class TestSlackAPIRepository:
         with pytest.raises(Exception, match="Slack API error"):
             await slack_repo.open_modal(trigger_id=trigger_id, view=view)
 
-    async def test_uploads_emoji_to_workspace(self, slack_repo, mock_slack_client):
+    async def test_adds_custom_emoji_to_workspace(self, slack_repo, mock_slack_client):
         """Test uploading emoji to Slack workspace."""
         # Arrange
         emoji_name = "custom_facepalm"
@@ -68,7 +68,9 @@ class TestSlackAPIRepository:
             name=emoji_name, url="", image=emoji_data
         )
 
-    async def test_adds_emoji_reaction_to_message(self, slack_repo, mock_slack_client):
+    async def test_applies_emoji_reaction_to_original_message(
+        self, slack_repo, mock_slack_client
+    ):
         """Test adding emoji reaction to a message."""
         # Arrange
         emoji_name = "custom_facepalm"

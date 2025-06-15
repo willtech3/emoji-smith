@@ -33,7 +33,7 @@ class DummyService:
 
 
 @pytest.mark.asyncio
-async def test_worker_start_and_stop(monkeypatch):
+async def test_processes_emoji_jobs_until_stopped(monkeypatch):
     """Test that BackgroundWorker starts and stops as expected."""
     job_queue = DummyJobQueue()
     service = DummyService()
@@ -48,7 +48,7 @@ async def test_worker_start_and_stop(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_worker_stop_when_not_running():
+async def test_handles_stop_gracefully_when_not_running():
     """Calling stop when the worker isn't running should succeed."""
     job_queue = DummyJobQueue()
     service = DummyService()
