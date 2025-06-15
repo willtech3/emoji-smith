@@ -37,16 +37,15 @@ async def test_generation_service_flow() -> None:
     image_data = bio.getvalue()
     repo.generate_image.return_value = image_data
     processor = DummyProcessor()
-    
+
     # Create mock validation service that returns valid GeneratedEmoji
     mock_validator = Mock()
     validation_service = EmojiValidationService(mock_validator)
     mock_validator.validate_emoji_format.return_value = None
-    
+
     service = EmojiGenerationService(repo, processor, validation_service)
     spec = EmojiSpecification(context="ctx", description="desc")
     emoji = await service.generate(spec, "name")
-    
     assert isinstance(emoji, GeneratedEmoji)
     assert emoji.name == "name"
     repo.enhance_prompt.assert_called_once()
