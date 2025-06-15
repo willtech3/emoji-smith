@@ -1,14 +1,17 @@
-"""Generated emoji entity and validation."""
+"""Generated emoji entity."""
 
 from dataclasses import dataclass
-from io import BytesIO
 from typing import ClassVar
-from PIL import Image
 
 
 @dataclass(frozen=True)
 class GeneratedEmoji:
-    """Entity representing a generated emoji image."""
+    """Entity representing a generated emoji image.
+
+    Note: Image format and dimension validation is handled by
+    EmojiValidationService using ImageValidator protocol to
+    maintain Clean Architecture boundaries.
+    """
 
     image_data: bytes
     name: str
@@ -19,12 +22,5 @@ class GeneratedEmoji:
             raise ValueError("image_data is required")
         if not self.name:
             raise ValueError("name is required")
-
-        with Image.open(BytesIO(self.image_data)) as img:
-            if img.format != "PNG":
-                raise ValueError("emoji must be PNG format")
-            if img.width != 128 or img.height != 128:
-                raise ValueError("emoji must be 128x128 pixels")
-
         if len(self.image_data) >= self.MAX_SIZE:
             raise ValueError("emoji must be smaller than 64KB")
