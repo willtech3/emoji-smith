@@ -218,12 +218,15 @@ class EmojiSmithStack(Stack):
             code=lambda_code,
             handler=_lambda.Handler.FROM_IMAGE,  # Required for container images
             runtime=_lambda.Runtime.FROM_IMAGE,  # Required for container images
-            timeout=Duration.minutes(15),
-            memory_size=512,
+            timeout=Duration.seconds(30),  # Reduced from 15min - webhooks should be fast
+            memory_size=1024,  # Increased from 512MB for better cold start performance
             role=lambda_role,
             environment={
                 "SQS_QUEUE_URL": self.processing_queue.queue_url,
                 "LOG_LEVEL": "INFO",
+                # Python optimization flags for better performance
+                "PYTHONOPTIMIZE": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
                 # Secrets injected at deploy time for performance
                 "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json("SLACK_BOT_TOKEN").unsafe_unwrap(),
                 "SLACK_SIGNING_SECRET": self.secrets.secret_value_from_json("SLACK_SIGNING_SECRET").unsafe_unwrap(),
@@ -232,6 +235,10 @@ class EmojiSmithStack(Stack):
             },
             log_group=webhook_log_group,
         )
+
+        # Provisioned concurrency removed - lazy loading + memory optimization 
+        # should achieve sub-3s performance for low-volume usage (8-10 calls/day)
+        # without the $9.30/month cost of keeping 3 warm containers
 
         # Create worker Lambda role
         worker_lambda_role = iam.Role(
