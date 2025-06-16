@@ -43,6 +43,92 @@ class EmojiSmithStack(Stack):
             ),
         )
 
+        # Create IAM user for GitHub Actions deployment
+        self.deployment_user = iam.User(
+            self,
+            "EmojiSmithDeploymentUser",
+            user_name="emoji-smith-deployment-user",
+        )
+
+        # Grant deployment user least privilege permissions for CDK deployment
+        deployment_policy = iam.Policy(
+            self,
+            "EmojiSmithDeploymentPolicy",
+            statements=[
+                # CloudFormation permissions for this stack only
+                iam.PolicyStatement(
+                    actions=[
+                        "cloudformation:CreateStack",
+                        "cloudformation:UpdateStack",
+                        "cloudformation:DeleteStack",
+                        "cloudformation:DescribeStacks",
+                        "cloudformation:DescribeStackEvents",
+                        "cloudformation:DescribeStackResources",
+                        "cloudformation:GetTemplate",
+                        "cloudformation:ListStacks",
+                    ],
+                    resources=[
+                        f"arn:aws:cloudformation:{self.region}:{self.account}:stack/EmojiSmithStack/*"
+                    ],
+                ),
+                # S3 permissions for CDK assets (CDK creates bucket for deployment artifacts)
+                iam.PolicyStatement(
+                    actions=[
+                        "s3:GetObject",
+                        "s3:PutObject",
+                        "s3:DeleteObject",
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation",
+                        "s3:CreateBucket",
+                    ],
+                    resources=[
+                        f"arn:aws:s3:::cdk-*-assets-{self.account}-{self.region}",
+                        f"arn:aws:s3:::cdk-*-assets-{self.account}-{self.region}/*",
+                    ],
+                ),
+                # ECR permissions for container images
+                iam.PolicyStatement(
+                    actions=[
+                        "ecr:GetAuthorizationToken",
+                        "ecr:BatchCheckLayerAvailability",
+                        "ecr:GetDownloadUrlForLayer",
+                        "ecr:BatchGetImage",
+                    ],
+                    resources=[
+                        f"arn:aws:ecr:{self.region}:{self.account}:repository/emoji-smith"
+                    ],
+                ),
+                # Additional ECR permission that requires wildcard
+                iam.PolicyStatement(
+                    actions=["ecr:GetAuthorizationToken"],
+                    resources=["*"],
+                ),
+                # Specific IAM permissions for pass role (CDK needs this)
+                iam.PolicyStatement(
+                    actions=["iam:PassRole"],
+                    resources=[
+                        f"arn:aws:iam::{self.account}:role/EmojiSmithStack-*"
+                    ],
+                ),
+                # Read-only permissions to check existing resources
+                iam.PolicyStatement(
+                    actions=[
+                        "lambda:GetFunction",
+                        "apigateway:GET",
+                        "sqs:GetQueueAttributes",
+                        "secretsmanager:DescribeSecret",
+                        "logs:DescribeLogGroups",
+                        "iam:GetRole",
+                        "iam:ListRolePolicies",
+                        "iam:GetRolePolicy",
+                    ],
+                    resources=["*"],
+                ),
+            ],
+        )
+
+        self.deployment_user.attach_inline_policy(deployment_policy)
+
         # Create Secrets Manager for production secrets
         self.secrets = secretsmanager.Secret(
             self,
