@@ -1,0 +1,12 @@
+# Ignore everything unnecessary for production image
+.git
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.md
+tests
+infra
+requirements-dev.lock
+run_dev.sh
+Dockerfile.bak
