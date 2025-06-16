@@ -22,30 +22,44 @@ jobs:
         version: "latest"
 
     - name: Set up Python ${{ matrix.python-version }}
-      run: uv python install ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
+    - name: Create & activate venv and install dependencies
       run: |
+        uv venv .venv
+        source .venv/bin/activate
         uv sync
+
+    - name: Run pre-commit hooks
+      run: |
+        source .venv/bin/activate
+        uv run pre-commit run --all-files
 
     - name: Code formatting check
       run: |
+        source .venv/bin/activate
         uv run black --check src/ tests/
 
     - name: Lint with flake8
       run: |
+        source .venv/bin/activate
         uv run flake8 src/ tests/
 
     - name: Type checking with mypy
       run: |
+        source .venv/bin/activate
         uv run mypy src/
 
     - name: Security analysis with bandit
       run: |
+        source .venv/bin/activate
         uv run bandit -r src/
 
     - name: Run tests with coverage
       run: |
+        source .venv/bin/activate
         uv run pytest --cov=src --cov-fail-under=80 tests/
 
   deploy:
@@ -69,7 +83,9 @@ jobs:
         version: "latest"
 
     - name: Set up Python 3.12
-      run: uv python install 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
 
     - name: Install Node.js for CDK
       uses: actions/setup-node@v4

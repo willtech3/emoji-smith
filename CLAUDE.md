@@ -499,7 +499,7 @@ pip install -r requirements.txt
 - name: Unit Tests
   run: pytest --cov=src tests/
 - name: Coverage Check
-  run: pytest --cov=src --cov-fail-under=90 tests/
+  run: pytest --cov=src --cov-fail-under=80 tests/
 ```
 
 **Stage 4: Lambda Build** (main branch only)
