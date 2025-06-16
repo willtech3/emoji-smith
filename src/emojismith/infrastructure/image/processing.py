@@ -5,8 +5,8 @@ import logging
 from PIL import Image
 from emojismith.domain.repositories.image_processor import ImageProcessor  # noqa: F401
 
-# Use LANCZOS if available, fall back to BICUBIC for older stubs
-RESAMPLE = getattr(Image, "LANCZOS", Image.BICUBIC)  # type: ignore[attr-defined]
+# Use LANCZOS for high-quality resampling
+RESAMPLE = Image.Resampling.LANCZOS
 
 
 class PillowImageProcessor:

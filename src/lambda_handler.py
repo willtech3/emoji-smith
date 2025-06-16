@@ -58,14 +58,14 @@ def get_app() -> "FastAPI":
     if _app is None:
         # Lazy import to avoid loading heavy dependencies during cold start
         from emojismith.app import create_app
-        
+
         # Secrets are now injected as environment variables at deploy time
         # No need to load from Secrets Manager at runtime
         _app = create_app()
     return _app
 
 
-def handler(event: dict, context: Any) -> dict:
+def handler(event: dict, context: Any) -> Any:
     """AWS Lambda handler."""
     # Only create app when Lambda is actually invoked
     app = get_app()
