@@ -56,8 +56,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
         Processing results with batch item failures
     """
-    # Load secrets on first invocation
-    _load_secrets_from_aws()
+    # Secrets are now injected as environment variables at deploy time
+    # No need to load from Secrets Manager at runtime
 
     # Initialize the emoji service
     _, _ = create_webhook_handler()  # This sets up dependencies

@@ -183,8 +183,8 @@ class EmojiSmithStack(Stack):
         self.processing_queue.grant_send_messages(lambda_role)
         self.processing_queue.grant_consume_messages(lambda_role)
 
-        # Grant Lambda access to Secrets Manager
-        self.secrets.grant_read(lambda_role)
+        # Secrets are now injected as environment variables at deploy time
+        # No runtime Secrets Manager access needed
 
         # Create CloudWatch log groups
         webhook_log_group = logs.LogGroup(
@@ -222,9 +222,13 @@ class EmojiSmithStack(Stack):
             memory_size=512,
             role=lambda_role,
             environment={
-                "SECRETS_NAME": self.secrets.secret_name,
                 "SQS_QUEUE_URL": self.processing_queue.queue_url,
                 "LOG_LEVEL": "INFO",
+                # Secrets injected at deploy time for performance
+                "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json("SLACK_BOT_TOKEN").unsafe_unwrap(),
+                "SLACK_SIGNING_SECRET": self.secrets.secret_value_from_json("SLACK_SIGNING_SECRET").unsafe_unwrap(),
+                "OPENAI_API_KEY": self.secrets.secret_value_from_json("OPENAI_API_KEY").unsafe_unwrap(),
+                "OPENAI_CHAT_MODEL": self.secrets.secret_value_from_json("OPENAI_CHAT_MODEL").unsafe_unwrap(),
             },
             log_group=webhook_log_group,
         )
@@ -245,8 +249,8 @@ class EmojiSmithStack(Stack):
         self.processing_queue.grant_consume_messages(worker_lambda_role)
         self.processing_dlq.grant_consume_messages(worker_lambda_role)
 
-        # Grant worker Lambda access to Secrets Manager
-        self.secrets.grant_read(worker_lambda_role)
+        # Secrets are now injected as environment variables at deploy time
+        # No runtime Secrets Manager access needed
 
         # Use same container image for worker Lambda
         worker_lambda_code = _lambda.Code.from_ecr_image(
@@ -269,8 +273,12 @@ class EmojiSmithStack(Stack):
             memory_size=1024,  # More memory for image processing
             role=worker_lambda_role,
             environment={
-                "SECRETS_NAME": self.secrets.secret_name,
                 "LOG_LEVEL": "INFO",
+                # Secrets injected at deploy time for performance
+                "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json("SLACK_BOT_TOKEN").unsafe_unwrap(),
+                "SLACK_SIGNING_SECRET": self.secrets.secret_value_from_json("SLACK_SIGNING_SECRET").unsafe_unwrap(),
+                "OPENAI_API_KEY": self.secrets.secret_value_from_json("OPENAI_API_KEY").unsafe_unwrap(),
+                "OPENAI_CHAT_MODEL": self.secrets.secret_value_from_json("OPENAI_CHAT_MODEL").unsafe_unwrap(),
             },
             log_group=worker_log_group,
         )

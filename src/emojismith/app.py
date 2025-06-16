@@ -31,14 +31,19 @@ def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityServic
     load_dotenv()
     slack_token = os.getenv("SLACK_BOT_TOKEN")
     slack_signing_secret = os.getenv("SLACK_SIGNING_SECRET")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
 
+    # Validate all required environment variables
+    if not slack_token:
+        raise ValueError("SLACK_BOT_TOKEN environment variable is required")
     if not slack_signing_secret:
         raise ValueError("SLACK_SIGNING_SECRET environment variable is required")
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is required")
 
     slack_client = AsyncWebClient(token=slack_token)
     slack_repo = SlackAPIRepository(slack_client)
 
-    openai_api_key = os.getenv("OPENAI_API_KEY")
     openai_client = AsyncOpenAI(api_key=openai_api_key)
     chat_model = os.getenv("OPENAI_CHAT_MODEL", "o3")
     openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
