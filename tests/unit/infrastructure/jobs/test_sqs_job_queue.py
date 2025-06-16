@@ -61,6 +61,9 @@ class TestSQSJobQueue:
         call_args = mock_sqs_client.send_message.call_args
         assert call_args.kwargs["QueueUrl"] == sqs_queue.queue_url
         assert "MessageBody" in call_args.kwargs
+        # Verify FIFO parameters are not sent for standard queue
+        assert "MessageGroupId" not in call_args.kwargs
+        assert "MessageDeduplicationId" not in call_args.kwargs
 
     async def test_retrieves_next_emoji_job_for_processing(
         self, sqs_queue, mock_sqs_client
