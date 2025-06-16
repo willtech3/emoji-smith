@@ -1,62 +1,46 @@
 """FastAPI application factory."""
 
-import time
+import json
 import logging
 import os
-
-# Profile imports to identify bottlenecks
-logger = logging.getLogger(__name__)
-start_imports = time.time()
-
-# Standard library imports
-from dotenv import load_dotenv
-from typing import Dict, Any, Optional
-import json
 import urllib.parse
+from typing import Dict, Any, Optional
 
-stdlib_time = time.time() - start_imports
-logger.info(f"📚 Standard library imports: {stdlib_time:.3f}s")
-
-# Third-party imports
-third_party_start = time.time()
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
-from slack_sdk.web.async_client import AsyncWebClient
 from openai import AsyncOpenAI
-third_party_time = time.time() - third_party_start
-logger.info(f"🌐 Third-party imports: {third_party_time:.3f}s")
+from slack_sdk.web.async_client import AsyncWebClient
 
-# Application imports
-app_import_start = time.time()
 from emojismith.application.handlers.slack_webhook import SlackWebhookHandler
 from emojismith.application.services.emoji_service import EmojiCreationService
-from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
-from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
-from emojismith.infrastructure.image.processing import PillowImageProcessor
-from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
-from emojismith.domain.services.generation_service import EmojiGenerationService
-from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from emojismith.domain.services.emoji_validation_service import EmojiValidationService
+from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.services.webhook_security_service import WebhookSecurityService
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
+from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
+from emojismith.infrastructure.image.processing import PillowImageProcessor
+from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 from emojismith.infrastructure.security.slack_signature_validator import (
     SlackSignatureValidator,
 )
-app_import_time = time.time() - app_import_start
-logger.info(f"🏠 Application imports: {app_import_time:.3f}s")
+from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 
-total_import_time = time.time() - start_imports
-logger.info(f"📦 Total module import time: {total_import_time:.3f}s")
+# Profile imports to identify bottlenecks
+logger = logging.getLogger(__name__)
+logger.info("📦 All imports completed - profiling will happen in functions")
 
 
 def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityService]:
     """Create webhook handler with dependencies."""
     import time
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     step_start = time.time()
     logger.info("📋 Loading environment variables...")
-    
+
     # Load environment variables and initialize real Slack repository and service
     load_dotenv()
     slack_token = os.getenv("SLACK_BOT_TOKEN")
@@ -70,7 +54,7 @@ def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityServic
         raise ValueError("SLACK_SIGNING_SECRET environment variable is required")
     if not openai_api_key:
         raise ValueError("OPENAI_API_KEY environment variable is required")
-    
+
     env_time = time.time() - step_start
     logger.info(f"✅ Environment setup: {env_time:.3f}s")
 
@@ -88,7 +72,7 @@ def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityServic
     openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
     openai_time = time.time() - step_start
     logger.info(f"✅ OpenAI client: {openai_time:.3f}s")
-    
+
     step_start = time.time()
     logger.info("🖼️ Creating image processor...")
     image_processor = PillowImageProcessor()
@@ -156,13 +140,15 @@ def _create_sqs_job_queue() -> JobQueueRepository:
     """Create SQS job queue for Lambda environment."""
     import time
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     start = time.time()
     try:
         logger.info("📦 Importing aioboto3...")
         import aioboto3  # type: ignore[import-untyped]
         from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
+
         import_time = time.time() - start
         logger.info(f"✅ aioboto3 import: {import_time:.3f}s")
 
@@ -179,7 +165,7 @@ def _create_sqs_job_queue() -> JobQueueRepository:
         sqs_queue = SQSJobQueue(session=session, queue_url=queue_url)
         session_time = time.time() - step_start
         logger.info(f"✅ SQS session: {session_time:.3f}s")
-        
+
         return sqs_queue
     except ImportError:
         raise RuntimeError(
@@ -191,8 +177,9 @@ def create_app() -> FastAPI:
     """Create FastAPI application."""
     import time
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     step_start = time.time()
     logger.info("🚀 Creating FastAPI app...")
     app = FastAPI(

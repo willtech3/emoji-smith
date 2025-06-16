@@ -57,22 +57,23 @@ def get_app() -> "FastAPI":
     global _app
     if _app is None:
         import time
-        
+
         start_total = time.time()
         logger.info("🔄 Starting app initialization...")
-        
+
         # Profile the import
         import_start = time.time()
         from emojismith.app import create_app
+
         import_time = time.time() - import_start
         logger.info(f"📦 Import create_app: {import_time:.3f}s")
-        
+
         # Profile the app creation
         creation_start = time.time()
         _app = create_app()
         creation_time = time.time() - creation_start
         logger.info(f"🏗️ create_app() execution: {creation_time:.3f}s")
-        
+
         total_time = time.time() - start_total
         logger.info(f"✅ Total app initialization: {total_time:.3f}s")
     return _app
