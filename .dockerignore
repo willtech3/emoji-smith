@@ -1,0 +1,11 @@
+.git
+.github
+*.md
+tests
+infra
+run_dev.sh
+requirements-dev.lock
+uv.lock
+*.pyc
+__pycache__/
+.venv
