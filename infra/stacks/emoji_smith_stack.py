@@ -236,15 +236,9 @@ class EmojiSmithStack(Stack):
             log_group=webhook_log_group,
         )
 
-        # Add provisioned concurrency for consistent sub-3s performance
-        webhook_version = self.webhook_lambda.current_version
-        webhook_alias = _lambda.Alias(
-            self,
-            "EmojiSmithWebhookProd",
-            alias_name="prod",
-            version=webhook_version,
-            provisioned_concurrent_executions=3,  # Keep 3 warm containers
-        )
+        # Provisioned concurrency removed - lazy loading + memory optimization 
+        # should achieve sub-3s performance for low-volume usage (8-10 calls/day)
+        # without the $9.30/month cost of keeping 3 warm containers
 
         # Create worker Lambda role
         worker_lambda_role = iam.Role(
