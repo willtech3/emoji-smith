@@ -116,6 +116,25 @@ class EmojiSmithStack(Stack):
                         f"arn:aws:iam::{self.account}:role/EmojiSmithStack-*"
                     ],
                 ),
+                # CDK bootstrap permissions
+                iam.PolicyStatement(
+                    actions=[
+                        "ssm:GetParameter",
+                        "ssm:GetParameters",
+                    ],
+                    resources=[
+                        f"arn:aws:ssm:{self.region}:{self.account}:parameter/cdk-bootstrap/*"
+                    ],
+                ),
+                # STS permissions for CDK role assumption
+                iam.PolicyStatement(
+                    actions=[
+                        "sts:AssumeRole",
+                    ],
+                    resources=[
+                        f"arn:aws:iam::{self.account}:role/cdk-*"
+                    ],
+                ),
                 # Read-only permissions to check existing resources
                 iam.PolicyStatement(
                     actions=[
