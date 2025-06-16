@@ -60,7 +60,14 @@ jobs:
     - name: Run tests with coverage
       run: |
         source .venv/bin/activate
-        uv run pytest --cov=src --cov-fail-under=80 tests/
+        uv run pytest --cov=src --cov-fail-under=80 --cov-report=xml tests/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
 
   deploy:
     needs: test
@@ -86,6 +93,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
+        cache: 'pip'
 
     - name: Install Node.js for CDK
       uses: actions/setup-node@v4
