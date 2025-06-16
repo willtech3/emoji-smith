@@ -168,4 +168,11 @@ def create_app() -> FastAPI:
             return await webhook_handler.handle_modal_submission(payload)
         return {"status": "ignored"}
 
+    @app.post("/slack/interactive")
+    async def slack_interactive(request: Request) -> Dict[str, Any]:
+        """Handle Slack interactive components (modals, buttons, etc.)."""
+        # Use the same logic as slack_events since interactive components
+        # are just a subset of Slack webhook events
+        return await slack_events(request)
+
     return app
