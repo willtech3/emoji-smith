@@ -56,18 +56,31 @@ def get_app() -> "FastAPI":
     """Get or create the FastAPI app instance with lazy loading."""
     global _app
     if _app is None:
-        # Lazy import to avoid loading heavy dependencies during cold start
+        import time
+        
+        start_total = time.time()
+        logger.info("🔄 Starting app initialization...")
+        
+        # Profile the import
+        import_start = time.time()
         from emojismith.app import create_app
-
-        # Secrets are now injected as environment variables at deploy time
-        # No need to load from Secrets Manager at runtime
+        import_time = time.time() - import_start
+        logger.info(f"📦 Import create_app: {import_time:.3f}s")
+        
+        # Profile the app creation
+        creation_start = time.time()
         _app = create_app()
+        creation_time = time.time() - creation_start
+        logger.info(f"🏗️ create_app() execution: {creation_time:.3f}s")
+        
+        total_time = time.time() - start_total
+        logger.info(f"✅ Total app initialization: {total_time:.3f}s")
     return _app
 
 
 def handler(event: dict, context: Any) -> Any:
     """AWS Lambda handler."""
-    # Only create app when Lambda is actually invoked
+    # App initialization happens on first request for lazy loading
     app = get_app()
     mangum_handler = Mangum(app, lifespan="off")
     return mangum_handler(event, context)

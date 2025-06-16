@@ -1,13 +1,32 @@
 """FastAPI application factory."""
 
+import time
+import logging
 import os
-from dotenv import load_dotenv
 
-from fastapi import FastAPI, Request, HTTPException
+# Profile imports to identify bottlenecks
+logger = logging.getLogger(__name__)
+start_imports = time.time()
+
+# Standard library imports
+from dotenv import load_dotenv
 from typing import Dict, Any, Optional
 import json
 import urllib.parse
+
+stdlib_time = time.time() - start_imports
+logger.info(f"📚 Standard library imports: {stdlib_time:.3f}s")
+
+# Third-party imports
+third_party_start = time.time()
+from fastapi import FastAPI, Request, HTTPException
 from slack_sdk.web.async_client import AsyncWebClient
+from openai import AsyncOpenAI
+third_party_time = time.time() - third_party_start
+logger.info(f"🌐 Third-party imports: {third_party_time:.3f}s")
+
+# Application imports
+app_import_start = time.time()
 from emojismith.application.handlers.slack_webhook import SlackWebhookHandler
 from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
@@ -22,11 +41,22 @@ from emojismith.domain.value_objects.webhook_request import WebhookRequest
 from emojismith.infrastructure.security.slack_signature_validator import (
     SlackSignatureValidator,
 )
-from openai import AsyncOpenAI
+app_import_time = time.time() - app_import_start
+logger.info(f"🏠 Application imports: {app_import_time:.3f}s")
+
+total_import_time = time.time() - start_imports
+logger.info(f"📦 Total module import time: {total_import_time:.3f}s")
 
 
 def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityService]:
     """Create webhook handler with dependencies."""
+    import time
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    step_start = time.time()
+    logger.info("📋 Loading environment variables...")
+    
     # Load environment variables and initialize real Slack repository and service
     load_dotenv()
     slack_token = os.getenv("SLACK_BOT_TOKEN")
@@ -40,58 +70,104 @@ def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityServic
         raise ValueError("SLACK_SIGNING_SECRET environment variable is required")
     if not openai_api_key:
         raise ValueError("OPENAI_API_KEY environment variable is required")
+    
+    env_time = time.time() - step_start
+    logger.info(f"✅ Environment setup: {env_time:.3f}s")
 
+    step_start = time.time()
+    logger.info("🔌 Creating Slack client...")
     slack_client = AsyncWebClient(token=slack_token)
     slack_repo = SlackAPIRepository(slack_client)
+    slack_time = time.time() - step_start
+    logger.info(f"✅ Slack client: {slack_time:.3f}s")
 
+    step_start = time.time()
+    logger.info("🤖 Creating OpenAI client...")
     openai_client = AsyncOpenAI(api_key=openai_api_key)
     chat_model = os.getenv("OPENAI_CHAT_MODEL", "o3")
     openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
+    openai_time = time.time() - step_start
+    logger.info(f"✅ OpenAI client: {openai_time:.3f}s")
+    
+    step_start = time.time()
+    logger.info("🖼️ Creating image processor...")
     image_processor = PillowImageProcessor()
 
     # Create validation service with image validator
     image_validator = PILImageValidator()
     emoji_validation_service = EmojiValidationService(image_validator)
+    image_time = time.time() - step_start
+    logger.info(f"✅ Image processor: {image_time:.3f}s")
 
+    step_start = time.time()
+    logger.info("⚙️ Creating domain services...")
     generator = EmojiGenerationService(
         openai_repo=openai_repo,
         image_processor=image_processor,
         emoji_validator=emoji_validation_service,
     )
+    domain_time = time.time() - step_start
+    logger.info(f"✅ Domain services: {domain_time:.3f}s")
 
+    step_start = time.time()
+    logger.info("🗃️ Setting up job queue...")
     # Configure job queue based on environment
     job_queue: Optional[JobQueueRepository] = None
     if os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
         # Running in Lambda - configure SQS job queue
         job_queue = _create_sqs_job_queue()
+    queue_time = time.time() - step_start
+    logger.info(f"✅ Job queue setup: {queue_time:.3f}s")
 
+    step_start = time.time()
+    logger.info("📁 Creating file sharing...")
     # Create file sharing repository
     from emojismith.infrastructure.slack.slack_file_sharing import (
         SlackFileSharingRepository,
     )
 
     file_sharing_repo = SlackFileSharingRepository(slack_client)
+    file_time = time.time() - step_start
+    logger.info(f"✅ File sharing: {file_time:.3f}s")
 
+    step_start = time.time()
+    logger.info("🏭 Creating emoji service...")
     emoji_service = EmojiCreationService(
         slack_repo=slack_repo,
         emoji_generator=generator,
         job_queue=job_queue,
         file_sharing_repo=file_sharing_repo,
     )
+    service_time = time.time() - step_start
+    logger.info(f"✅ Emoji service: {service_time:.3f}s")
 
+    step_start = time.time()
+    logger.info("🔐 Creating security service...")
     # Create webhook security service
     signature_validator = SlackSignatureValidator(signing_secret=slack_signing_secret)
     security_service = WebhookSecurityService(signature_validator)
+    security_time = time.time() - step_start
+    logger.info(f"✅ Security service: {security_time:.3f}s")
 
     return SlackWebhookHandler(emoji_service=emoji_service), security_service
 
 
 def _create_sqs_job_queue() -> JobQueueRepository:
     """Create SQS job queue for Lambda environment."""
+    import time
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    start = time.time()
     try:
+        logger.info("📦 Importing aioboto3...")
         import aioboto3  # type: ignore[import-untyped]
         from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
+        import_time = time.time() - start
+        logger.info(f"✅ aioboto3 import: {import_time:.3f}s")
 
+        step_start = time.time()
+        logger.info("🔗 Creating aioboto3 session...")
         session = aioboto3.Session()
         queue_url = os.getenv("SQS_QUEUE_URL")
 
@@ -100,7 +176,11 @@ def _create_sqs_job_queue() -> JobQueueRepository:
                 "SQS_QUEUE_URL environment variable is required for Lambda"
             )
 
-        return SQSJobQueue(session=session, queue_url=queue_url)
+        sqs_queue = SQSJobQueue(session=session, queue_url=queue_url)
+        session_time = time.time() - step_start
+        logger.info(f"✅ SQS session: {session_time:.3f}s")
+        
+        return sqs_queue
     except ImportError:
         raise RuntimeError(
             "aioboto3 is required for SQS job queue in Lambda environment"
@@ -109,13 +189,25 @@ def _create_sqs_job_queue() -> JobQueueRepository:
 
 def create_app() -> FastAPI:
     """Create FastAPI application."""
+    import time
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    step_start = time.time()
+    logger.info("🚀 Creating FastAPI app...")
     app = FastAPI(
         title="Emoji Smith",
         description="AI-powered custom emoji generator for Slack",
         version="0.1.0",
     )
+    fastapi_time = time.time() - step_start
+    logger.info(f"✅ FastAPI creation: {fastapi_time:.3f}s")
 
+    step_start = time.time()
+    logger.info("🔧 Creating webhook handler...")
     webhook_handler, security_service = create_webhook_handler()
+    handler_time = time.time() - step_start
+    logger.info(f"✅ Webhook handler: {handler_time:.3f}s")
 
     @app.get("/health")
     async def health_check() -> Dict[str, str]:
