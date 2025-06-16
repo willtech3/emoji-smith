@@ -23,30 +23,24 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Create venv and install dependencies
+    - name: Install dependencies
       run: |
-        uv venv .venv
-        source .venv/bin/activate
         uv sync
 
     - name: Run pre-commit hooks
       run: |
-        source .venv/bin/activate
         uv run pre-commit run --all-files
 
     - name: Code formatting check
       run: |
-        source .venv/bin/activate
         uv run black --check src/ tests/
 
     - name: Lint with flake8
       run: |
-        source .venv/bin/activate
         uv run flake8 src/ tests/
 
     - name: Type checking with mypy
       run: |
-        source .venv/bin/activate
         uv run mypy src/
 
   # Stage 2: Security
@@ -66,15 +60,12 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Create venv and install dependencies
+    - name: Install dependencies
       run: |
-        uv venv .venv
-        source .venv/bin/activate
         uv sync
 
     - name: Security analysis with bandit
       run: |
-        source .venv/bin/activate
         uv run bandit -r src/
 
   # Stage 3: Testing
@@ -94,15 +85,12 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Create venv and install dependencies
+    - name: Install dependencies
       run: |
-        uv venv .venv
-        source .venv/bin/activate
         uv sync
 
     - name: Run tests with coverage
       run: |
-        source .venv/bin/activate
         uv run pytest --cov=src --cov-fail-under=80 --cov-report=xml tests/
 
     - name: Upload coverage to Codecov
