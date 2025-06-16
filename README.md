@@ -28,8 +28,9 @@ graph LR
 **Tech Stack:**
 - **Backend**: Python 3.12 + FastAPI + Slack Bolt
 - **AI Services**: OpenAI o3 with fallback to gpt-4/gpt-3.5 (prompt enhancement) + DALL-E (image generation)
-- **Infrastructure**: AWS Lambda + API Gateway + Secrets Manager
+- **Infrastructure**: AWS Lambda + API Gateway + SQS + Secrets Manager
 - **Deployment**: AWS CDK + GitHub Actions
+- **Monitoring**: CloudWatch logs + health check endpoint (`/health`)
 - **Security**: Bandit SAST scanning + least-privilege IAM
 
 ## 🚀 Quick Start
