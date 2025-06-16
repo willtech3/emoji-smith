@@ -44,7 +44,7 @@ class EmojiSmithStack(Stack):
             description="Production secrets for Emoji Smith bot",
             generate_secret_string=secretsmanager.SecretStringGenerator(
                 secret_string_template='{"LOG_LEVEL":"INFO"}',
-                generate_string_key="generated_password",
+                generate_string_key="generated_password",  # nosec B106
                 exclude_characters='"@/\\',
             ),
         )
@@ -157,7 +157,11 @@ class EmojiSmithStack(Stack):
             default_cors_preflight_options=apigateway.CorsOptions(
                 allow_origins=["*"],
                 allow_methods=["GET", "POST"],
-                allow_headers=["Content-Type", "X-Slack-Signature", "X-Slack-Request-Timestamp"],
+                allow_headers=[
+                    "Content-Type",
+                    "X-Slack-Signature",
+                    "X-Slack-Request-Timestamp",
+                ],
             ),
         )
 
@@ -178,4 +182,6 @@ class EmojiSmithStack(Stack):
         # Add Slack events endpoint
         events_resource = self.api.root.add_resource("slack")
         events_resource.add_resource("events").add_method("POST", webhook_integration)
-        events_resource.add_resource("interactive").add_method("POST", webhook_integration)
+        events_resource.add_resource("interactive").add_method(
+            "POST", webhook_integration
+        )
