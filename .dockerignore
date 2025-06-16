@@ -1,0 +1,19 @@
+# Ignore development files and directories
+.git
+.vscode
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.tmp
+*.log
+tests/
+*.md
+CLAUDE.md
+AGENTS.md
+SETUP.md
+SLACK-APP-SETUP.md
+run_dev.sh
+docs/
