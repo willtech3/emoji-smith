@@ -1,0 +1,102 @@
+"""Tests for lambda_handler module."""
+
+import json
+import os
+from unittest.mock import Mock, patch
+import pytest
+from botocore.exceptions import ClientError
+
+# Import the function directly to test it
+from src.lambda_handler import _load_secrets_from_aws
+
+
+class TestLoadSecretsFromAws:
+    """Test the _load_secrets_from_aws function."""
+
+    def test_skips_when_secrets_name_not_set(self, caplog):
+        """Should skip loading when SECRETS_NAME is not set."""
+        with patch.dict(os.environ, {}, clear=True):
+            with caplog.at_level('INFO'):
+                _load_secrets_from_aws()
+
+        assert "SECRETS_NAME not set, skipping secrets loading" in caplog.text
+
+    @patch("src.lambda_handler.boto3.client")
+    def test_loads_secrets_successfully(self, mock_boto_client, caplog):
+        """Should load secrets into environment variables."""
+        # Arrange
+        mock_secrets_client = Mock()
+        mock_boto_client.return_value = mock_secrets_client
+
+        secrets_response = {
+            "SecretString": json.dumps(
+                {
+                    "SLACK_BOT_TOKEN": "xoxb-test-token",
+                    "OPENAI_API_KEY": "sk-test-key",
+                    "generated_password": "ignore-this",
+                }
+            )
+        }
+        mock_secrets_client.get_secret_value.return_value = secrets_response
+
+        # Act - use clean environment to avoid existing vars
+        test_env = {"SECRETS_NAME": "test-secret"}
+        with patch.dict(os.environ, test_env, clear=True):
+            with caplog.at_level('INFO'):
+                _load_secrets_from_aws()
+            
+            # Assert within the patched environment
+            assert os.environ.get("SLACK_BOT_TOKEN") == "xoxb-test-token"
+            assert os.environ.get("OPENAI_API_KEY") == "sk-test-key"
+            assert "generated_password" not in os.environ
+
+        # Assert
+        mock_boto_client.assert_called_once_with("secretsmanager")
+        mock_secrets_client.get_secret_value.assert_called_once_with(
+            SecretId="test-secret"
+        )
+        assert "Successfully loaded 3 secrets from AWS" in caplog.text
+
+    @patch("src.lambda_handler.boto3.client")
+    def test_raises_client_error_on_aws_failure(self, mock_boto_client):
+        """Should raise ClientError when AWS call fails."""
+        # Arrange
+        mock_secrets_client = Mock()
+        mock_boto_client.return_value = mock_secrets_client
+
+        error = ClientError(
+            error_response={"Error": {"Code": "ResourceNotFound"}},
+            operation_name="GetSecretValue",
+        )
+        mock_secrets_client.get_secret_value.side_effect = error
+
+        # Act & Assert
+        with patch.dict(os.environ, {"SECRETS_NAME": "test-secret"}):
+            with pytest.raises(ClientError):
+                _load_secrets_from_aws()
+
+    @patch("src.lambda_handler.boto3.client")
+    def test_raises_json_decode_error_on_invalid_json(self, mock_boto_client):
+        """Should raise JSONDecodeError when secret is not valid JSON."""
+        # Arrange
+        mock_secrets_client = Mock()
+        mock_boto_client.return_value = mock_secrets_client
+
+        secrets_response = {"SecretString": "invalid-json"}
+        mock_secrets_client.get_secret_value.return_value = secrets_response
+
+        # Act & Assert
+        with patch.dict(os.environ, {"SECRETS_NAME": "test-secret"}):
+            with pytest.raises(json.JSONDecodeError):
+                _load_secrets_from_aws()
+
+    @patch("src.lambda_handler.boto3.client")
+    def test_raises_exception_on_unexpected_error(self, mock_boto_client):
+        """Should raise Exception on unexpected errors."""
+        # Arrange
+        mock_boto_client.side_effect = Exception("Unexpected error")
+
+        # Act & Assert
+        with patch.dict(os.environ, {"SECRETS_NAME": "test-secret"}):
+            with pytest.raises(Exception, match="Unexpected error"):
+                _load_secrets_from_aws()

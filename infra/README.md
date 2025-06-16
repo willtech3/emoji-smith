@@ -30,7 +30,7 @@ cdk bootstrap
 cd infra
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
 ## Deployment
@@ -66,15 +66,20 @@ aws secretsmanager update-secret \
 The CDK stack creates:
 
 - **Lambda Function**: `emoji-smith-webhook` - Handles Slack webhooks
+  - Environment variables: `SECRETS_NAME`, `SQS_QUEUE_URL`, `LOG_LEVEL`
+  - Runtime: Python 3.12, Memory: 512MB, Timeout: 15 minutes
 - **API Gateway**: REST API with endpoints:
-  - `GET /health` - Health check
+  - `GET /health` - Health check returning `{"status": "healthy"}`
   - `POST /webhook` - General webhook endpoint
   - `POST /slack/events` - Slack Events API
   - `POST /slack/interactive` - Slack Interactive Components
-- **SQS Queue**: `emoji-smith-processing` - Background job processing
+- **SQS Queues**: 
+  - `emoji-smith-processing` - Background job processing
+  - `emoji-smith-processing-dlq` - Dead letter queue (3 retries, 14-day retention)
 - **Secrets Manager**: `emoji-smith/production` - Secure secret storage
-- **CloudWatch Logs**: `/aws/lambda/emoji-smith-webhook` - Application logs
-- **IAM Roles**: Least-privilege permissions for Lambda
+  - Required secrets: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `OPENAI_API_KEY`
+- **CloudWatch Logs**: `/aws/lambda/emoji-smith-webhook` - Application logs (30-day retention)
+- **IAM Roles**: Least-privilege permissions for Lambda (SQS, Secrets Manager access)
 
 ## Testing the Deployment
 

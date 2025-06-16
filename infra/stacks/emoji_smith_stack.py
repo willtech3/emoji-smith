@@ -15,12 +15,24 @@ class EmojiSmithStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        # Create SQS dead letter queue
+        self.processing_dlq = sqs.Queue(
+            self,
+            "EmojiProcessingDLQ",
+            queue_name="emoji-smith-processing-dlq",
+            retention_period=Duration.days(14),  # Keep failed messages for 2 weeks
+        )
+
         # Create SQS queue for background processing
         self.processing_queue = sqs.Queue(
             self,
             "EmojiProcessingQueue",
             queue_name="emoji-smith-processing",
             visibility_timeout=Duration.minutes(15),  # Match Lambda timeout
+            dead_letter_queue=sqs.DeadLetterQueue(
+                max_receive_count=3,  # Retry failed messages 3 times
+                queue=self.processing_dlq,
+            ),
         )
 
         # Create Secrets Manager for production secrets
