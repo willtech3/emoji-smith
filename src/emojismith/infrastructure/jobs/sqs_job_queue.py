@@ -10,8 +10,8 @@ from emojismith.domain.repositories.job_queue_repository import JobQueueReposito
 class SQSJobQueue(JobQueueRepository):
     """SQS-based implementation of job queue."""
 
-    def __init__(self, sqs_client: Any, queue_url: str) -> None:
-        self._sqs_client = sqs_client
+    def __init__(self, session: Any, queue_url: str) -> None:
+        self._session = session
         self._queue_url = queue_url
         self._logger = logging.getLogger(__name__)
 
@@ -25,12 +25,13 @@ class SQSJobQueue(JobQueueRepository):
         # Send message to SQS
         message_body = json.dumps(job.to_dict())
 
-        response = await self._sqs_client.send_message(
-            QueueUrl=self._queue_url,
-            MessageBody=message_body,
-            MessageGroupId="emoji-generation",  # For FIFO queues
-            MessageDeduplicationId=job.job_id,  # For FIFO queues
-        )
+        async with self._session.client("sqs") as sqs_client:
+            response = await sqs_client.send_message(
+                QueueUrl=self._queue_url,
+                MessageBody=message_body,
+                MessageGroupId="emoji-generation",  # For FIFO queues
+                MessageDeduplicationId=job.job_id,  # For FIFO queues
+            )
 
         self._logger.info(
             "Enqueued emoji generation job",
@@ -49,12 +50,13 @@ class SQSJobQueue(JobQueueRepository):
         Returns a tuple containing the job and the SQS receipt handle used
         to acknowledge completion.
         """
-        response = await self._sqs_client.receive_message(
-            QueueUrl=self._queue_url,
-            MaxNumberOfMessages=1,
-            WaitTimeSeconds=20,  # Long polling for efficiency
-            MessageAttributeNames=["All"],
-        )
+        async with self._session.client("sqs") as sqs_client:
+            response = await sqs_client.receive_message(
+                QueueUrl=self._queue_url,
+                MaxNumberOfMessages=1,
+                WaitTimeSeconds=20,  # Long polling for efficiency
+                MessageAttributeNames=["All"],
+            )
 
         messages = response.get("Messages", [])
         if not messages:
@@ -95,9 +97,10 @@ class SQSJobQueue(JobQueueRepository):
         """Delete message from SQS queue if a receipt handle is present."""
         if not receipt_handle:
             return
-        await self._sqs_client.delete_message(
-            QueueUrl=self._queue_url, ReceiptHandle=receipt_handle
-        )
+        async with self._session.client("sqs") as sqs_client:
+            await sqs_client.delete_message(
+                QueueUrl=self._queue_url, ReceiptHandle=receipt_handle
+            )
 
     async def get_job_status(self, job_id: str) -> Optional[str]:
         """Get the current status of a job."""
