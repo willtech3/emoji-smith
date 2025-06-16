@@ -1,7 +1,7 @@
 """Tests for SQS job queue implementation."""
 
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 
 
@@ -14,10 +14,21 @@ class TestSQSJobQueue:
         return AsyncMock()
 
     @pytest.fixture
-    def sqs_queue(self, mock_sqs_client):
-        """SQS job queue with mocked client."""
+    def mock_session(self, mock_sqs_client):
+        """Mock aioboto3 session that returns mocked SQS client."""
+        session = Mock()
+        # Create an async context manager for the client
+        async_context_manager = AsyncMock()
+        async_context_manager.__aenter__.return_value = mock_sqs_client
+        async_context_manager.__aexit__.return_value = None
+        session.client.return_value = async_context_manager
+        return session
+
+    @pytest.fixture
+    def sqs_queue(self, mock_session):
+        """SQS job queue with mocked session."""
         return SQSJobQueue(
-            sqs_client=mock_sqs_client,
+            session=mock_session,
             queue_url="https://sqs.us-east-1.amazonaws.com/123456789/emoji-jobs",
         )
 

@@ -88,7 +88,6 @@ def _create_sqs_job_queue() -> JobQueueRepository:
         from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 
         session = aioboto3.Session()
-        sqs_client = session.client("sqs")
         queue_url = os.getenv("SQS_QUEUE_URL")
 
         if not queue_url:
@@ -96,7 +95,7 @@ def _create_sqs_job_queue() -> JobQueueRepository:
                 "SQS_QUEUE_URL environment variable is required for Lambda"
             )
 
-        return SQSJobQueue(sqs_client=sqs_client, queue_url=queue_url)
+        return SQSJobQueue(session=session, queue_url=queue_url)
     except ImportError:
         raise RuntimeError(
             "aioboto3 is required for SQS job queue in Lambda environment"
