@@ -10,12 +10,12 @@
    ```bash
    # Check if you have Python 3.12
    python3 --version
-   
+
    # If not installed, use pyenv (recommended):
    curl https://pyenv.run | bash
    pyenv install 3.12.3
    pyenv global 3.12.3
-   
+
    # Or install via system package manager:
    # macOS: brew install python@3.12
    # Ubuntu: sudo apt install python3.12 python3.12-venv
@@ -25,7 +25,7 @@
    ```bash
    # Install uv
    curl -LsSf https://astral.sh/uv/install.sh | sh
-   
+
    # Verify installation
    uv --version
    ```
@@ -35,7 +35,7 @@
    # Install GitHub CLI
    # macOS: brew install gh
    # Ubuntu: sudo apt install gh
-   
+
    # Authenticate with GitHub
    gh auth login
    ```
@@ -44,7 +44,7 @@
    ```bash
    # macOS: brew install ngrok
    # Or download from: https://ngrok.com/download
-   
+
    # Sign up and get auth token from https://dashboard.ngrok.com/auth
    ngrok authtoken YOUR_TOKEN_HERE
    ```
@@ -95,7 +95,7 @@ Required environment variables:
 SLACK_BOT_TOKEN=xoxb-your-bot-token-here
 SLACK_SIGNING_SECRET=your-signing-secret-here
 
-# OpenAI API Configuration  
+# OpenAI API Configuration
 OPENAI_API_KEY=your-openai-api-key         # Required for emoji generation
 OPENAI_CHAT_MODEL=o3                       # Preferred chat model (optional)
 
@@ -122,7 +122,7 @@ For local development without SQS, jobs are processed synchronously by the appli
 1. **Create Slack App**
    - Go to [api.slack.com/apps](https://api.slack.com/apps)
    - Click "Create New App" → "From scratch"
-   - Name: "Emoji Smith" 
+   - Name: "Emoji Smith"
    - Choose your development workspace
 
 2. **Configure Permissions**
@@ -189,7 +189,7 @@ gh pr create --title "Your Feature" --body "Description"
 uv pip install package-name
 uv pip freeze > requirements.lock  # Update lock file
 
-# Install new dev dependency  
+# Install new dev dependency
 uv pip install package-name
 echo "package-name>=1.0.0" >> pyproject.toml  # Add to dev dependencies
 uv pip freeze > requirements-dev.lock
@@ -215,7 +215,7 @@ open htmlcov/index.html  # View coverage report
    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
    unzip awscliv2.zip
    sudo ./aws/install
-   
+
    # Configure credentials (for bootstrap only)
    aws configure
    ```
@@ -225,10 +225,10 @@ open htmlcov/index.html  # View coverage report
    # Install Node.js (required for CDK)
    # macOS: brew install node
    # Ubuntu: sudo apt install nodejs npm
-   
+
    # Install CDK globally
    npm install -g aws-cdk
-   
+
    # Verify installation
    cdk --version
    ```
@@ -406,7 +406,7 @@ ngrok http 8000
 ## Next Steps
 
 1. **Complete Slack app setup** with your ngrok webhook URL
-2. **Test the message action** in your Slack workspace  
+2. **Test the message action** in your Slack workspace
 3. **Start implementing features** following the phase plan in GitHub issues
 4. **Deploy to AWS** when ready for production testing
 

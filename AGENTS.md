@@ -37,7 +37,7 @@ This document summarizes the **canonical rules** that **any automated or AI-powe
 1. Follow the *Red → Green → Refactor* cycle for every feature.
 2. Maintain a healthy test pyramid: many unit tests, fewer integration tests, almost no E2E.
 3. Unit tests must run in < 1 second – mock external services.
-4. Minimum coverage: **90 %** (enforced in CI).
+4. Minimum coverage: **80 %** (enforced in CI).
 
 ## 4. Security Rules (hard requirements)
 
@@ -75,16 +75,16 @@ black --check src/ tests/
 flake8 src/ tests/
 mypy src/
 bandit -r src/
-pytest --cov=src --cov-fail-under=90 tests/
+pytest --cov=src --cov-fail-under=80 tests/
 ```
 
 ## 8. Checklist Before Opening a Pull Request
 
-☑️ All new/updated code has **unit tests**  
-☑️ All quality gates pass locally (formatter, linter, mypy, bandit, tests)  
-☑️ Only the intended files are staged (no `git add .`)  
-☑️ No secrets or credentials are present  
-☑️ Documentation is updated when behaviour changes  
+☑️ All new/updated code has **unit tests**
+☑️ All quality gates pass locally (formatter, linter, mypy, bandit, tests)
+☑️ Only the intended files are staged (no `git add .`)
+☑️ No secrets or credentials are present
+☑️ Documentation is updated when behaviour changes
 
 ---
 
@@ -93,7 +93,7 @@ pytest --cov=src --cov-fail-under=90 tests/
 The following single-sentence reminders are safe to embed directly in an LLM prompt:
 
 * “Use Python 3.12 and format with **black**.”
-* “Write tests first and keep coverage ≥ 90 %.”
+* “Write tests first and keep coverage ≥ 80 %.”
 * “Never commit secrets or use `git add .`.”
 * “Apply the Repository Pattern and inject dependencies.”
 

@@ -16,7 +16,7 @@ class TestLoadSecretsFromAws:
     def test_skips_when_secrets_name_not_set(self, caplog):
         """Should skip loading when SECRETS_NAME is not set."""
         with patch.dict(os.environ, {}, clear=True):
-            with caplog.at_level('INFO'):
+            with caplog.at_level("INFO"):
                 _load_secrets_from_aws()
 
         assert "SECRETS_NAME not set, skipping secrets loading" in caplog.text
@@ -42,9 +42,9 @@ class TestLoadSecretsFromAws:
         # Act - use clean environment to avoid existing vars
         test_env = {"SECRETS_NAME": "test-secret"}
         with patch.dict(os.environ, test_env, clear=True):
-            with caplog.at_level('INFO'):
+            with caplog.at_level("INFO"):
                 _load_secrets_from_aws()
-            
+
             # Assert within the patched environment
             assert os.environ.get("SLACK_BOT_TOKEN") == "xoxb-test-token"
             assert os.environ.get("OPENAI_API_KEY") == "sk-test-key"

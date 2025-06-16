@@ -3,12 +3,16 @@
 import json
 import logging
 import os
+from typing import TYPE_CHECKING, Any
 
 import boto3
 from botocore.exceptions import ClientError
 from mangum import Mangum
 
 from emojismith.app import create_app
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -44,11 +48,23 @@ def _load_secrets_from_aws() -> None:
         raise
 
 
-# Load secrets when module is imported
-_load_secrets_from_aws()
+# Global variable to cache the app
+_app = None
 
-# Create FastAPI app
-app = create_app()
 
-# Create Lambda handler using Mangum
-handler = Mangum(app, lifespan="off")
+def get_app() -> "FastAPI":
+    """Get or create the FastAPI app instance."""
+    global _app
+    if _app is None:
+        # Load secrets from AWS when first creating the app
+        _load_secrets_from_aws()
+        _app = create_app()
+    return _app
+
+
+def handler(event: dict, context: Any) -> dict:
+    """AWS Lambda handler."""
+    # Only create app when Lambda is actually invoked
+    app = get_app()
+    mangum_handler = Mangum(app, lifespan="off")
+    return mangum_handler(event, context)

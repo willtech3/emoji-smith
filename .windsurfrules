@@ -80,11 +80,11 @@ pytest --cov=src --cov-fail-under=90 tests/
 
 ## 8. Checklist Before Opening a Pull Request
 
-☑️ All new/updated code has **unit tests**  
-☑️ All quality gates pass locally (formatter, linter, mypy, bandit, tests)  
-☑️ Only the intended files are staged (no `git add .`)  
-☑️ No secrets or credentials are present  
-☑️ Documentation is updated when behaviour changes  
+☑️ All new/updated code has **unit tests**
+☑️ All quality gates pass locally (formatter, linter, mypy, bandit, tests)
+☑️ Only the intended files are staged (no `git add .`)
+☑️ No secrets or credentials are present
+☑️ Documentation is updated when behaviour changes
 
 ---
 

@@ -1,5 +1,7 @@
 # Emoji Smith 🎨
 
+[![Coverage Status](https://codecov.io/gh/willtech3/emoji-smith/branch/main/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/willtech3/emoji-smith)
+
 > **AI-powered custom emoji generator for Slack workspaces**
 
 Emoji Smith is a Slack bot that automatically generates custom emojis using OpenAI's DALL-E, triggered by message actions. Simply right-click any Slack message, choose "Create Reaction," describe the emoji you want, and watch as AI creates the perfect custom emoji reaction.
@@ -111,7 +113,7 @@ aws secretsmanager create-secret --name "emoji-smith/production" --secret-string
 ### Example Use Cases
 
 - **"facepalm but cute"** on deployment failure messages
-- **"celebrating with confetti"** on successful releases  
+- **"celebrating with confetti"** on successful releases
 - **"this is fine dog"** on system alerts
 - **"mind blown explosion"** on brilliant ideas
 - **"typing furiously"** on coding discussions
@@ -154,7 +156,7 @@ All code must pass these checks before merging:
 
 ```bash
 black --check src/ tests/     # Code formatting
-flake8 src/ tests/           # Style linting  
+flake8 src/ tests/           # Style linting
 mypy src/                    # Type checking
 bandit -r src/               # Security scanning
 pytest --cov=src tests/      # Tests with 90%+ coverage
@@ -183,7 +185,7 @@ emoji-smith/
 ├── src/emojismith/          # Main application (Clean Architecture)
 │   ├── domain/             # 🏛️  Domain Layer (pure business logic)
 │   │   ├── entities/       # Core business objects
-│   │   ├── value_objects/  # Immutable domain concepts  
+│   │   ├── value_objects/  # Immutable domain concepts
 │   │   ├── services/       # Domain business rules
 │   │   └── repositories/   # Repository interfaces (abstractions)
 │   ├── application/        # 🎯 Application Layer (use cases)
@@ -220,7 +222,7 @@ MIT License - see [LICENSE](./LICENSE) for details.
 ## 🆘 Support
 
 - **Setup Issues**: See [SETUP.md](./SETUP.md) for detailed instructions
-- **Development**: See [CLAUDE.md](./CLAUDE.md) for coding guidelines  
+- **Development**: See [CLAUDE.md](./CLAUDE.md) for coding guidelines
 - **Bug Reports**: [Open an issue](https://github.com/willtech3/emoji-smith/issues)
 - **Feature Requests**: [Start a discussion](https://github.com/willtech3/emoji-smith/discussions)
 

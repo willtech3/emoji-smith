@@ -8,6 +8,7 @@ from aws_cdk import (
     aws_iam as iam,
     aws_secretsmanager as secretsmanager,
     aws_logs as logs,
+    aws_ecr as ecr,
 )
 from constructs import Construct
 
@@ -15,6 +16,12 @@ from constructs import Construct
 class EmojiSmithStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+        
+        # Get image URI from context (required for container deployment)
+        image_uri = self.node.try_get_context("imageUri")
+        if not image_uri:
+            # Use a placeholder for synth/ls operations, fail only on deploy
+            image_uri = "placeholder:latest"
 
         # Create SQS dead letter queue
         self.processing_dlq = sqs.Queue(
@@ -36,6 +43,92 @@ class EmojiSmithStack(Stack):
             ),
         )
 
+        # Create IAM user for GitHub Actions deployment
+        self.deployment_user = iam.User(
+            self,
+            "EmojiSmithDeploymentUser",
+            user_name="emoji-smith-deployment-user",
+        )
+
+        # Grant deployment user least privilege permissions for CDK deployment
+        deployment_policy = iam.Policy(
+            self,
+            "EmojiSmithDeploymentPolicy",
+            statements=[
+                # CloudFormation permissions for this stack only
+                iam.PolicyStatement(
+                    actions=[
+                        "cloudformation:CreateStack",
+                        "cloudformation:UpdateStack",
+                        "cloudformation:DeleteStack",
+                        "cloudformation:DescribeStacks",
+                        "cloudformation:DescribeStackEvents",
+                        "cloudformation:DescribeStackResources",
+                        "cloudformation:GetTemplate",
+                        "cloudformation:ListStacks",
+                    ],
+                    resources=[
+                        f"arn:aws:cloudformation:{self.region}:{self.account}:stack/EmojiSmithStack/*"
+                    ],
+                ),
+                # S3 permissions for CDK assets (CDK creates bucket for deployment artifacts)
+                iam.PolicyStatement(
+                    actions=[
+                        "s3:GetObject",
+                        "s3:PutObject",
+                        "s3:DeleteObject",
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation",
+                        "s3:CreateBucket",
+                    ],
+                    resources=[
+                        f"arn:aws:s3:::cdk-*-assets-{self.account}-{self.region}",
+                        f"arn:aws:s3:::cdk-*-assets-{self.account}-{self.region}/*",
+                    ],
+                ),
+                # ECR permissions for container images
+                iam.PolicyStatement(
+                    actions=[
+                        "ecr:GetAuthorizationToken",
+                        "ecr:BatchCheckLayerAvailability",
+                        "ecr:GetDownloadUrlForLayer",
+                        "ecr:BatchGetImage",
+                    ],
+                    resources=[
+                        f"arn:aws:ecr:{self.region}:{self.account}:repository/emoji-smith"
+                    ],
+                ),
+                # Additional ECR permission that requires wildcard
+                iam.PolicyStatement(
+                    actions=["ecr:GetAuthorizationToken"],
+                    resources=["*"],
+                ),
+                # Specific IAM permissions for pass role (CDK needs this)
+                iam.PolicyStatement(
+                    actions=["iam:PassRole"],
+                    resources=[
+                        f"arn:aws:iam::{self.account}:role/EmojiSmithStack-*"
+                    ],
+                ),
+                # Read-only permissions to check existing resources
+                iam.PolicyStatement(
+                    actions=[
+                        "lambda:GetFunction",
+                        "apigateway:GET",
+                        "sqs:GetQueueAttributes",
+                        "secretsmanager:DescribeSecret",
+                        "logs:DescribeLogGroups",
+                        "iam:GetRole",
+                        "iam:ListRolePolicies",
+                        "iam:GetRolePolicy",
+                    ],
+                    resources=["*"],
+                ),
+            ],
+        )
+
+        self.deployment_user.attach_inline_policy(deployment_policy)
+
         # Create Secrets Manager for production secrets
         self.secrets = secretsmanager.Secret(
             self,
@@ -44,7 +137,7 @@ class EmojiSmithStack(Stack):
             description="Production secrets for Emoji Smith bot",
             generate_secret_string=secretsmanager.SecretStringGenerator(
                 secret_string_template='{"LOG_LEVEL":"INFO"}',
-                generate_string_key="generated_password",
+                generate_string_key="generated_password",  # nosec B106
                 exclude_characters='"@/\\',
             ),
         )
@@ -83,14 +176,23 @@ class EmojiSmithStack(Stack):
             retention=logs.RetentionDays.ONE_MONTH,
         )
 
+        # Use container image from ECR
+        lambda_code = _lambda.Code.from_ecr_image(
+            repository=ecr.Repository.from_repository_name(
+                self, "EmojiSmithRepository", "emoji-smith"
+            ),
+            tag_or_digest=image_uri.split(":")[-1],  # Extract tag from URI
+            cmd=["lambda_handler.handler"],
+        )
+
         # Create Lambda function
         self.webhook_lambda = _lambda.Function(
             self,
             "EmojiSmithWebhook",
             function_name="emoji-smith-webhook",
-            runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="lambda_handler.handler",
-            code=_lambda.Code.from_asset("../src"),
+            code=lambda_code,
+            handler=_lambda.Handler.FROM_IMAGE,  # Required for container images
+            runtime=_lambda.Runtime.FROM_IMAGE,  # Required for container images
             timeout=Duration.minutes(15),
             memory_size=512,
             role=lambda_role,
@@ -121,14 +223,23 @@ class EmojiSmithStack(Stack):
         # Grant worker Lambda access to Secrets Manager
         self.secrets.grant_read(worker_lambda_role)
 
+        # Use same container image for worker Lambda
+        worker_lambda_code = _lambda.Code.from_ecr_image(
+            repository=ecr.Repository.from_repository_name(
+                self, "EmojiSmithWorkerRepository", "emoji-smith"
+            ),
+            tag_or_digest=image_uri.split(":")[-1],  # Extract tag from URI
+            cmd=["worker_handler.handler"],
+        )
+
         # Create worker Lambda function
         self.worker_lambda = _lambda.Function(
             self,
             "EmojiSmithWorker",
             function_name="emoji-smith-worker",
-            runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="worker_handler.handler",
-            code=_lambda.Code.from_asset("../src"),
+            code=worker_lambda_code,
+            handler=_lambda.Handler.FROM_IMAGE,  # Required for container images
+            runtime=_lambda.Runtime.FROM_IMAGE,  # Required for container images
             timeout=Duration.minutes(15),
             memory_size=1024,  # More memory for image processing
             role=worker_lambda_role,
@@ -157,7 +268,11 @@ class EmojiSmithStack(Stack):
             default_cors_preflight_options=apigateway.CorsOptions(
                 allow_origins=["*"],
                 allow_methods=["GET", "POST"],
-                allow_headers=["Content-Type", "X-Slack-Signature", "X-Slack-Request-Timestamp"],
+                allow_headers=[
+                    "Content-Type",
+                    "X-Slack-Signature",
+                    "X-Slack-Request-Timestamp",
+                ],
             ),
         )
 
@@ -178,4 +293,6 @@ class EmojiSmithStack(Stack):
         # Add Slack events endpoint
         events_resource = self.api.root.add_resource("slack")
         events_resource.add_resource("events").add_method("POST", webhook_integration)
-        events_resource.add_resource("interactive").add_method("POST", webhook_integration)
+        events_resource.add_resource("interactive").add_method(
+            "POST", webhook_integration
+        )

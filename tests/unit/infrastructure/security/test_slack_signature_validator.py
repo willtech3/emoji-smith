@@ -4,6 +4,7 @@ import pytest
 import hmac
 import hashlib
 import time
+from unittest.mock import patch
 from emojismith.infrastructure.security.slack_signature_validator import (
     SlackSignatureValidator,
     MissingSigningSecretError,
@@ -107,6 +108,7 @@ class TestSlackSignatureValidator:
         # Assert
         assert result is False
 
+    @patch.dict("os.environ", {}, clear=True)
     def test_handles_missing_signing_secret_raises_error(self):
         """Test that missing signing secret raises MissingSigningSecretError."""
         # Arrange

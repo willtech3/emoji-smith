@@ -79,7 +79,7 @@ class TestSlackFileSharingRepository:
         mock_slack_client.files_upload_v2.assert_called_once()
         upload_args = mock_slack_client.files_upload_v2.call_args[1]
         assert upload_args["filename"] == "test_emoji.png"
-        assert upload_args["channels"] == channel_id
+        assert upload_args["channels"] == [channel_id]
         assert "thread_ts" not in upload_args  # New thread, no thread_ts yet
 
         # Verify instructions were posted
