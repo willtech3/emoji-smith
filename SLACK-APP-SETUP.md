@@ -15,7 +15,7 @@ Navigate to **"OAuth & Permissions"** and add these Bot Token Scopes:
 
 **Required Scopes:**
 - `emoji:write` - Upload custom emojis to workspace (Enterprise Grid only)
-- `reactions:write` - Add emoji reactions to messages  
+- `reactions:write` - Add emoji reactions to messages
 - `commands` - Create slash commands
 - `chat:write` - Send messages (for notifications)
 - `chat:write.public` - Post messages to public channels
@@ -31,7 +31,7 @@ Navigate to **"OAuth & Permissions"** and add these Bot Token Scopes:
    - Request URL: `https://your-ngrok-url.ngrok.io/slack/events` (will update during development)
 
 2. **Create Message Action**
-   - Click **"Create New Action"** 
+   - Click **"Create New Action"**
    - Type: **"On messages"**
    - Name: `Create Reaction`
    - Description: `Generate custom emoji reaction`
@@ -64,7 +64,7 @@ Add these to your `.env` file:
 SLACK_BOT_TOKEN=xoxb-your-bot-token-here
 SLACK_SIGNING_SECRET=your-signing-secret-here
 
-# OpenAI Configuration  
+# OpenAI Configuration
 OPENAI_API_KEY=your-openai-api-key-here
 
 # Development Settings

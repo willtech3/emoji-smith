@@ -54,7 +54,7 @@ aws secretsmanager update-secret \
   --secret-id emoji-smith/production \
   --secret-string '{
     "SLACK_BOT_TOKEN": "xoxb-your-bot-token",
-    "SLACK_SIGNING_SECRET": "your-signing-secret", 
+    "SLACK_SIGNING_SECRET": "your-signing-secret",
     "OPENAI_API_KEY": "sk-your-openai-key",
     "OPENAI_CHAT_MODEL": "o3",
     "LOG_LEVEL": "INFO"
@@ -73,7 +73,7 @@ The CDK stack creates:
   - `POST /webhook` - General webhook endpoint
   - `POST /slack/events` - Slack Events API
   - `POST /slack/interactive` - Slack Interactive Components
-- **SQS Queues**: 
+- **SQS Queues**:
   - `emoji-smith-processing` - Background job processing
   - `emoji-smith-processing-dlq` - Dead letter queue (3 retries, 14-day retention)
 - **Secrets Manager**: `emoji-smith/production` - Secure secret storage

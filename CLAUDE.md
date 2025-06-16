@@ -66,7 +66,7 @@ class EmojiGenerator:
     def __init__(self, ai_client: AIClient) -> None:
         self._ai_client = ai_client
         self._logger = logging.getLogger(__name__)
-    
+
     async def generate_emoji(self, request: EmojiRequest) -> EmojiResult:
         """Generate emoji based on message context and user preferences."""
         try:
@@ -118,11 +118,11 @@ class TestEmojiGenerator:
     @pytest.fixture
     def mock_ai_client(self):
         return AsyncMock()
-    
+
     @pytest.fixture
     def emoji_generator(self, mock_ai_client):
         return EmojiGenerator(mock_ai_client)
-    
+
     async def test_generate_emoji_includes_message_context_in_prompt(
         self, emoji_generator, mock_ai_client
     ):
@@ -133,10 +133,10 @@ class TestEmojiGenerator:
             style_preferences={"style": "cartoon"},
             user_id="U123456"
         )
-        
+
         # Act
         await emoji_generator.generate_emoji(request)
-        
+
         # Assert
         mock_ai_client.generate_image.assert_called_once()
         call_args = mock_ai_client.generate_image.call_args
@@ -152,7 +152,7 @@ class TestEmojiGenerator:
 
 **Repository Pattern Benefits:**
 - **Testability** - Mock `SlackRepository` and `OpenAIRepository` in unit tests without real API calls
-- **Flexibility** - Easy to swap between OpenAI models (o3, DALL-E) without changing business logic  
+- **Flexibility** - Easy to swap between OpenAI models (o3, DALL-E) without changing business logic
 - **Clean boundaries** - Domain logic doesn't know about HTTP clients, API specifics, or external service details
 
 **Dependency Injection Benefits:**
@@ -166,7 +166,7 @@ class TestEmojiGenerator:
 class EmojiGenerator:
     def __init__(self):
         self.ai_client = OpenAIClient(api_key=os.environ["OPENAI_KEY"])  # Hard to mock
-    
+
 # With DI - easy to test, flexible
 class EmojiGenerator:
     def __init__(self, ai_service: AIServiceRepository):
@@ -186,7 +186,7 @@ class SlackMessage:
     channel_id: str
     timestamp: str
 
-@dataclass  
+@dataclass
 class EmojiSpecification:
     description: str
     style: str
@@ -206,9 +206,9 @@ class GeneratedEmoji:
 ```python
 class EmojiCreationService:
     """Orchestrates the emoji creation process."""
-    
+
     async def create_emoji_from_message_action(
-        self, 
+        self,
         message: SlackMessage,
         user_input: UserEmojiRequest
     ) -> CreatedEmoji:
@@ -217,7 +217,7 @@ class EmojiCreationService:
 
 class AIPromptService:
     """Builds AI prompts from domain context."""
-    
+
     def build_generation_prompt(
         self,
         message_context: str,
@@ -242,7 +242,7 @@ class SlackRepository(ABC):
     async def upload_emoji(self, emoji: GeneratedEmoji, workspace_id: str) -> str:
         """Upload emoji to Slack workspace."""
         pass
-    
+
     @abstractmethod
     async def add_reaction(self, emoji_name: str, message_ref: MessageRef) -> None:
         """Add emoji reaction to message."""
@@ -253,8 +253,8 @@ class OpenAIRepository(ABC):
     async def generate_emoji_image(self, prompt: str, style_params: Dict) -> bytes:
         """Generate emoji image using OpenAI DALL-E."""
         pass
-    
-    @abstractmethod 
+
+    @abstractmethod
     async def enhance_prompt(self, context: str, description: str) -> str:
         """Use o3 to enhance emoji generation prompt."""
         pass
@@ -299,7 +299,7 @@ class SlackIntegrationError(EmojiSmithError):
    ```bash
    # ✅ CORRECT - Explicit file specification
    git add src/emojismith/new_feature.py tests/unit/test_new_feature.py
-   
+
    # ❌ WRONG - Could accidentally commit secrets
    git add .
    ```
@@ -314,7 +314,7 @@ class SlackIntegrationError(EmojiSmithError):
    ```bash
    # Run bandit security scan (must pass)
    bandit -r src/
-   
+
    # Check for high-severity issues
    bandit -r src/ -ll
    ```
@@ -330,7 +330,7 @@ class SlackIntegrationError(EmojiSmithError):
    api_key = os.environ.get("OPENAI_API_KEY")
    if not api_key:
        raise ValueError("OPENAI_API_KEY environment variable required")
-   
+
    # ❌ WRONG - Hardcoded secrets
    api_key = "sk-1234567890abcdef"  # Never do this!
    ```
@@ -350,7 +350,7 @@ class Config:
     slack_signing_secret: str
     openai_api_key: str
     log_level: str = "INFO"
-    
+
     @classmethod
     def from_env(cls) -> "Config":
         """Load from .env for local development."""
@@ -364,20 +364,20 @@ class Config:
 
 ### Production (AWS Secrets Manager)
 ```python
-    @classmethod 
+    @classmethod
     async def from_aws_secrets(cls) -> "Config":
         """Load from AWS Secrets Manager for Lambda runtime."""
         secrets_client = boto3.client('secretsmanager')
-        
+
         # Get all secrets in one call for efficiency
         secret_value = await secrets_client.get_secret_value(
             SecretId='emoji-smith/production'
         )
         secrets = json.loads(secret_value['SecretString'])
-        
+
         return cls(
             slack_bot_token=secrets["SLACK_BOT_TOKEN"],
-            slack_signing_secret=secrets["SLACK_SIGNING_SECRET"], 
+            slack_signing_secret=secrets["SLACK_SIGNING_SECRET"],
             openai_api_key=secrets["OPENAI_API_KEY"],
             log_level=secrets.get("LOG_LEVEL", "INFO")
         )
@@ -405,7 +405,7 @@ async def create_config() -> Config:
 
 ### Testing Approach
 1. **Unit Tests** - Mock all external services (Slack API, AI services)
-2. **Integration Tests** - Test against real services in controlled scenarios  
+2. **Integration Tests** - Test against real services in controlled scenarios
 3. **Local Development** - Use ngrok tunnel for Slack webhook testing
 4. **Manual Testing** - Deploy to production Lambda and verify functionality
 
@@ -613,7 +613,7 @@ def is_development() -> bool:
 # Pre-commit workflow (never use 'git add .')
 black src/ tests/                    # Format code
 flake8 src/ tests/                  # Lint code
-mypy src/                           # Type checking  
+mypy src/                           # Type checking
 bandit -r src/                      # Security scan
 pytest --cov=src --cov-fail-under=90 tests/  # Tests with coverage
 
