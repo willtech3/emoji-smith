@@ -56,8 +56,8 @@ def get_app() -> "FastAPI":
     """Get or create the FastAPI app instance."""
     global _app
     if _app is None:
-        # Load secrets from AWS when first creating the app
-        _load_secrets_from_aws()
+        # Secrets are now injected as environment variables at deploy time
+        # No need to load from Secrets Manager at runtime
         _app = create_app()
     return _app
 
