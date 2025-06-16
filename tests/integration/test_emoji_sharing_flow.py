@@ -119,7 +119,7 @@ class TestEmojiSharingFlow:
         mock_slack_client.files_upload_v2.assert_called_once()
         upload_args = mock_slack_client.files_upload_v2.call_args[1]
         assert upload_args["filename"] == "facepalm.png"
-        assert upload_args["channels"] == "C789012"
+        assert upload_args["channels"] == ["C789012"]
         assert "upload" in upload_args["initial_comment"].lower()
 
         # 6. Verify thread was created
