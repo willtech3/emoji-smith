@@ -1,0 +1,117 @@
+name: Deploy Emoji Smith
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: "latest"
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Create & activate venv and install dependencies
+      run: |
+        uv venv .venv
+        source .venv/bin/activate
+        uv sync
+
+    - name: Run pre-commit hooks
+      run: |
+        source .venv/bin/activate
+        uv run pre-commit run --all-files
+
+    - name: Code formatting check
+      run: |
+        source .venv/bin/activate
+        uv run black --check src/ tests/
+
+    - name: Lint with flake8
+      run: |
+        source .venv/bin/activate
+        uv run flake8 src/ tests/
+
+    - name: Type checking with mypy
+      run: |
+        source .venv/bin/activate
+        uv run mypy src/
+
+    - name: Security analysis with bandit
+      run: |
+        source .venv/bin/activate
+        uv run bandit -r src/
+
+    - name: Run tests with coverage
+      run: |
+        source .venv/bin/activate
+        uv run pytest --cov=src --cov-fail-under=80 --cov-report=xml tests/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: "latest"
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install Node.js for CDK
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install AWS CDK
+      run: npm install -g aws-cdk
+
+    - name: Install CDK dependencies
+      working-directory: ./infra
+      run: |
+        python -m venv .venv
+        source .venv/bin/activate
+        pip install -r requirements.txt
+
+    - name: CDK Deploy
+      working-directory: ./infra
+      run: |
+        source .venv/bin/activate
+        cdk deploy --require-approval never

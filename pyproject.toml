@@ -105,6 +105,7 @@ source = ["src"]
 omit = ["tests/*", "src/emojismith/dev_server.py"]
 
 [tool.coverage.report]
+fail_under = 80
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -115,5 +116,5 @@ exclude_lines = [
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
-skips = ["B101"]  # Skip assert_used test (pytest uses asserts)
+skips = ["B101", "B104"]  # Skip assert_used test (pytest uses asserts), skip bind all interfaces for dev server
 severity = "medium"

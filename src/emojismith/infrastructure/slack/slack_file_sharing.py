@@ -233,15 +233,12 @@ class SlackFileSharingRepository:
                     f"Bot cannot join channel {channel_id}: {error_code}. "
                     "Bot may need to be manually invited to private channels."
                 )
-                # Don't fail here - the file upload might still work if bot was previously added
+                # Don't fail here - the file upload might still work if bot was
+                # previously added
                 return
 
             # For other errors, log but continue - the upload might still work
-            self._logger.warning(
-                f"Could not join channel {channel_id}: {error_code}"
-            )
+            self._logger.warning(f"Could not join channel {channel_id}: {error_code}")
         except Exception as e:
             # Log unexpected errors but don't fail the file sharing operation
-            self._logger.warning(
-                f"Unexpected error joining channel {channel_id}: {e}"
-            )
+            self._logger.warning(f"Unexpected error joining channel {channel_id}: {e}")

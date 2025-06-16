@@ -1,5 +1,7 @@
 # Emoji Smith 🎨
 
+[![Coverage Status](https://codecov.io/gh/willtech3/emoji-smith/branch/main/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/willtech3/emoji-smith)
+
 > **AI-powered custom emoji generator for Slack workspaces**
 
 Emoji Smith is a Slack bot that automatically generates custom emojis using OpenAI's DALL-E, triggered by message actions. Simply right-click any Slack message, choose "Create Reaction," describe the emoji you want, and watch as AI creates the perfect custom emoji reaction.
