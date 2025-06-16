@@ -2,6 +2,7 @@ from aws_cdk import (
     Stack,
     Duration,
     aws_lambda as _lambda,
+    aws_lambda_event_sources as lambda_event_sources,
     aws_apigateway as apigateway,
     aws_sqs as sqs,
     aws_iam as iam,
@@ -67,11 +68,18 @@ class EmojiSmithStack(Stack):
         # Grant Lambda access to Secrets Manager
         self.secrets.grant_read(lambda_role)
 
-        # Create CloudWatch log group
-        log_group = logs.LogGroup(
+        # Create CloudWatch log groups
+        webhook_log_group = logs.LogGroup(
             self,
-            "EmojiSmithLogGroup",
+            "EmojiSmithWebhookLogGroup",
             log_group_name="/aws/lambda/emoji-smith-webhook",
+            retention=logs.RetentionDays.ONE_MONTH,
+        )
+
+        worker_log_group = logs.LogGroup(
+            self,
+            "EmojiSmithWorkerLogGroup",
+            log_group_name="/aws/lambda/emoji-smith-worker",
             retention=logs.RetentionDays.ONE_MONTH,
         )
 
@@ -91,7 +99,53 @@ class EmojiSmithStack(Stack):
                 "SQS_QUEUE_URL": self.processing_queue.queue_url,
                 "LOG_LEVEL": "INFO",
             },
-            log_group=log_group,
+            log_group=webhook_log_group,
+        )
+
+        # Create worker Lambda role
+        worker_lambda_role = iam.Role(
+            self,
+            "EmojiSmithWorkerLambdaRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                )
+            ],
+        )
+
+        # Grant worker Lambda access to SQS queue
+        self.processing_queue.grant_consume_messages(worker_lambda_role)
+        self.processing_dlq.grant_consume_messages(worker_lambda_role)
+
+        # Grant worker Lambda access to Secrets Manager
+        self.secrets.grant_read(worker_lambda_role)
+
+        # Create worker Lambda function
+        self.worker_lambda = _lambda.Function(
+            self,
+            "EmojiSmithWorker",
+            function_name="emoji-smith-worker",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="worker_handler.handler",
+            code=_lambda.Code.from_asset("../src"),
+            timeout=Duration.minutes(15),
+            memory_size=1024,  # More memory for image processing
+            role=worker_lambda_role,
+            environment={
+                "SECRETS_NAME": self.secrets.secret_name,
+                "LOG_LEVEL": "INFO",
+            },
+            log_group=worker_log_group,
+        )
+
+        # Create SQS event source for worker Lambda
+        self.worker_lambda.add_event_source(
+            lambda_event_sources.SqsEventSource(
+                self.processing_queue,
+                batch_size=1,  # Process one emoji job at a time
+                max_batching_window=Duration.seconds(5),
+            )
         )
 
         # Create API Gateway for Slack webhooks
