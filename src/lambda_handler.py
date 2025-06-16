@@ -9,7 +9,7 @@ import boto3
 from botocore.exceptions import ClientError
 from mangum import Mangum
 
-from emojismith.app import create_app
+# Lazy import - only import create_app when actually needed
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -53,9 +53,12 @@ _app = None
 
 
 def get_app() -> "FastAPI":
-    """Get or create the FastAPI app instance."""
+    """Get or create the FastAPI app instance with lazy loading."""
     global _app
     if _app is None:
+        # Lazy import to avoid loading heavy dependencies during cold start
+        from emojismith.app import create_app
+        
         # Secrets are now injected as environment variables at deploy time
         # No need to load from Secrets Manager at runtime
         _app = create_app()
