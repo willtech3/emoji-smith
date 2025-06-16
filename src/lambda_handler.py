@@ -81,7 +81,31 @@ def get_app() -> "FastAPI":
 
 def handler(event: dict, context: Any) -> Any:
     """AWS Lambda handler."""
+    import time
+
+    handler_start = time.time()
+    logger.info("🚀 Lambda handler started")
+
+    # Load secrets first if in AWS environment
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        secrets_start = time.time()
+        logger.info("🔐 Loading secrets from AWS...")
+        _load_secrets_from_aws()
+        secrets_time = time.time() - secrets_start
+        logger.info(f"✅ Secrets loaded: {secrets_time:.3f}s")
+
     # App initialization happens on first request for lazy loading
+    app_start = time.time()
     app = get_app()
+    app_time = time.time() - app_start
+    logger.info(f"📱 App ready: {app_time:.3f}s")
+
+    mangum_start = time.time()
     mangum_handler = Mangum(app, lifespan="off")
+    mangum_time = time.time() - mangum_start
+    logger.info(f"🔗 Mangum handler: {mangum_time:.3f}s")
+
+    total_time = time.time() - handler_start
+    logger.info(f"🏁 Total handler time: {total_time:.3f}s")
+
     return mangum_handler(event, context)
