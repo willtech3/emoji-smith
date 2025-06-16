@@ -29,8 +29,6 @@ class SQSJobQueue(JobQueueRepository):
             response = await sqs_client.send_message(
                 QueueUrl=self._queue_url,
                 MessageBody=message_body,
-                MessageGroupId="emoji-generation",  # For FIFO queues
-                MessageDeduplicationId=job.job_id,  # For FIFO queues
             )
 
         self._logger.info(
