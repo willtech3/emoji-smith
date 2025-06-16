@@ -1,0 +1,37 @@
+# Aggressive optimization for sub-3s Lambda cold start
+# Development and build artifacts
+.git
+.github
+.vscode
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.tmp
+*.log
+
+# Documentation and markdown files
+*.md
+README.md
+CLAUDE.md
+AGENTS.md
+SETUP.md
+SLACK-APP-SETUP.md
+docs/
+
+# Development and testing
+tests/
+infra/
+requirements-dev.lock
+uv.lock
+pyproject.toml
+run_dev.sh
+Dockerfile.bak
+
+# IDE and editor files
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

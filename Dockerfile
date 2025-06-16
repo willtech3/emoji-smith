@@ -1,16 +1,23 @@
-# Use the official AWS Lambda Python runtime
-FROM public.ecr.aws/lambda/python:3.12
+# Build stage: install dependencies
+FROM public.ecr.aws/lambda/python:3.12 AS builder
+WORKDIR /app
 
-# Copy source code first for editable install
-COPY src/ ${LAMBDA_TASK_ROOT}/
-COPY src/lambda_handler.py ${LAMBDA_TASK_ROOT}/
-COPY src/worker_handler.py ${LAMBDA_TASK_ROOT}/
-COPY pyproject.toml ${LAMBDA_TASK_ROOT}/
+# Install production dependencies only - aggressively optimized for sub-3s cold start
+COPY requirements.lock .
+RUN grep -v "^-e \\." requirements.lock | \
+    # Keep core runtime dependencies and their essential transitive deps
+    grep -E "^(aioboto3|fastapi|slack-|openai|pillow|mangum|python-dotenv|pydantic|aiohttp|boto3|certifi|httpx|jmespath|urllib3|botocore|s3transfer|multidict|yarl|aiosignal|frozenlist)" > requirements-minimal.lock && \
+    pip install --no-cache-dir --target /app/python -r requirements-minimal.lock
 
-# Copy requirements and install dependencies (excluding editable install)
-COPY requirements.lock ${LAMBDA_TASK_ROOT}/
-RUN grep -v "^-e \." requirements.lock > requirements-no-editable.lock && \
-    pip install --no-cache-dir -r requirements-no-editable.lock
+# Copy application source (without tests/docs via .dockerignore)
+COPY src/ /app/src/
 
-# Set the CMD to your handler (could also be worker_handler.handler for worker Lambda)
+# Runtime stage: minimal slim image
+FROM public.ecr.aws/lambda/python:3.12-slim
+
+# Copy python packages and application code
+COPY --from=builder /app/python /var/task/
+COPY --from=builder /app/src/ ${LAMBDA_TASK_ROOT}/
+
+# Default command
 CMD ["lambda_handler.handler"]
