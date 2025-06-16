@@ -93,6 +93,12 @@ class EmojiSmithStack(Stack):
                         "ecr:BatchCheckLayerAvailability",
                         "ecr:GetDownloadUrlForLayer",
                         "ecr:BatchGetImage",
+                        "ecr:DescribeRepositories",
+                        "ecr:CreateRepository",
+                        "ecr:PutImage",
+                        "ecr:InitiateLayerUpload",
+                        "ecr:UploadLayerPart",
+                        "ecr:CompleteLayerUpload",
                     ],
                     resources=[
                         f"arn:aws:ecr:{self.region}:{self.account}:repository/emoji-smith"
