@@ -127,3 +127,29 @@ class TestWebhookHandler:
         # Assert
         assert result["status"] == "error"
         assert "Failed to create emoji" in result["error"]
+
+    async def test_message_action_accepts_extra_message_fields(
+        self, webhook_handler, mock_slack_repo
+    ):
+        """Message payloads may include additional fields beyond the schema."""
+
+        payload = {
+            "type": "message_action",
+            "callback_id": "create_emoji_reaction",
+            "trigger_id": "TRIG",
+            "user": {"id": "U2", "name": "testuser"},
+            "message": {
+                "text": "extra fields",
+                "user": "U1",
+                "ts": "123.456",
+                "type": "message",
+                "client_msg_id": "abc123",
+            },
+            "channel": {"id": "C1"},
+            "team": {"id": "T1"},
+        }
+
+        result = await webhook_handler.handle_message_action(payload)
+
+        assert result == {"status": "ok"}
+        mock_slack_repo.open_modal.assert_called_once()
