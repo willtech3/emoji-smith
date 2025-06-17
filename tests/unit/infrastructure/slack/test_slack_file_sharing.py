@@ -9,7 +9,7 @@ from emojismith.infrastructure.slack.slack_file_sharing import (
     SlackFileSharingRepository,
 )
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
-from emojismith.domain.value_objects.emoji_sharing_preferences import (
+from shared.domain.value_objects import (
     EmojiSharingPreferences,
     ShareLocation,
     InstructionVisibility,

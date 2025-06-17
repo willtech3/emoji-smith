@@ -237,7 +237,8 @@ class TestEmojiCreationService:
     ):
         """Test processing emoji generation job from job entity."""
         # Arrange
-        from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+        from shared.domain.entities import EmojiGenerationJob
+        from shared.domain.value_objects import EmojiSharingPreferences
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from io import BytesIO
@@ -250,6 +251,7 @@ class TestEmojiCreationService:
             channel_id="C67890",
             timestamp="1234567890.123456",
             team_id="T11111",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
         )
 
         # Mock successful file sharing for standard workspace
@@ -290,7 +292,8 @@ class TestEmojiCreationService:
     ):
         """Test processing emoji generation job when file sharing fails gracefully."""
         # Arrange
-        from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+        from shared.domain.entities import EmojiGenerationJob
+        from shared.domain.value_objects import EmojiSharingPreferences
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from io import BytesIO
@@ -303,6 +306,7 @@ class TestEmojiCreationService:
             channel_id="C67890",
             timestamp="1234567890.123456",
             team_id="T11111",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
         )
 
         # Mock file sharing failure for standard workspace

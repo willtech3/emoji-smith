@@ -1,9 +1,7 @@
 """Tests for EmojiGenerationJob domain entity."""
 
-from emojismith.domain.entities.emoji_generation_job import (
-    EmojiGenerationJob,
-    JobStatus,
-)
+from shared.domain.entities import EmojiGenerationJob
+from shared.domain.value_objects import JobStatus
 
 
 class TestEmojiGenerationJob:

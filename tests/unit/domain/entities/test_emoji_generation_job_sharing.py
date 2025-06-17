@@ -1,7 +1,7 @@
 """Tests for EmojiGenerationJob with sharing preferences."""
 
-from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
-from emojismith.domain.value_objects.emoji_sharing_preferences import (
+from shared.domain.entities import EmojiGenerationJob
+from shared.domain.value_objects import (
     EmojiSharingPreferences,
     ShareLocation,
     InstructionVisibility,
