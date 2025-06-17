@@ -74,7 +74,7 @@ class TestDualLambdaE2EIntegration:
                         "emoji_description": {"description": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
-                                "selected_option": {"value": "original_channel"}
+                                "selected_option": {"value": "channel"}
                             }
                         },
                         "instruction_visibility": {
@@ -151,9 +151,9 @@ class TestDualLambdaE2EIntegration:
         assert job.channel_id == "C67890"
         assert job.team_id == "T11111"
         assert job.timestamp == "1234567890.123456"
-        assert job.sharing_preferences.share_location.value == "original_channel"
-        assert job.sharing_preferences.instruction_visibility.value == "everyone"
-        assert job.sharing_preferences.image_size.value == "emoji_size"
+        assert job.sharing_preferences.share_location.value == "channel"
+        assert job.sharing_preferences.instruction_visibility.value == "EVERYONE"
+        assert job.sharing_preferences.image_size.value == "EMOJI_SIZE"
 
         # Verify job has required worker fields
         assert job.job_id is not None

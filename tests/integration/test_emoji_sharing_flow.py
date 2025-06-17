@@ -147,7 +147,7 @@ class TestEmojiSharingFlow:
                         },
                         "instruction_visibility": {
                             "visibility_select": {
-                                "selected_option": {"value": "submitter_only"}
+                                "selected_option": {"value": "hidden"}
                             }
                         },
                         "image_size": {

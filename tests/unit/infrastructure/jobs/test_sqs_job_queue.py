@@ -38,7 +38,9 @@ class TestSQSJobQueue:
     ):
         """Test enqueuing job sends job directly to SQS."""
         # Arrange
-        from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+        from shared.domain.entities import EmojiGenerationJob
+
+        from shared.domain.value_objects import EmojiSharingPreferences
 
         job = EmojiGenerationJob.create_new(
             message_text="Just deployed on Friday!",
@@ -47,6 +49,7 @@ class TestSQSJobQueue:
             channel_id="C67890",
             timestamp="1234567890.123456",
             team_id="T11111",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
         )
         mock_sqs_client.send_message.return_value = {
             "MessageId": "msg_123",
@@ -87,13 +90,13 @@ class TestSQSJobQueue:
             "channel_id": "C67890",
             "timestamp": "123.456",
             "team_id": "T11111",
-            "status": "pending",
+            "status": "PENDING",
             "created_at": "2023-01-01T12:00:00+00:00",
             "sharing_preferences": {
-                "share_location": "original_channel",
-                "instruction_visibility": "everyone",
+                "share_location": "channel",
+                "instruction_visibility": "EVERYONE",
                 "include_upload_instructions": True,
-                "image_size": "full_size",
+                "image_size": "EMOJI_SIZE",
                 "thread_ts": None,
             },
         }
@@ -121,7 +124,9 @@ class TestSQSJobQueue:
     async def test_removes_completed_job_from_queue(self, sqs_queue, mock_sqs_client):
         """Test complete_job calls delete_message when receipt_handle is present."""
         # Arrange: create dummy job with receipt_handle
-        from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+        from shared.domain.entities import EmojiGenerationJob
+
+        from shared.domain.value_objects import EmojiSharingPreferences
 
         job = EmojiGenerationJob.create_new(
             message_text="x",
@@ -130,6 +135,7 @@ class TestSQSJobQueue:
             channel_id="C1",
             timestamp="ts",
             team_id="T1",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
         )
         receipt_handle = "rh"
 

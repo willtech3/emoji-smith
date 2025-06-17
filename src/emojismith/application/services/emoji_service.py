@@ -311,7 +311,7 @@ class EmojiCreationService:
                 {
                     **metadata,
                     "user_description": description,
-                    "sharing_preferences": sharing_preferences,
+                    "sharing_preferences": sharing_preferences.to_dict(),
                 }
             )
 

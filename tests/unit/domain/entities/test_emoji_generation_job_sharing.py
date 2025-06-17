@@ -104,7 +104,7 @@ class TestEmojiGenerationJobSharing:
         """Test job defaults to new thread when not in thread context."""
         # Arrange
         default_prefs = EmojiSharingPreferences.default_for_context(is_in_thread=False)
-        
+
         # Act
         job = EmojiGenerationJob.create_new(
             message_text="Deploy failed",
@@ -130,7 +130,7 @@ class TestEmojiGenerationJobSharing:
         default_prefs = EmojiSharingPreferences.default_for_context(
             is_in_thread=True, thread_ts="123.456"
         )
-        
+
         # Act
         job = EmojiGenerationJob.create_new(
             message_text="Bug in thread",
