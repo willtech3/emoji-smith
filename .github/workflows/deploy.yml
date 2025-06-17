@@ -163,6 +163,16 @@ jobs:
     - name: Install AWS CDK
       run: npm install -g aws-cdk
 
+    - name: Install uv for webhook package build
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: "latest"
+
+    - name: Build webhook package
+      run: |
+        uv sync --group webhook
+        ./scripts/build_webhook_package.sh
+
     - name: Install CDK dependencies
       working-directory: ./infra
       run: |
