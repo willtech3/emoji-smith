@@ -52,6 +52,8 @@ SQS_QUEUE_URL=https://sqs.region.amazonaws.com/account/queue-name
 # Generate webhook package for Lambda deployment
 ./scripts/build_webhook_package.sh
 ```
+The script now packages the `shared` domain module alongside the webhook code so
+imports resolve correctly when deployed to Lambda.
 
 ### CDK Deployment
 ```bash
