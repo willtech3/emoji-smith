@@ -3,29 +3,21 @@
 import json
 import logging
 from typing import Dict, Any
-from dataclasses import dataclass
 
 from webhook.domain.slack_message import SlackMessage
-from webhook.domain.emoji_generation_job import EmojiGenerationJob
+from webhook.domain.emoji_generation_job import (
+    EmojiGenerationJob,
+    EmojiSharingPreferences,
+)
 from webhook.repositories.slack_repository import SlackRepository
 from webhook.repositories.job_queue_repository import JobQueueRepository
-
-
-@dataclass
-class EmojiSharingPreferences:
-    """User preferences for emoji sharing."""
-    share_location: str
-    instruction_visibility: str
-    image_size: str
 
 
 class WebhookHandler:
     """Handles Slack webhook events with immediate modal opening."""
 
     def __init__(
-        self,
-        slack_repo: SlackRepository,
-        job_queue: JobQueueRepository
+        self, slack_repo: SlackRepository, job_queue: JobQueueRepository
     ) -> None:
         self._slack_repo = slack_repo
         self._job_queue = job_queue
@@ -88,7 +80,7 @@ class WebhookHandler:
         sharing_preferences = EmojiSharingPreferences(
             share_location=share_location,
             instruction_visibility=visibility,
-            image_size=image_size
+            image_size=image_size,
         )
 
         job = EmojiGenerationJob.create_new(
@@ -99,7 +91,7 @@ class WebhookHandler:
             timestamp=metadata["timestamp"],
             team_id=metadata["team_id"],
             sharing_preferences=sharing_preferences,
-            thread_ts=metadata.get("thread_ts")
+            thread_ts=metadata.get("thread_ts"),
         )
 
         # Queue job for worker Lambda
@@ -107,7 +99,7 @@ class WebhookHandler:
             await self._job_queue.enqueue_job(job)
             self._logger.info(
                 "Queued emoji generation job",
-                extra={"job_id": job.job_id, "user_id": job.user_id}
+                extra={"job_id": job.job_id, "user_id": job.user_id},
             )
             return {"response_action": "clear"}
         except Exception:
@@ -115,8 +107,10 @@ class WebhookHandler:
             return {
                 "response_action": "errors",
                 "errors": {
-                    "emoji_description": "Failed to queue emoji generation. Please try again."
-                }
+                    "emoji_description": (
+                        "Failed to queue emoji generation. Please try again."
+                    )
+                },
             }
 
     async def _open_emoji_creation_modal(
@@ -142,8 +136,12 @@ class WebhookHandler:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"Creating emoji for message: \"{slack_message.text[:100]}{'...' if len(slack_message.text) > 100 else ''}\""
-                    }
+                        "text": (
+                            f"Creating emoji for message: \""
+                            f"{slack_message.text[:100]}"
+                            f"{'...' if len(slack_message.text) > 100 else ''}\""
+                        ),
+                    },
                 },
                 {
                     "type": "input",
@@ -151,9 +149,12 @@ class WebhookHandler:
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "description",
-                        "placeholder": {"type": "plain_text", "text": "Describe the emoji you want..."}
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Describe the emoji you want...",
+                        },
                     },
-                    "label": {"type": "plain_text", "text": "Emoji Description"}
+                    "label": {"type": "plain_text", "text": "Emoji Description"},
                 },
                 {
                     "type": "input",
@@ -161,14 +162,32 @@ class WebhookHandler:
                     "element": {
                         "type": "static_select",
                         "action_id": "share_location_select",
-                        "placeholder": {"type": "plain_text", "text": "Choose sharing location"},
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Choose sharing location",
+                        },
                         "options": [
-                            {"text": {"type": "plain_text", "text": "Current channel"}, "value": "channel"},
-                            {"text": {"type": "plain_text", "text": "Direct message"}, "value": "dm"}
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Current channel",
+                                },
+                                "value": "channel",
+                            },
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Direct message",
+                                },
+                                "value": "dm",
+                            },
                         ],
-                        "initial_option": {"text": {"type": "plain_text", "text": "Current channel"}, "value": "channel"}
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Current channel"},
+                            "value": "channel",
+                        },
                     },
-                    "label": {"type": "plain_text", "text": "Share Location"}
+                    "label": {"type": "plain_text", "text": "Share Location"},
                 },
                 {
                     "type": "input",
@@ -176,14 +195,32 @@ class WebhookHandler:
                     "element": {
                         "type": "static_select",
                         "action_id": "visibility_select",
-                        "placeholder": {"type": "plain_text", "text": "Choose instruction visibility"},
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Choose instruction visibility",
+                        },
                         "options": [
-                            {"text": {"type": "plain_text", "text": "Show description"}, "value": "visible"},
-                            {"text": {"type": "plain_text", "text": "Hide description"}, "value": "hidden"}
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Show description",
+                                },
+                                "value": "visible",
+                            },
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Hide description",
+                                },
+                                "value": "hidden",
+                            },
                         ],
-                        "initial_option": {"text": {"type": "plain_text", "text": "Show description"}, "value": "visible"}
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Show description"},
+                            "value": "visible",
+                        },
                     },
-                    "label": {"type": "plain_text", "text": "Instruction Visibility"}
+                    "label": {"type": "plain_text", "text": "Instruction Visibility"},
                 },
                 {
                     "type": "input",
@@ -191,16 +228,43 @@ class WebhookHandler:
                     "element": {
                         "type": "static_select",
                         "action_id": "size_select",
-                        "placeholder": {"type": "plain_text", "text": "Choose image size"},
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Choose image size",
+                        },
                         "options": [
-                            {"text": {"type": "plain_text", "text": "512x512 (Recommended)"}, "value": "512x512"},
-                            {"text": {"type": "plain_text", "text": "256x256 (Smaller)"}, "value": "256x256"},
-                            {"text": {"type": "plain_text", "text": "1024x1024 (Larger)"}, "value": "1024x1024"}
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "512x512 (Recommended)",
+                                },
+                                "value": "512x512",
+                            },
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "256x256 (Smaller)",
+                                },
+                                "value": "256x256",
+                            },
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "1024x1024 (Larger)",
+                                },
+                                "value": "1024x1024",
+                            },
                         ],
-                        "initial_option": {"text": {"type": "plain_text", "text": "512x512 (Recommended)"}, "value": "512x512"}
+                        "initial_option": {
+                            "text": {
+                                "type": "plain_text",
+                                "text": "512x512 (Recommended)",
+                            },
+                            "value": "512x512",
+                        },
                     },
-                    "label": {"type": "plain_text", "text": "Image Size"}
-                }
+                    "label": {"type": "plain_text", "text": "Image Size"},
+                },
             ],
             "submit": {"type": "plain_text", "text": "Generate Emoji"},
             "private_metadata": json.dumps(metadata),

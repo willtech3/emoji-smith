@@ -2,7 +2,6 @@
 
 import json
 import logging
-from typing import Any
 import boto3
 
 from webhook.repositories.job_queue_repository import JobQueueRepository
@@ -14,7 +13,7 @@ class SQSJobQueue(JobQueueRepository):
 
     def __init__(self, queue_url: str) -> None:
         self._queue_url = queue_url
-        self._sqs_client = boto3.client('sqs')
+        self._sqs_client = boto3.client("sqs")
         self._logger = logging.getLogger(__name__)
 
     async def enqueue_job(self, job: EmojiGenerationJob) -> str:

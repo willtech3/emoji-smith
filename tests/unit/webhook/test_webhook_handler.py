@@ -1,7 +1,7 @@
 """Tests for simplified webhook handler (package Lambda)."""
 
 import pytest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 from webhook.handler import WebhookHandler
 
 
@@ -18,10 +18,7 @@ class TestWebhookHandler:
 
     @pytest.fixture
     def webhook_handler(self, mock_slack_repo, mock_job_queue):
-        return WebhookHandler(
-            slack_repo=mock_slack_repo,
-            job_queue=mock_job_queue
-        )
+        return WebhookHandler(slack_repo=mock_slack_repo, job_queue=mock_job_queue)
 
     async def test_handles_message_action_opens_modal_immediately(
         self, webhook_handler, mock_slack_repo
@@ -61,12 +58,26 @@ class TestWebhookHandler:
                 "state": {
                     "values": {
                         "emoji_description": {"description": {"value": "facepalm"}},
-                        "share_location": {"share_location_select": {"selected_option": {"value": "channel"}}},
-                        "instruction_visibility": {"visibility_select": {"selected_option": {"value": "visible"}}},
-                        "image_size": {"size_select": {"selected_option": {"value": "512x512"}}},
+                        "share_location": {
+                            "share_location_select": {
+                                "selected_option": {"value": "channel"}
+                            }
+                        },
+                        "instruction_visibility": {
+                            "visibility_select": {
+                                "selected_option": {"value": "visible"}
+                            }
+                        },
+                        "image_size": {
+                            "size_select": {"selected_option": {"value": "512x512"}}
+                        },
                     }
                 },
-                "private_metadata": '{"message_text": "test", "user_id": "U123", "channel_id": "C123", "timestamp": "123.456", "team_id": "T123"}',
+                "private_metadata": (
+                    '{"message_text": "test", "user_id": "U123", '
+                    '"channel_id": "C123", "timestamp": "123.456", '
+                    '"team_id": "T123"}'
+                ),
             },
         }
 

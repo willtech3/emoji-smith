@@ -11,7 +11,7 @@ from src.worker_handler import handler
 
 @pytest.fixture
 def sqs_event() -> Dict[str, Any]:
-    """Sample SQS event for testing with wrapped message format."""
+    """Sample SQS event for testing with direct job format."""
     return {
         "Records": [
             {
@@ -19,18 +19,20 @@ def sqs_event() -> Dict[str, Any]:
                 "receiptHandle": "test-receipt-handle",
                 "body": json.dumps(
                     {
-                        "message_type": "emoji_generation",
-                        "payload": {
-                            "job_id": "test-job-123",
-                            "message_text": "Just deployed on Friday",
-                            "user_description": "A test emoji",
-                            "user_id": "U123456",
-                            "channel_id": "C123456",
-                            "timestamp": "1234567890.123456",
-                            "team_id": "T123456",
-                            "status": "pending",
-                            "created_at": "2024-01-01T00:00:00+00:00",
-                        },
+                        "job_id": "test-job-123",
+                        "message_text": "Just deployed on Friday",
+                        "user_description": "A test emoji",
+                        "user_id": "U123456",
+                        "channel_id": "C123456",
+                        "timestamp": "1234567890.123456",
+                        "team_id": "T123456",
+                        "status": "pending",
+                        "created_at": "2024-01-01T00:00:00+00:00",
+                        "sharing_preferences": {
+                            "share_location": "original_channel",
+                            "instruction_visibility": "everyone",
+                            "image_size": "emoji_size"
+                        }
                     }
                 ),
                 "attributes": {
