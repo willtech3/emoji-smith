@@ -28,7 +28,8 @@ cp src/__init__.py "$TEMP_DIR/"
 # Create package zip
 echo -e "${YELLOW}Creating webhook package zip...${NC}"
 cd "$TEMP_DIR"
-zip -r webhook_package.zip . -x "*.pyc" "*__pycache__*" "*.git*"
+# Create zip with compression and exclude unnecessary files
+zip -rq webhook_package.zip . -x "*.pyc" "*__pycache__*" "*.git*"
 
 # Move package to project root
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
