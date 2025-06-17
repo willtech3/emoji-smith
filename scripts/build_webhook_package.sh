@@ -1,7 +1,7 @@
 #!/bin/bash
 # Build webhook package for Lambda deployment
 
-set -e
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -17,7 +17,7 @@ echo "Using temporary directory: $TEMP_DIR"
 
 # Install dependencies to temp directory
 echo -e "${YELLOW}Installing webhook dependencies...${NC}"
-pip install -r requirements-webhook.txt -t "$TEMP_DIR" --no-deps
+uv pip sync requirements-webhook.lock --target "$TEMP_DIR" --no-deps
 
 # Copy webhook source code
 echo -e "${YELLOW}Copying webhook source code...${NC}"
@@ -30,8 +30,9 @@ cd "$TEMP_DIR"
 zip -r webhook_package.zip . -x "*.pyc" "*__pycache__*" "*.git*"
 
 # Move package to project root
-mv webhook_package.zip /Users/williamlane/Desktop/Code/emoji-smith/
-cd /Users/williamlane/Desktop/Code/emoji-smith/
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+mv webhook_package.zip "$PROJECT_ROOT/"
+cd "$PROJECT_ROOT"
 
 # Cleanup
 rm -rf "$TEMP_DIR"
