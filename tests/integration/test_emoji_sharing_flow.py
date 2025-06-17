@@ -147,11 +147,11 @@ class TestEmojiSharingFlow:
                         },
                         "instruction_visibility": {
                             "visibility_select": {
-                                "selected_option": {"value": "requester_only"}
+                                "selected_option": {"value": "submitter_only"}
                             }
                         },
                         "image_size": {
-                            "size_select": {"selected_option": {"value": "full_size"}}
+                            "size_select": {"selected_option": {"value": "1024x1024"}}
                         },
                     }
                 },

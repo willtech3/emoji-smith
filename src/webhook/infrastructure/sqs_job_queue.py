@@ -5,7 +5,7 @@ import logging
 import boto3
 
 from webhook.repositories.job_queue_repository import JobQueueRepository
-from webhook.domain.emoji_generation_job import EmojiGenerationJob
+from shared.domain.entities import EmojiGenerationJob
 
 
 class SQSJobQueue(JobQueueRepository):

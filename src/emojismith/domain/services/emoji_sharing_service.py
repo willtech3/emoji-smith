@@ -6,9 +6,7 @@ from typing import Protocol
 
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.entities.slack_message import SlackMessage
-from emojismith.domain.value_objects.emoji_sharing_preferences import (
-    EmojiSharingPreferences,
-)
+from shared.domain.value_objects import EmojiSharingPreferences
 
 
 class WorkspaceType(str, Enum):

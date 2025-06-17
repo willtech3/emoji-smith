@@ -10,10 +10,11 @@ from emojismith.domain.services.emoji_sharing_service import (
 )
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.entities.slack_message import SlackMessage
-from emojismith.domain.value_objects.emoji_sharing_preferences import (
+from shared.domain.value_objects import (
     EmojiSharingPreferences,
     ShareLocation,
     InstructionVisibility,
+    ImageSize,
 )
 
 
@@ -47,6 +48,7 @@ class TestEmojiSharingService:
         return EmojiSharingPreferences(
             share_location=ShareLocation.ORIGINAL_CHANNEL,
             instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
         )
 
     def test_uses_direct_upload_for_enterprise_grid(
@@ -111,7 +113,8 @@ class TestEmojiSharingService:
         # Arrange
         thread_prefs = EmojiSharingPreferences(
             share_location=ShareLocation.THREAD,
-            instruction_visibility=InstructionVisibility.REQUESTER_ONLY,
+            instruction_visibility=InstructionVisibility.SUBMITTER_ONLY,
+            image_size=ImageSize.EMOJI_SIZE,
             thread_ts="1234567890.123456",
         )
         context = EmojiSharingContext(
@@ -153,6 +156,7 @@ class TestEmojiSharingContext:
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.ORIGINAL_CHANNEL,
             instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
         )
 
         # Act
@@ -184,6 +188,7 @@ class TestEmojiSharingContext:
             preferences=EmojiSharingPreferences(
                 share_location=ShareLocation.ORIGINAL_CHANNEL,
                 instruction_visibility=InstructionVisibility.EVERYONE,
+                image_size=ImageSize.EMOJI_SIZE,
             ),
             workspace_type=WorkspaceType.STANDARD,
         )

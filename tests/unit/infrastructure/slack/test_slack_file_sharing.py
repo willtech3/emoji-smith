@@ -9,7 +9,7 @@ from emojismith.infrastructure.slack.slack_file_sharing import (
     SlackFileSharingRepository,
 )
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
-from emojismith.domain.value_objects.emoji_sharing_preferences import (
+from shared.domain.value_objects import (
     EmojiSharingPreferences,
     ShareLocation,
     InstructionVisibility,
@@ -47,6 +47,7 @@ class TestSlackFileSharingRepository:
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.NEW_THREAD,
             instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
         )
         channel_id = "C123456"
 
@@ -93,7 +94,8 @@ class TestSlackFileSharingRepository:
         thread_ts = "1234567890.123456"
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.THREAD,
-            instruction_visibility=InstructionVisibility.REQUESTER_ONLY,
+            instruction_visibility=InstructionVisibility.SUBMITTER_ONLY,
+            image_size=ImageSize.EMOJI_SIZE,
             thread_ts=thread_ts,
         )
         channel_id = "C123456"
@@ -141,7 +143,7 @@ class TestSlackFileSharingRepository:
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.NEW_THREAD,
             instruction_visibility=InstructionVisibility.EVERYONE,
-            image_size=ImageSize.FULL_SIZE,
+            image_size=ImageSize.LARGE,
         )
 
         mock_slack_client.files_upload_v2.return_value = {
@@ -176,6 +178,7 @@ class TestSlackFileSharingRepository:
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.NEW_THREAD,
             instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
             include_upload_instructions=True,
         )
 
@@ -215,6 +218,7 @@ class TestSlackFileSharingRepository:
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.NEW_THREAD,
             instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
         )
 
         # Mock _prepare_image_data to return oversized data
@@ -243,6 +247,7 @@ class TestSlackFileSharingRepository:
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.NEW_THREAD,
             instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
         )
 
         mock_slack_client.files_upload_v2.return_value = {

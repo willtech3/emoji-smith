@@ -8,7 +8,7 @@ from typing import Dict, Any
 from webhook.handler import WebhookHandler
 from webhook.infrastructure.slack_api import SlackAPIRepository
 from webhook.infrastructure.sqs_job_queue import SQSJobQueue
-from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+from shared.domain.entities import EmojiGenerationJob
 
 
 class TestDualLambdaE2EIntegration:

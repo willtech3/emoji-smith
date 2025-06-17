@@ -1,40 +1,16 @@
-"""Emoji generation job domain model for webhook package."""
+"""Shared domain entities for emoji generation."""
 
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Dict, Any
 
-
-@dataclass
-class EmojiSharingPreferences:
-    """User preferences for emoji sharing."""
-
-    share_location: str
-    instruction_visibility: str
-    image_size: str
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for serialization."""
-        return {
-            "share_location": self.share_location,
-            "instruction_visibility": self.instruction_visibility,
-            "image_size": self.image_size,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "EmojiSharingPreferences":
-        """Create from dictionary."""
-        return cls(
-            share_location=data["share_location"],
-            instruction_visibility=data["instruction_visibility"],
-            image_size=data["image_size"],
-        )
+from shared.domain.value_objects import EmojiSharingPreferences, JobStatus
 
 
 @dataclass
 class EmojiGenerationJob:
-    """Represents an emoji generation job to be processed by worker Lambda."""
+    """Domain entity representing an emoji generation job."""
 
     job_id: str
     user_description: str
@@ -43,6 +19,7 @@ class EmojiGenerationJob:
     channel_id: str
     timestamp: str
     team_id: str
+    status: JobStatus
     sharing_preferences: EmojiSharingPreferences
     thread_ts: Optional[str]
     created_at: datetime
@@ -68,12 +45,13 @@ class EmojiGenerationJob:
             channel_id=channel_id,
             timestamp=timestamp,
             team_id=team_id,
+            status=JobStatus.PENDING,
             sharing_preferences=sharing_preferences,
             thread_ts=thread_ts,
             created_at=datetime.now(timezone.utc),
         )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "job_id": self.job_id,
@@ -83,14 +61,14 @@ class EmojiGenerationJob:
             "channel_id": self.channel_id,
             "timestamp": self.timestamp,
             "team_id": self.team_id,
-            "status": "pending",  # All new jobs start as pending
+            "status": self.status.value,
             "sharing_preferences": self.sharing_preferences.to_dict(),
             "thread_ts": self.thread_ts,
             "created_at": self.created_at.isoformat(),
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "EmojiGenerationJob":
+    def from_dict(cls, data: Dict[str, Any]) -> "EmojiGenerationJob":
         """Create from dictionary."""
         return cls(
             job_id=data["job_id"],
@@ -100,9 +78,22 @@ class EmojiGenerationJob:
             channel_id=data["channel_id"],
             timestamp=data["timestamp"],
             team_id=data["team_id"],
+            status=JobStatus(data["status"]),
             sharing_preferences=EmojiSharingPreferences.from_dict(
                 data["sharing_preferences"]
             ),
             thread_ts=data.get("thread_ts"),
             created_at=datetime.fromisoformat(data["created_at"]),
         )
+
+    def mark_as_processing(self) -> None:
+        """Mark job as processing."""
+        self.status = JobStatus.PROCESSING
+
+    def mark_as_completed(self) -> None:
+        """Mark job as completed."""
+        self.status = JobStatus.COMPLETED
+
+    def mark_as_failed(self) -> None:
+        """Mark job as failed."""
+        self.status = JobStatus.FAILED

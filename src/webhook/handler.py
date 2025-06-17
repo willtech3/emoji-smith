@@ -5,10 +5,8 @@ import logging
 from typing import Dict, Any
 
 from webhook.domain.slack_message import SlackMessage
-from webhook.domain.emoji_generation_job import (
-    EmojiGenerationJob,
-    EmojiSharingPreferences,
-)
+from shared.domain.entities import EmojiGenerationJob
+from shared.domain.value_objects import EmojiSharingPreferences
 from webhook.domain.slack_payloads import MessageActionPayload, ModalSubmissionPayload
 from webhook.repositories.slack_repository import SlackRepository
 from webhook.repositories.job_queue_repository import JobQueueRepository
@@ -106,11 +104,12 @@ class WebhookHandler:
             self._logger.exception("Malformed modal submission form data")
             raise ValueError("Malformed modal submission form data") from exc
 
-        # Create emoji generation job
-        sharing_preferences = EmojiSharingPreferences(
+        # Create emoji generation job with type-safe shared domain models
+        sharing_preferences = EmojiSharingPreferences.from_form_values(
             share_location=share_location,
             instruction_visibility=visibility,
             image_size=image_size,
+            thread_ts=metadata.get("thread_ts"),
         )
 
         job = EmojiGenerationJob.create_new(
