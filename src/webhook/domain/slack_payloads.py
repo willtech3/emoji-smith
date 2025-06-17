@@ -31,6 +31,11 @@ class SlackChannel:
     id: str
     name: Optional[str] = None
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SlackChannel":
+        """Create from dictionary, ignoring extra fields."""
+        return cls(id=data["id"], name=data.get("name"))
+
 
 @dataclass
 class SlackTeam:
@@ -79,9 +84,7 @@ class MessageActionPayload:
             callback_id=data["callback_id"],
             trigger_id=data["trigger_id"],
             user=SlackUser.from_dict(data["user"]),
-            channel=SlackChannel(
-                id=data["channel"]["id"], name=data["channel"].get("name")
-            ),
+            channel=SlackChannel.from_dict(data["channel"]),
             message=SlackMessage.from_dict(data["message"]),
             team=SlackTeam.from_dict(data["team"]),
         )
