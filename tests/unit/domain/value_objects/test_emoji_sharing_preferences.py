@@ -50,7 +50,7 @@ class TestEmojiSharingPreferences:
             image_size=ImageSize.EMOJI_SIZE,
             # Missing thread_ts
         )
-        
+
         # Assert
         assert prefs.share_location == ShareLocation.THREAD
         assert prefs.thread_ts is None
