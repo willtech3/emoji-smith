@@ -1,7 +1,6 @@
 # Minimal webhook dependencies for Lambda package deployment
 # Generated for uv compatibility
-slack-sdk==3.31.1
-boto3==1.35.94
-fastapi==0.115.6
+slack-sdk==3.35.0
+boto3==1.37.3
+fastapi==0.115.12
 mangum==0.19.0
-uvicorn==0.33.0
