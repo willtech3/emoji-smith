@@ -26,12 +26,12 @@ def sqs_event() -> Dict[str, Any]:
                         "channel_id": "C123456",
                         "timestamp": "1234567890.123456",
                         "team_id": "T123456",
-                        "status": "pending",
+                        "status": "PENDING",
                         "created_at": "2024-01-01T00:00:00+00:00",
                         "sharing_preferences": {
-                            "share_location": "original_channel",
-                            "instruction_visibility": "everyone",
-                            "image_size": "emoji_size",
+                            "share_location": "channel",
+                            "instruction_visibility": "EVERYONE",
+                            "image_size": "EMOJI_SIZE",
                         },
                     }
                 ),

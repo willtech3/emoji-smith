@@ -62,7 +62,7 @@ class TestDualLambdaIntegration:
                         "emoji_description": {"description": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
-                                "selected_option": {"value": "original_channel"}
+                                "selected_option": {"value": "channel"}
                             }
                         },
                         "instruction_visibility": {
@@ -123,9 +123,7 @@ class TestDualLambdaIntegration:
         assert message_body["user_description"] == "facepalm"
         assert message_body["message_text"] == "Just deployed on Friday"
         assert message_body["user_id"] == "U12345"
-        assert (
-            message_body["sharing_preferences"]["share_location"] == "original_channel"
-        )
+        assert message_body["sharing_preferences"]["share_location"] == "channel"
 
     async def test_webhook_handles_invalid_payloads_gracefully(
         self, webhook_handler, mock_slack_repo
@@ -175,7 +173,7 @@ class TestDualLambdaIntegration:
         self, webhook_handler, modal_submission_payload
     ):
         """Test SQS message format is compatible with worker Lambda."""
-        from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+        from shared.domain.entities import EmojiGenerationJob
 
         # Setup mock SQS client for modal submission
         mock_sqs_client = webhook_handler._job_queue._mock_sqs_client
@@ -196,6 +194,6 @@ class TestDualLambdaIntegration:
         assert job.message_text == "Just deployed on Friday"
         assert job.user_id == "U12345"
         assert job.channel_id == "C67890"
-        assert job.sharing_preferences.share_location.value == "original_channel"
-        assert job.sharing_preferences.instruction_visibility.value == "everyone"
-        assert job.sharing_preferences.image_size.value == "emoji_size"
+        assert job.sharing_preferences.share_location.value == "channel"
+        assert job.sharing_preferences.instruction_visibility.value == "EVERYONE"
+        assert job.sharing_preferences.image_size.value == "EMOJI_SIZE"

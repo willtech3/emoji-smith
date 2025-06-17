@@ -76,7 +76,7 @@ class TestEmojiServiceModalSharing:
                         },
                         "share_location": {
                             "share_location_select": {
-                                "selected_option": {"value": "original_channel"}
+                                "selected_option": {"value": "channel"}
                             }
                         },
                         "instruction_visibility": {

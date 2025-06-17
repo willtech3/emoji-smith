@@ -6,8 +6,8 @@ from io import BytesIO
 from PIL import Image
 from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.domain.entities.slack_message import SlackMessage
-from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+from emojismith.domain.services.generation_service import EmojiGenerationService
 
 
 class TestEmojiCreationService:
