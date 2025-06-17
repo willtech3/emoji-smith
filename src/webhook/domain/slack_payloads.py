@@ -11,6 +11,7 @@ class SlackUser:
     id: str
     name: str
     username: Optional[str] = None
+    team_id: Optional[str] = None
 
 
 @dataclass

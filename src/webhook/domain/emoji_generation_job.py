@@ -13,6 +13,8 @@ class EmojiSharingPreferences:
     share_location: str
     instruction_visibility: str
     image_size: str
+    include_upload_instructions: bool = True
+    thread_ts: Optional[str] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
@@ -20,6 +22,8 @@ class EmojiSharingPreferences:
             "share_location": self.share_location,
             "instruction_visibility": self.instruction_visibility,
             "image_size": self.image_size,
+            "include_upload_instructions": self.include_upload_instructions,
+            "thread_ts": self.thread_ts,
         }
 
     @classmethod
@@ -29,6 +33,8 @@ class EmojiSharingPreferences:
             share_location=data["share_location"],
             instruction_visibility=data["instruction_visibility"],
             image_size=data["image_size"],
+            include_upload_instructions=data.get("include_upload_instructions", True),
+            thread_ts=data.get("thread_ts"),
         )
 
 
@@ -83,7 +89,7 @@ class EmojiGenerationJob:
             "channel_id": self.channel_id,
             "timestamp": self.timestamp,
             "team_id": self.team_id,
-            "status": "pending",  # All new jobs start as pending
+            "status": "PENDING",  # Worker expects enum string format
             "sharing_preferences": self.sharing_preferences.to_dict(),
             "thread_ts": self.thread_ts,
             "created_at": self.created_at.isoformat(),
