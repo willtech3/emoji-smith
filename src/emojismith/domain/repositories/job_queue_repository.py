@@ -34,4 +34,3 @@ class JobQueueRepository(Protocol):
     async def retry_failed_jobs(self, max_retries: int = 3) -> int:
         """Retry failed jobs that haven't exceeded max retries."""
         ...
-

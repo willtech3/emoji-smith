@@ -419,7 +419,6 @@ class EmojiCreationService:
         # In production, this could check API permissions or be configured
         return WorkspaceType.STANDARD
 
-
     async def process_emoji_generation_job_dict(self, job_data: Dict[str, Any]) -> None:
         """Generate emoji using dict payload, upload to Slack, and add reaction."""
         # Convert dict to job entity for consistent processing

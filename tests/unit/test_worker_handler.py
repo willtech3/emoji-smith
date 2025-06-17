@@ -31,8 +31,8 @@ def sqs_event() -> Dict[str, Any]:
                         "sharing_preferences": {
                             "share_location": "original_channel",
                             "instruction_visibility": "everyone",
-                            "image_size": "emoji_size"
-                        }
+                            "image_size": "emoji_size",
+                        },
                     }
                 ),
                 "attributes": {
