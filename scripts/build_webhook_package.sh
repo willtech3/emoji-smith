@@ -31,6 +31,7 @@ uv pip install -r requirements-webhook.lock --target "$TEMP_DIR" --no-deps
 # Copy webhook source code
 echo -e "${YELLOW}Copying webhook source code...${NC}"
 cp -r src/webhook "$TEMP_DIR/"
+cp -r src/shared "$TEMP_DIR/"
 cp src/webhook_handler.py "$TEMP_DIR/"
 cp src/__init__.py "$TEMP_DIR/"
 
