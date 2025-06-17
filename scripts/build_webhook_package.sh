@@ -17,7 +17,7 @@ echo "Using temporary directory: $TEMP_DIR"
 
 # Install dependencies to temp directory
 echo -e "${YELLOW}Installing webhook dependencies...${NC}"
-uv pip sync requirements-webhook.lock --target "$TEMP_DIR" --no-deps
+uv pip install -r requirements-webhook.lock --target "$TEMP_DIR" --no-deps
 
 # Copy webhook source code
 echo -e "${YELLOW}Copying webhook source code...${NC}"
