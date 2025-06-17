@@ -53,15 +53,23 @@ class MessageActionPayload:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "MessageActionPayload":
         """Create from dictionary."""
+        message_data = data["message"]
+        slack_message = SlackMessage(
+            text=message_data["text"],
+            ts=message_data["ts"],
+            user=message_data["user"],
+        )
+
         return cls(
             type=data["type"],
             callback_id=data["callback_id"],
             trigger_id=data["trigger_id"],
             user=SlackUser(**data["user"]),
             channel=SlackChannel(
-                id=data["channel"]["id"], name=data["channel"].get("name")
+                id=data["channel"]["id"],
+                name=data["channel"].get("name"),
             ),
-            message=SlackMessage(**data["message"]),
+            message=slack_message,
             team=SlackTeam(**data["team"]),
         )
 
