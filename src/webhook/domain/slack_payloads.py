@@ -10,6 +10,7 @@ class SlackUser:
 
     id: str
     name: str
+    username: Optional[str] = None
 
 
 @dataclass
