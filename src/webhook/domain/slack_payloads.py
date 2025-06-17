@@ -37,6 +37,11 @@ class SlackMessage:
     ts: str
     user: str
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SlackMessage":
+        """Create from dictionary, ignoring extra fields."""
+        return cls(text=data["text"], ts=data["ts"], user=data["user"])
+
 
 @dataclass
 class MessageActionPayload:
@@ -61,7 +66,7 @@ class MessageActionPayload:
             channel=SlackChannel(
                 id=data["channel"]["id"], name=data["channel"].get("name")
             ),
-            message=SlackMessage(**data["message"]),
+            message=SlackMessage.from_dict(data["message"]),
             team=SlackTeam(**data["team"]),
         )
 
