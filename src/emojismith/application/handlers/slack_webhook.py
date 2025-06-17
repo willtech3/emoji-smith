@@ -32,12 +32,26 @@ class SlackWebhookHandler:
         # Extract trigger ID for modal
         trigger_id = payload["trigger_id"]
 
-        # Initiate emoji creation process
+        # Try async queue first, fallback to sync if not available
         try:
-            await self._emoji_service.initiate_emoji_creation(slack_message, trigger_id)
+            await self._emoji_service.queue_modal_opening(slack_message, trigger_id)
+            # Return immediately - don't wait for modal opening
             return {"status": "ok"}
+        except ValueError:
+            # Fallback to synchronous modal opening if queue not configured
+            try:
+                await self._emoji_service.initiate_emoji_creation(
+                    slack_message, trigger_id
+                )
+                return {"status": "ok"}
+            except Exception:
+                self._logger.exception("Failed to initiate emoji creation")
+                return {
+                    "status": "error",
+                    "error": "Failed to create emoji. Please try again later.",
+                }
         except Exception:
-            self._logger.exception("Failed to initiate emoji creation")
+            self._logger.exception("Failed to queue emoji creation")
             return {
                 "status": "error",
                 "error": "Failed to create emoji. Please try again later.",

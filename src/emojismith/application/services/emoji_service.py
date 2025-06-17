@@ -419,6 +419,19 @@ class EmojiCreationService:
         # In production, this could check API permissions or be configured
         return WorkspaceType.STANDARD
 
+    async def queue_modal_opening(
+        self, slack_message: SlackMessage, trigger_id: str
+    ) -> None:
+        """Queue modal opening for asynchronous processing."""
+        if not self._job_queue:
+            raise ValueError("Job queue not configured for async modal opening")
+
+        await self._job_queue.enqueue_modal_opening(slack_message, trigger_id)
+        self._logger.info(
+            "Queued modal opening for async processing",
+            extra={"trigger_id": trigger_id, "user_id": slack_message.user_id},
+        )
+
     async def process_emoji_generation_job_dict(self, job_data: Dict[str, Any]) -> None:
         """Generate emoji using dict payload, upload to Slack, and add reaction."""
         # Convert dict to job entity for consistent processing

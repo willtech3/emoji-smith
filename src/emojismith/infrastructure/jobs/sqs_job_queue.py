@@ -4,6 +4,12 @@ import json
 import logging
 from typing import Any, Optional, Tuple
 from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+from emojismith.domain.entities.slack_message import SlackMessage
+from emojismith.domain.entities.queue_message import (
+    QueueMessage,
+    ModalOpeningMessage,
+    MessageType,
+)
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 
 
@@ -22,8 +28,13 @@ class SQSJobQueue(JobQueueRepository):
 
     async def enqueue_job(self, job: EmojiGenerationJob) -> str:
         """Enqueue a new emoji generation job."""
-        # Send message to SQS
-        message_body = json.dumps(job.to_dict())
+        # Wrap in generic queue message
+        queue_message = QueueMessage(
+            message_type=MessageType.EMOJI_GENERATION, payload=job
+        )
+
+        # Send wrapped message to SQS
+        message_body = json.dumps(queue_message.to_dict())
 
         async with self._session.client("sqs") as sqs_client:
             response = await sqs_client.send_message(
@@ -63,9 +74,21 @@ class SQSJobQueue(JobQueueRepository):
         message = messages[0]
 
         try:
-            # Parse job data from message body
-            job_data = json.loads(message["Body"])
-            job = EmojiGenerationJob.from_dict(job_data)
+            # Parse queue message from body
+            message_data = json.loads(message["Body"])
+            queue_message = QueueMessage.from_dict(message_data)
+
+            # Only return emoji generation jobs from this method
+            if queue_message.message_type != MessageType.EMOJI_GENERATION:
+                self._logger.warning(
+                    f"Skipping non-emoji-generation message: "
+                    f"{queue_message.message_type}"
+                )
+                return None
+
+            job = queue_message.payload
+            if not isinstance(job, EmojiGenerationJob):
+                raise ValueError(f"Expected EmojiGenerationJob, got {type(job)}")
             receipt_handle = message["ReceiptHandle"]
 
             self._logger.info(
@@ -75,7 +98,7 @@ class SQSJobQueue(JobQueueRepository):
 
             return job, receipt_handle
 
-        except (json.JSONDecodeError, KeyError) as e:
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
             self._logger.error(
                 "Failed to parse job message",
                 extra={"message_id": message.get("MessageId"), "error": str(e)},
@@ -119,3 +142,36 @@ class SQSJobQueue(JobQueueRepository):
         # SQS handles retries through Dead Letter Queues and redrive policies
         # This would be configured in the infrastructure setup
         return 0
+
+    async def enqueue_modal_opening(
+        self, slack_message: SlackMessage, trigger_id: str
+    ) -> str:
+        """Enqueue a modal opening operation."""
+        # Create modal opening message
+        modal_message = ModalOpeningMessage.create_new(slack_message, trigger_id)
+
+        # Wrap in generic queue message
+        queue_message = QueueMessage(
+            message_type=MessageType.MODAL_OPENING, payload=modal_message
+        )
+
+        # Send to SQS
+        message_body = json.dumps(queue_message.to_dict())
+
+        async with self._session.client("sqs") as sqs_client:
+            response = await sqs_client.send_message(
+                QueueUrl=self._queue_url,
+                MessageBody=message_body,
+            )
+
+        self._logger.info(
+            "Enqueued modal opening message",
+            extra={
+                "message_id": modal_message.message_id,
+                "sqs_message_id": response["MessageId"],
+                "trigger_id": trigger_id,
+                "user_id": slack_message.user_id,
+            },
+        )
+
+        return modal_message.message_id
