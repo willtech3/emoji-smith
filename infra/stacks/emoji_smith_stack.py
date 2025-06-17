@@ -1,3 +1,4 @@
+import os
 from aws_cdk import (
     Stack,
     Duration,
@@ -202,11 +203,28 @@ class EmojiSmithStack(Stack):
         )
 
         # Create webhook Lambda (package deployment for fast cold start)
+        # Look for webhook package in common locations
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        webhook_package_path = None
+        
+        # Try project root first (most common)
+        candidate_path = os.path.join(project_root, "webhook_package.zip")
+        if os.path.exists(candidate_path):
+            webhook_package_path = candidate_path
+        else:
+            # Try current working directory (for CI/CD contexts)
+            candidate_path = os.path.join(os.getcwd(), "webhook_package.zip")
+            if os.path.exists(candidate_path):
+                webhook_package_path = candidate_path
+            else:
+                # Fallback to relative path for backwards compatibility
+                webhook_package_path = os.path.join(os.path.dirname(__file__), "..", "..", "webhook_package.zip")
+        
         self.webhook_lambda = _lambda.Function(
             self,
             "EmojiSmithWebhook",
             function_name="emoji-smith-webhook",
-            code=_lambda.Code.from_asset("webhook_package.zip"),
+            code=_lambda.Code.from_asset(webhook_package_path),
             handler="webhook_handler.handler",
             runtime=_lambda.Runtime.PYTHON_3_12,
             timeout=Duration.seconds(30),  # Fast webhook processing

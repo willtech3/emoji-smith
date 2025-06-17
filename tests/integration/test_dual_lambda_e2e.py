@@ -32,11 +32,15 @@ class TestDualLambdaE2EIntegration:
     def webhook_handler(self, mock_slack_repo, mock_sqs_client):
         """Create webhook handler with mocked dependencies."""
         # Create job queue with mocked SQS client
-        with patch('webhook.infrastructure.sqs_job_queue.boto3.client') as mock_boto:
+        with patch("webhook.infrastructure.sqs_job_queue.boto3.client") as mock_boto:
             mock_boto.return_value = mock_sqs_client
-            job_queue = SQSJobQueue(queue_url="https://sqs.us-east-1.amazonaws.com/123456789012/test-queue")
-            
-            webhook_handler = WebhookHandler(slack_repo=mock_slack_repo, job_queue=job_queue)
+            job_queue = SQSJobQueue(
+                queue_url="https://sqs.us-east-1.amazonaws.com/123456789012/test-queue"
+            )
+
+            webhook_handler = WebhookHandler(
+                slack_repo=mock_slack_repo, job_queue=job_queue
+            )
             # Attach mock client for verification
             webhook_handler._sqs_client = mock_sqs_client
             return webhook_handler
@@ -106,34 +110,40 @@ class TestDualLambdaE2EIntegration:
         """Test complete flow: webhook → SQS → worker-ready message."""
         # Step 1: Handle message action (should open modal immediately)
         result = await webhook_handler.handle_message_action(message_action_payload)
-        
+
         # Verify webhook response is immediate
         assert result == {"status": "ok"}
         mock_slack_repo.open_modal.assert_called_once()
-        
+
         # Verify modal was opened with correct trigger_id
         modal_call = mock_slack_repo.open_modal.call_args
-        assert modal_call.kwargs["trigger_id"] == "123456789.987654321.abcdefghijklmnopqrstuvwxyz"
-        
+        assert (
+            modal_call.kwargs["trigger_id"]
+            == "123456789.987654321.abcdefghijklmnopqrstuvwxyz"
+        )
+
         # Step 2: Handle modal submission (should queue job to SQS)
         result = await webhook_handler.handle_modal_submission(modal_submission_payload)
-        
+
         # Verify modal submission response
         assert result == {"response_action": "clear"}
-        
+
         # Step 3: Verify SQS message was sent
         mock_sqs_client.send_message.assert_called_once()
-        
+
         # Get the message that was sent to SQS
         send_call = mock_sqs_client.send_message.call_args
-        assert send_call.kwargs["QueueUrl"] == "https://sqs.us-east-1.amazonaws.com/123456789012/test-queue"
-        
+        assert (
+            send_call.kwargs["QueueUrl"]
+            == "https://sqs.us-east-1.amazonaws.com/123456789012/test-queue"
+        )
+
         message_body = json.loads(send_call.kwargs["MessageBody"])
-        
+
         # Step 4: Verify message format is compatible with worker Lambda
         # Worker Lambda should be able to parse this into EmojiGenerationJob
         job = EmojiGenerationJob.from_dict(message_body)
-        
+
         # Verify job data is correct
         assert job.user_description == "facepalm"
         assert job.message_text == "Just deployed on Friday"
@@ -144,7 +154,7 @@ class TestDualLambdaE2EIntegration:
         assert job.sharing_preferences.share_location.value == "original_channel"
         assert job.sharing_preferences.instruction_visibility.value == "everyone"
         assert job.sharing_preferences.image_size.value == "emoji_size"
-        
+
         # Verify job has required worker fields
         assert job.job_id is not None
         assert job.created_at is not None
@@ -157,32 +167,38 @@ class TestDualLambdaE2EIntegration:
     ):
         """Test webhook meets performance requirements."""
         import time
-        
+
         # Measure timing
         start_time = time.time()
         result = await webhook_handler.handle_modal_submission(modal_submission_payload)
         end_time = time.time()
-        
+
         # Verify fast response (webhook requirement)
         assert end_time - start_time < 1.0  # Should complete in under 1 second
         assert result == {"response_action": "clear"}
-        
+
         # Verify SQS message was sent
         mock_sqs_client.send_message.assert_called_once()
-        
+
         # Get the message that was sent to SQS
         send_call = mock_sqs_client.send_message.call_args
         message_body = json.loads(send_call.kwargs["MessageBody"])
-        
+
         # Essential fields for worker Lambda
         required_fields = [
-            "job_id", "user_description", "message_text", "user_id", 
-            "channel_id", "team_id", "timestamp", "sharing_preferences"
+            "job_id",
+            "user_description",
+            "message_text",
+            "user_id",
+            "channel_id",
+            "team_id",
+            "timestamp",
+            "sharing_preferences",
         ]
-        
+
         for field in required_fields:
             assert field in message_body, f"Missing required field: {field}"
-        
+
         # Verify sharing preferences structure
         sharing_prefs = message_body["sharing_preferences"]
         assert "share_location" in sharing_prefs
@@ -203,10 +219,10 @@ class TestDualLambdaE2EIntegration:
                 # Missing required fields
             },
         }
-        
+
         with pytest.raises(ValueError, match="Invalid modal submission payload"):
             await webhook_handler.handle_modal_submission(invalid_payload)
-        
+
         # Verify no messages were sent to SQS on error
         mock_sqs_client.send_message.assert_not_called()
 
@@ -220,23 +236,26 @@ class TestDualLambdaE2EIntegration:
         # Send message through webhook
         result = await webhook_handler.handle_modal_submission(modal_submission_payload)
         assert result == {"response_action": "clear"}
-        
+
         # Get the message that was sent to SQS
         send_call = mock_sqs_client.send_message.call_args
         message_body = json.loads(send_call.kwargs["MessageBody"])
-        
+
         # Verify worker Lambda can parse the message without errors
         job = EmojiGenerationJob.from_dict(message_body)
-        
+
         # Verify job can be serialized back to dict (round-trip test)
         job_dict = job.to_dict()
-        
+
         # Verify essential fields are preserved
         assert job_dict["user_description"] == job.user_description
         assert job_dict["message_text"] == job.message_text
         assert job_dict["user_id"] == job.user_id
-        assert job_dict["sharing_preferences"]["share_location"] == job.sharing_preferences.share_location.value
-        
+        assert (
+            job_dict["sharing_preferences"]["share_location"]
+            == job.sharing_preferences.share_location.value
+        )
+
         # Verify job can be recreated from dict
         job_recreated = EmojiGenerationJob.from_dict(job_dict)
         assert job_recreated.user_description == job.user_description
