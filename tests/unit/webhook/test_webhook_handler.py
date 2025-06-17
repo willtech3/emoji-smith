@@ -46,6 +46,26 @@ class TestWebhookHandler:
         assert result == {"status": "ok"}
         mock_slack_repo.open_modal.assert_called_once()
 
+    async def test_message_action_with_team_domain(
+        self, webhook_handler, mock_slack_repo
+    ):
+        """Payloads with a team domain should be accepted."""
+
+        payload = {
+            "type": "message_action",
+            "callback_id": "create_emoji_reaction",
+            "trigger_id": "TRIG",
+            "user": {"id": "U2", "name": "testuser"},
+            "message": {"text": "domain test", "user": "U1", "ts": "123.456"},
+            "channel": {"id": "C1"},
+            "team": {"id": "T1", "domain": "example"},
+        }
+
+        result = await webhook_handler.handle_message_action(payload)
+
+        assert result == {"status": "ok"}
+        mock_slack_repo.open_modal.assert_called_once()
+
     async def test_handles_modal_submission_queues_emoji_job(
         self, webhook_handler, mock_job_queue
     ):

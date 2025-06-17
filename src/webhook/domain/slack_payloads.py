@@ -27,6 +27,7 @@ class SlackTeam:
     """Slack team information."""
 
     id: str
+    domain: Optional[str] = None
 
 
 @dataclass
@@ -67,7 +68,10 @@ class MessageActionPayload:
                 id=data["channel"]["id"], name=data["channel"].get("name")
             ),
             message=SlackMessage.from_dict(data["message"]),
-            team=SlackTeam(**data["team"]),
+            team=SlackTeam(
+                id=data["team"]["id"],
+                domain=data["team"].get("domain"),
+            ),
         )
 
 
