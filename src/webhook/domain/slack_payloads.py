@@ -27,6 +27,7 @@ class SlackTeam:
     """Slack team information."""
 
     id: str
+    domain: Optional[str] = None
 
 
 @dataclass
