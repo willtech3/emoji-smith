@@ -113,66 +113,43 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # Parse the SQS message body
             message_body = json.loads(record["body"])
 
-            # Check if this is a new-style wrapped message or legacy job
-            if "message_type" in message_body:
-                # New-style wrapped message
-                from emojismith.domain.entities.queue_message import (
-                    QueueMessage,
-                    MessageType,
-                )
+            # All messages use the wrapped format
+            from emojismith.domain.entities.queue_message import (
+                QueueMessage,
+                MessageType,
+                ModalOpeningMessage,
+            )
 
-                queue_message = QueueMessage.from_dict(message_body)
+            queue_message = QueueMessage.from_dict(message_body)
 
-                if queue_message.message_type == MessageType.MODAL_OPENING:
-                    # Handle modal opening
-                    from emojismith.domain.entities.queue_message import (
-                        ModalOpeningMessage,
-                    )
-
-                    modal_message = queue_message.payload
-                    assert isinstance(modal_message, ModalOpeningMessage)
-
-                    logger.info(
-                        f"Processing modal opening for user {modal_message.slack_message.user_id}"
-                    )
-
-                    import asyncio
-
-                    asyncio.run(
-                        emoji_service.initiate_emoji_creation(
-                            modal_message.slack_message, modal_message.trigger_id
-                        )
-                    )
-
-                    logger.info(
-                        f"Successfully opened modal: {modal_message.message_id}"
-                    )
-
-                elif queue_message.message_type == MessageType.EMOJI_GENERATION:
-                    # Handle emoji generation job
-                    job = queue_message.payload
-                    assert isinstance(job, EmojiGenerationJob)
-
-                    logger.info(
-                        f"Processing emoji generation job: {job.job_id} for user {job.user_id}"
-                    )
-
-                    import asyncio
-
-                    asyncio.run(emoji_service.process_emoji_generation_job(job))
-
-                    logger.info(f"Successfully completed job: {job.job_id}")
-                # Note: All message types are handled above
-                # This else clause is kept for future extensibility
-            else:
-                # Legacy emoji generation job format
-                job = EmojiGenerationJob.from_dict(message_body)
+            if queue_message.message_type == MessageType.MODAL_OPENING:
+                # Handle modal opening
+                modal_message = queue_message.payload
+                assert isinstance(modal_message, ModalOpeningMessage)
 
                 logger.info(
-                    f"Processing legacy emoji generation job: {job.job_id} for user {job.user_id}"
+                    f"Processing modal opening for user {modal_message.slack_message.user_id}"
                 )
 
-                # Process the job using async handler
+                import asyncio
+
+                asyncio.run(
+                    emoji_service.initiate_emoji_creation(
+                        modal_message.slack_message, modal_message.trigger_id
+                    )
+                )
+
+                logger.info(f"Successfully opened modal: {modal_message.message_id}")
+
+            elif queue_message.message_type == MessageType.EMOJI_GENERATION:
+                # Handle emoji generation job
+                job = queue_message.payload
+                assert isinstance(job, EmojiGenerationJob)
+
+                logger.info(
+                    f"Processing emoji generation job: {job.job_id} for user {job.user_id}"
+                )
+
                 import asyncio
 
                 asyncio.run(emoji_service.process_emoji_generation_job(job))

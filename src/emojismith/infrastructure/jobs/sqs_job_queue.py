@@ -28,8 +28,13 @@ class SQSJobQueue(JobQueueRepository):
 
     async def enqueue_job(self, job: EmojiGenerationJob) -> str:
         """Enqueue a new emoji generation job."""
-        # Send message to SQS
-        message_body = json.dumps(job.to_dict())
+        # Wrap in generic queue message
+        queue_message = QueueMessage(
+            message_type=MessageType.EMOJI_GENERATION, payload=job
+        )
+
+        # Send wrapped message to SQS
+        message_body = json.dumps(queue_message.to_dict())
 
         async with self._session.client("sqs") as sqs_client:
             response = await sqs_client.send_message(
@@ -69,9 +74,19 @@ class SQSJobQueue(JobQueueRepository):
         message = messages[0]
 
         try:
-            # Parse job data from message body
-            job_data = json.loads(message["Body"])
-            job = EmojiGenerationJob.from_dict(job_data)
+            # Parse queue message from body
+            message_data = json.loads(message["Body"])
+            queue_message = QueueMessage.from_dict(message_data)
+
+            # Only return emoji generation jobs from this method
+            if queue_message.message_type != MessageType.EMOJI_GENERATION:
+                self._logger.warning(
+                    f"Skipping non-emoji-generation message: {queue_message.message_type}"
+                )
+                return None
+
+            job = queue_message.payload
+            assert isinstance(job, EmojiGenerationJob)
             receipt_handle = message["ReceiptHandle"]
 
             self._logger.info(
@@ -81,7 +96,7 @@ class SQSJobQueue(JobQueueRepository):
 
             return job, receipt_handle
 
-        except (json.JSONDecodeError, KeyError) as e:
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
             self._logger.error(
                 "Failed to parse job message",
                 extra={"message_id": message.get("MessageId"), "error": str(e)},

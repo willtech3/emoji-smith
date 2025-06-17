@@ -75,7 +75,7 @@ class TestSQSJobQueue:
     async def test_queues_emoji_generation_for_background_processing(
         self, sqs_queue, mock_sqs_client
     ):
-        """Test enqueuing job sends message to SQS."""
+        """Test enqueuing job sends wrapped message to SQS."""
         # Arrange
         from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 
@@ -100,7 +100,15 @@ class TestSQSJobQueue:
         assert mock_sqs_client.send_message.called
         call_args = mock_sqs_client.send_message.call_args
         assert call_args.kwargs["QueueUrl"] == sqs_queue.queue_url
-        assert "MessageBody" in call_args.kwargs
+
+        # Verify message is wrapped with message_type
+        message_body = call_args.kwargs["MessageBody"]
+        import json
+
+        message_data = json.loads(message_body)
+        assert message_data["message_type"] == "emoji_generation"
+        assert message_data["payload"]["job_id"] == job.job_id
+
         # Verify FIFO parameters are not sent for standard queue
         assert "MessageGroupId" not in call_args.kwargs
         assert "MessageDeduplicationId" not in call_args.kwargs
@@ -108,18 +116,21 @@ class TestSQSJobQueue:
     async def test_retrieves_next_emoji_job_for_processing(
         self, sqs_queue, mock_sqs_client
     ):
-        """Test dequeuing job receives message from SQS."""
+        """Test dequeuing job receives wrapped message from SQS."""
         # Arrange
-        job_data = {
-            "job_id": "job_123",
-            "message_text": "test message",
-            "user_description": "test emoji",
-            "user_id": "U12345",
-            "channel_id": "C67890",
-            "timestamp": "123.456",
-            "team_id": "T11111",
-            "status": "pending",
-            "created_at": "2023-01-01T12:00:00+00:00",
+        wrapped_message = {
+            "message_type": "emoji_generation",
+            "payload": {
+                "job_id": "job_123",
+                "message_text": "test message",
+                "user_description": "test emoji",
+                "user_id": "U12345",
+                "channel_id": "C67890",
+                "timestamp": "123.456",
+                "team_id": "T11111",
+                "status": "pending",
+                "created_at": "2023-01-01T12:00:00+00:00",
+            },
         }
 
         mock_sqs_client.receive_message.return_value = {
@@ -127,7 +138,7 @@ class TestSQSJobQueue:
                 {
                     "MessageId": "msg_123",
                     "ReceiptHandle": "receipt_123",
-                    "Body": str(job_data).replace("'", '"'),  # JSON-like format
+                    "Body": str(wrapped_message).replace("'", '"'),  # JSON-like format
                 }
             ]
         }
