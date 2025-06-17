@@ -94,6 +94,11 @@ class TestWebhookHandler:
         invalid_payload = {
             "type": "message_action",
             "callback_id": "wrong_callback_id",
+            "trigger_id": "TRIG",
+            "user": {"id": "U2", "name": "testuser"},
+            "message": {"text": "test", "user": "U1", "ts": "123.456"},
+            "channel": {"id": "C1"},
+            "team": {"id": "T1"},
         }
 
         # Act & Assert
@@ -109,6 +114,7 @@ class TestWebhookHandler:
             "type": "message_action",
             "callback_id": "create_emoji_reaction",
             "trigger_id": "TRIG",
+            "user": {"id": "U2", "name": "testuser"},
             "message": {"text": "test", "user": "U1", "ts": "123.456"},
             "channel": {"id": "C1"},
             "team": {"id": "T1"},

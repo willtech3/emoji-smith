@@ -9,6 +9,7 @@ from webhook.domain.emoji_generation_job import (
     EmojiGenerationJob,
     EmojiSharingPreferences,
 )
+from webhook.domain.slack_payloads import MessageActionPayload, ModalSubmissionPayload
 from webhook.repositories.slack_repository import SlackRepository
 from webhook.repositories.job_queue_repository import JobQueueRepository
 
@@ -25,22 +26,28 @@ class WebhookHandler:
 
     async def handle_message_action(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle Slack message action - open modal immediately."""
-        # Validate callback ID
-        if payload.get("callback_id") != "create_emoji_reaction":
+        # Parse payload into structured dataclass first
+        try:
+            action_payload = MessageActionPayload.from_dict(payload)
+        except (KeyError, TypeError) as e:
+            self._logger.error(f"Invalid message action payload: {e}")
+            raise ValueError("Invalid message action payload") from e
+
+        # Validate callback ID after successful parsing
+        if action_payload.callback_id != "create_emoji_reaction":
             raise ValueError("Invalid callback_id")
 
-        # Extract message details
-        message_data = payload["message"]
+        # Create domain message object
         slack_message = SlackMessage(
-            text=message_data["text"],
-            user_id=message_data["user"],  # Original message author
-            channel_id=payload["channel"]["id"],
-            timestamp=message_data["ts"],
-            team_id=payload["team"]["id"],
+            text=action_payload.message.text,
+            user_id=action_payload.message.user,  # Original message author
+            channel_id=action_payload.channel.id,
+            timestamp=action_payload.message.ts,
+            team_id=action_payload.team.id,
         )
 
         # Extract trigger ID for modal
-        trigger_id = payload["trigger_id"]
+        trigger_id = action_payload.trigger_id
 
         try:
             # Open modal immediately for fast response
@@ -55,26 +62,49 @@ class WebhookHandler:
 
     async def handle_modal_submission(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle modal submission and queue emoji generation job."""
+        # Parse payload into structured dataclass
+        try:
+            modal_payload = ModalSubmissionPayload.from_dict(payload)
+        except (KeyError, TypeError) as e:
+            self._logger.error(f"Invalid modal submission payload: {e}")
+            raise ValueError("Invalid modal submission payload") from e
+
         # Validate callback ID
-        view = payload.get("view", {})
-        if view.get("callback_id") != "emoji_creation_modal":
+        if modal_payload.view.callback_id != "emoji_creation_modal":
             raise ValueError("Invalid callback_id for modal submission")
 
-        # Extract form data
-        state = view.get("state", {}).get("values", {})
+        # Extract form data with proper error handling
         try:
-            description = state["emoji_description"]["description"]["value"]
-            share_location = state["share_location"]["share_location_select"][
-                "selected_option"
-            ]["value"]
-            visibility = state["instruction_visibility"]["visibility_select"][
-                "selected_option"
-            ]["value"]
-            image_size = state["image_size"]["size_select"]["selected_option"]["value"]
-            metadata = json.loads(view.get("private_metadata", "{}"))
-        except (KeyError, json.JSONDecodeError) as exc:
-            self._logger.exception("Malformed modal submission payload")
-            raise ValueError("Malformed modal submission payload") from exc
+            state = modal_payload.view.state.values
+
+            # Extract description with None check
+            desc_block = state["emoji_description"].description
+            if desc_block is None:
+                raise ValueError("Missing emoji description")
+            description = desc_block.value
+
+            # Extract share location with None check
+            share_select = state["share_location"].share_location_select
+            if share_select is None:
+                raise ValueError("Missing share location")
+            share_location = share_select["selected_option"]["value"]
+
+            # Extract visibility with None check
+            vis_select = state["instruction_visibility"].visibility_select
+            if vis_select is None:
+                raise ValueError("Missing visibility setting")
+            visibility = vis_select["selected_option"]["value"]
+
+            # Extract image size with None check
+            size_select = state["image_size"].size_select
+            if size_select is None:
+                raise ValueError("Missing image size")
+            image_size = size_select["selected_option"]["value"]
+
+            metadata = json.loads(modal_payload.view.private_metadata)
+        except (KeyError, json.JSONDecodeError, ValueError) as exc:
+            self._logger.exception("Malformed modal submission form data")
+            raise ValueError("Malformed modal submission form data") from exc
 
         # Create emoji generation job
         sharing_preferences = EmojiSharingPreferences(
@@ -84,7 +114,7 @@ class WebhookHandler:
         )
 
         job = EmojiGenerationJob.create_new(
-            description=description,
+            user_description=description,
             message_text=metadata["message_text"],
             user_id=metadata["user_id"],
             channel_id=metadata["channel_id"],
@@ -137,7 +167,7 @@ class WebhookHandler:
                     "text": {
                         "type": "mrkdwn",
                         "text": (
-                            f"Creating emoji for message: \""
+                            f'Creating emoji for message: "'
                             f"{slack_message.text[:100]}"
                             f"{'...' if len(slack_message.text) > 100 else ''}\""
                         ),
