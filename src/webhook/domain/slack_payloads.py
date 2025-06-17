@@ -13,6 +13,16 @@ class SlackUser:
     username: Optional[str] = None
     team_id: Optional[str] = None
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SlackUser":
+        """Create from dictionary, ignoring extra fields."""
+        return cls(
+            id=data["id"],
+            name=data.get("name", ""),
+            username=data.get("username"),
+            team_id=data.get("team_id"),
+        )
+
 
 @dataclass
 class SlackChannel:
@@ -27,6 +37,12 @@ class SlackTeam:
     """Slack team information."""
 
     id: str
+    domain: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SlackTeam":
+        """Create from dictionary, ignoring extra fields."""
+        return cls(id=data["id"], domain=data.get("domain"))
 
 
 @dataclass
@@ -62,12 +78,12 @@ class MessageActionPayload:
             type=data["type"],
             callback_id=data["callback_id"],
             trigger_id=data["trigger_id"],
-            user=SlackUser(**data["user"]),
+            user=SlackUser.from_dict(data["user"]),
             channel=SlackChannel(
                 id=data["channel"]["id"], name=data["channel"].get("name")
             ),
             message=SlackMessage.from_dict(data["message"]),
-            team=SlackTeam(**data["team"]),
+            team=SlackTeam.from_dict(data["team"]),
         )
 
 
