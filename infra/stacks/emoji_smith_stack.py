@@ -280,6 +280,7 @@ class EmojiSmithStack(Stack):
             memory_size=1024,  # More memory for image processing
             role=worker_lambda_role,
             environment={
+                "SQS_QUEUE_URL": self.processing_queue.queue_url,
                 "LOG_LEVEL": "INFO",
                 # Secrets injected at deploy time for performance
                 "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json("SLACK_BOT_TOKEN").unsafe_unwrap(),
