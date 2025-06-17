@@ -125,10 +125,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             if queue_message.message_type == MessageType.MODAL_OPENING:
                 # Handle modal opening
                 modal_message = queue_message.payload
-                assert isinstance(modal_message, ModalOpeningMessage)
+                if not isinstance(modal_message, ModalOpeningMessage):
+                    raise ValueError(
+                        f"Expected ModalOpeningMessage, got {type(modal_message)}"
+                    )
 
                 logger.info(
-                    f"Processing modal opening for user {modal_message.slack_message.user_id}"
+                    f"Processing modal opening for user "
+                    f"{modal_message.slack_message.user_id}"
                 )
 
                 import asyncio
@@ -144,10 +148,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             elif queue_message.message_type == MessageType.EMOJI_GENERATION:
                 # Handle emoji generation job
                 job = queue_message.payload
-                assert isinstance(job, EmojiGenerationJob)
+                if not isinstance(job, EmojiGenerationJob):
+                    raise ValueError(f"Expected EmojiGenerationJob, got {type(job)}")
 
                 logger.info(
-                    f"Processing emoji generation job: {job.job_id} for user {job.user_id}"
+                    f"Processing emoji generation job: {job.job_id} for user "
+                    f"{job.user_id}"
                 )
 
                 import asyncio

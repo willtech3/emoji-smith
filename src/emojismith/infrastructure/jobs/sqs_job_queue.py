@@ -81,12 +81,14 @@ class SQSJobQueue(JobQueueRepository):
             # Only return emoji generation jobs from this method
             if queue_message.message_type != MessageType.EMOJI_GENERATION:
                 self._logger.warning(
-                    f"Skipping non-emoji-generation message: {queue_message.message_type}"
+                    f"Skipping non-emoji-generation message: "
+                    f"{queue_message.message_type}"
                 )
                 return None
 
             job = queue_message.payload
-            assert isinstance(job, EmojiGenerationJob)
+            if not isinstance(job, EmojiGenerationJob):
+                raise ValueError(f"Expected EmojiGenerationJob, got {type(job)}")
             receipt_handle = message["ReceiptHandle"]
 
             self._logger.info(

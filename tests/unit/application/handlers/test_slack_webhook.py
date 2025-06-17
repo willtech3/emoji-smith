@@ -139,8 +139,8 @@ class TestSlackWebhookHandler:
         await webhook_handler.handle_message_action(payload)
 
         # Assert
-        mock_emoji_service.initiate_emoji_creation.assert_called_once()
-        call_args = mock_emoji_service.initiate_emoji_creation.call_args[0]
+        mock_emoji_service.queue_modal_opening.assert_called_once()
+        call_args = mock_emoji_service.queue_modal_opening.call_args[0]
         slack_message = call_args[0]
 
         assert slack_message.text == "The deployment failed again 😭"
@@ -176,6 +176,7 @@ class TestSlackWebhookHandler:
             "team": {"id": "T1"},
             "trigger_id": "TRIG",
         }
+        mock_emoji_service.queue_modal_opening.side_effect = Exception("boom")
         mock_emoji_service.initiate_emoji_creation.side_effect = Exception("boom")
 
         # Act
