@@ -201,25 +201,16 @@ class EmojiSmithStack(Stack):
             retention=logs.RetentionDays.ONE_MONTH,
         )
 
-        # Use container image from ECR
-        lambda_code = _lambda.Code.from_ecr_image(
-            repository=ecr.Repository.from_repository_name(
-                self, "EmojiSmithRepository", "emoji-smith"
-            ),
-            tag_or_digest=image_uri.split(":")[-1],  # Extract tag from URI
-            cmd=["lambda_handler.handler"],
-        )
-
-        # Create Lambda function
+        # Create webhook Lambda (package deployment for fast cold start)
         self.webhook_lambda = _lambda.Function(
             self,
             "EmojiSmithWebhook",
             function_name="emoji-smith-webhook",
-            code=lambda_code,
-            handler=_lambda.Handler.FROM_IMAGE,  # Required for container images
-            runtime=_lambda.Runtime.FROM_IMAGE,  # Required for container images
-            timeout=Duration.seconds(30),  # Reduced from 15min - webhooks should be fast
-            memory_size=1024,  # Increased from 512MB for better cold start performance
+            code=_lambda.Code.from_asset("webhook_package.zip"),
+            handler="webhook_handler.handler",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),  # Fast webhook processing
+            memory_size=512,  # Reduced memory for minimal package
             role=lambda_role,
             environment={
                 "SQS_QUEUE_URL": self.processing_queue.queue_url,
@@ -230,8 +221,6 @@ class EmojiSmithStack(Stack):
                 # Secrets injected at deploy time for performance
                 "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json("SLACK_BOT_TOKEN").unsafe_unwrap(),
                 "SLACK_SIGNING_SECRET": self.secrets.secret_value_from_json("SLACK_SIGNING_SECRET").unsafe_unwrap(),
-                "OPENAI_API_KEY": self.secrets.secret_value_from_json("OPENAI_API_KEY").unsafe_unwrap(),
-                "OPENAI_CHAT_MODEL": self.secrets.secret_value_from_json("OPENAI_CHAT_MODEL").unsafe_unwrap(),
             },
             log_group=webhook_log_group,
         )

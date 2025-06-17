@@ -2,7 +2,6 @@
 
 from typing import Optional, Protocol, Tuple
 from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
-from emojismith.domain.entities.slack_message import SlackMessage
 
 
 class JobQueueRepository(Protocol):
@@ -36,8 +35,3 @@ class JobQueueRepository(Protocol):
         """Retry failed jobs that haven't exceeded max retries."""
         ...
 
-    async def enqueue_modal_opening(
-        self, slack_message: SlackMessage, trigger_id: str
-    ) -> str:
-        """Enqueue a modal opening operation."""
-        ...
