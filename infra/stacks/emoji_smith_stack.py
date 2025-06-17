@@ -188,19 +188,8 @@ class EmojiSmithStack(Stack):
         # No runtime Secrets Manager access needed
 
         # Create CloudWatch log groups
-        webhook_log_group = logs.LogGroup(
-            self,
-            "EmojiSmithWebhookLogGroup",
-            log_group_name="/aws/lambda/emoji-smith-webhook",
-            retention=logs.RetentionDays.ONE_MONTH,
-        )
-
-        worker_log_group = logs.LogGroup(
-            self,
-            "EmojiSmithWorkerLogGroup",
-            log_group_name="/aws/lambda/emoji-smith-worker",
-            retention=logs.RetentionDays.ONE_MONTH,
-        )
+        # Note: CDK will auto-generate function names like "EmojiSmithStack-EmojiSmithWebhook[hash]"
+        # We'll let Lambda create the log groups automatically to avoid naming conflicts
 
         # Create webhook Lambda (package deployment for fast cold start)
         # Look for webhook package in common locations
@@ -223,7 +212,6 @@ class EmojiSmithStack(Stack):
         self.webhook_lambda = _lambda.Function(
             self,
             "EmojiSmithWebhook",
-            function_name="emoji-smith-webhook",
             code=_lambda.Code.from_asset(webhook_package_path),
             handler="webhook_handler.handler",
             runtime=_lambda.Runtime.PYTHON_3_12,
@@ -240,7 +228,6 @@ class EmojiSmithStack(Stack):
                 "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json("SLACK_BOT_TOKEN").unsafe_unwrap(),
                 "SLACK_SIGNING_SECRET": self.secrets.secret_value_from_json("SLACK_SIGNING_SECRET").unsafe_unwrap(),
             },
-            log_group=webhook_log_group,
         )
 
         # Provisioned concurrency removed - lazy loading + memory optimization 
@@ -279,7 +266,6 @@ class EmojiSmithStack(Stack):
         self.worker_lambda = _lambda.Function(
             self,
             "EmojiSmithWorker",
-            function_name="emoji-smith-worker",
             code=worker_lambda_code,
             handler=_lambda.Handler.FROM_IMAGE,  # Required for container images
             runtime=_lambda.Runtime.FROM_IMAGE,  # Required for container images
@@ -295,7 +281,6 @@ class EmojiSmithStack(Stack):
                 "OPENAI_API_KEY": self.secrets.secret_value_from_json("OPENAI_API_KEY").unsafe_unwrap(),
                 "OPENAI_CHAT_MODEL": self.secrets.secret_value_from_json("OPENAI_CHAT_MODEL").unsafe_unwrap(),
             },
-            log_group=worker_log_group,
         )
 
         # Create SQS event source for worker Lambda
