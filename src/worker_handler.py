@@ -113,54 +113,19 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # Parse the SQS message body
             message_body = json.loads(record["body"])
 
-            # All messages use the wrapped format
-            from emojismith.domain.entities.queue_message import (
-                QueueMessage,
-                MessageType,
-                ModalOpeningMessage,
+            # Parse emoji generation job directly
+            job = EmojiGenerationJob.from_dict(message_body)
+
+            logger.info(
+                f"Processing emoji generation job: {job.job_id} for user {job.user_id}"
             )
 
-            queue_message = QueueMessage.from_dict(message_body)
+            # Process the job using async handler
+            import asyncio
 
-            if queue_message.message_type == MessageType.MODAL_OPENING:
-                # Handle modal opening
-                modal_message = queue_message.payload
-                if not isinstance(modal_message, ModalOpeningMessage):
-                    raise ValueError(
-                        f"Expected ModalOpeningMessage, got {type(modal_message)}"
-                    )
+            asyncio.run(emoji_service.process_emoji_generation_job(job))
 
-                logger.info(
-                    f"Processing modal opening for user "
-                    f"{modal_message.slack_message.user_id}"
-                )
-
-                import asyncio
-
-                asyncio.run(
-                    emoji_service.initiate_emoji_creation(
-                        modal_message.slack_message, modal_message.trigger_id
-                    )
-                )
-
-                logger.info(f"Successfully opened modal: {modal_message.message_id}")
-
-            elif queue_message.message_type == MessageType.EMOJI_GENERATION:
-                # Handle emoji generation job
-                job = queue_message.payload
-                if not isinstance(job, EmojiGenerationJob):
-                    raise ValueError(f"Expected EmojiGenerationJob, got {type(job)}")
-
-                logger.info(
-                    f"Processing emoji generation job: {job.job_id} for user "
-                    f"{job.user_id}"
-                )
-
-                import asyncio
-
-                asyncio.run(emoji_service.process_emoji_generation_job(job))
-
-                logger.info(f"Successfully completed job: {job.job_id}")
+            logger.info(f"Successfully completed job: {job.job_id}")
 
         except Exception as e:
             logger.exception(f"Failed to process SQS record: {e}")

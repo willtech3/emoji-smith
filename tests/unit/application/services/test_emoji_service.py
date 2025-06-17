@@ -187,28 +187,6 @@ class TestEmojiCreationService:
         with pytest.raises(ValueError, match="Malformed modal submission payload"):
             await emoji_service.handle_modal_submission(bad_payload)
 
-    async def test_queue_modal_opening_enqueues_message(
-        self, emoji_service_with_queue, mock_job_queue
-    ):
-        """Test queue_modal_opening enqueues modal opening message."""
-        # Arrange
-        slack_message = SlackMessage(
-            text="Just deployed on Friday afternoon!",
-            user_id="U12345",
-            channel_id="C67890",
-            timestamp="1234567890.123456",
-            team_id="T11111",
-        )
-        trigger_id = "123456789.987654321.abcdefghijklmnopqrstuvwxyz"
-
-        # Act
-        await emoji_service_with_queue.queue_modal_opening(slack_message, trigger_id)
-
-        # Assert - should enqueue a modal opening message
-        mock_job_queue.enqueue_modal_opening.assert_called_once()
-        call_args = mock_job_queue.enqueue_modal_opening.call_args[0]
-        assert call_args[0] == slack_message
-        assert call_args[1] == trigger_id
 
     async def test_processes_emoji_generation_job_end_to_end(
         self,

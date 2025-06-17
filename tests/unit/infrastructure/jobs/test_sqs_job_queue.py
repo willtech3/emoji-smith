@@ -1,5 +1,6 @@
 """Tests for SQS job queue implementation."""
 
+import json
 import pytest
 from unittest.mock import AsyncMock, Mock
 from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
@@ -32,50 +33,11 @@ class TestSQSJobQueue:
             queue_url="https://sqs.us-east-1.amazonaws.com/123456789/emoji-jobs",
         )
 
-    async def test_enqueues_modal_opening_message(self, sqs_queue, mock_sqs_client):
-        """Test enqueuing modal opening message sends to SQS."""
-        # Arrange
-        from emojismith.domain.entities.slack_message import SlackMessage
-
-        slack_message = SlackMessage(
-            text="Just deployed on Friday!",
-            user_id="U12345",
-            channel_id="C67890",
-            timestamp="1234567890.123456",
-            team_id="T11111",
-        )
-        trigger_id = "123456789.987654321.abcdefghijklmnopqrstuvwxyz"
-
-        mock_sqs_client.send_message.return_value = {
-            "MessageId": "msg_123",
-            "MD5OfBody": "abc123",
-        }
-
-        # Act
-        message_id = await sqs_queue.enqueue_modal_opening(slack_message, trigger_id)
-
-        # Assert
-        assert message_id is not None
-        assert mock_sqs_client.send_message.called
-        call_args = mock_sqs_client.send_message.call_args
-        assert call_args.kwargs["QueueUrl"] == sqs_queue.queue_url
-
-        # Verify message contains modal opening type and data
-        message_body = call_args.kwargs["MessageBody"]
-        import json
-
-        message_data = json.loads(message_body)
-        assert message_data["message_type"] == "modal_opening"
-        assert message_data["payload"]["trigger_id"] == trigger_id
-        assert (
-            message_data["payload"]["slack_message"]["text"]
-            == "Just deployed on Friday!"
-        )
 
     async def test_queues_emoji_generation_for_background_processing(
         self, sqs_queue, mock_sqs_client
     ):
-        """Test enqueuing job sends wrapped message to SQS."""
+        """Test enqueuing job sends job directly to SQS."""
         # Arrange
         from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
 
@@ -101,13 +63,13 @@ class TestSQSJobQueue:
         call_args = mock_sqs_client.send_message.call_args
         assert call_args.kwargs["QueueUrl"] == sqs_queue.queue_url
 
-        # Verify message is wrapped with message_type
+        # Verify message contains job data directly
         message_body = call_args.kwargs["MessageBody"]
         import json
 
         message_data = json.loads(message_body)
-        assert message_data["message_type"] == "emoji_generation"
-        assert message_data["payload"]["job_id"] == job.job_id
+        assert message_data["job_id"] == job.job_id
+        assert message_data["message_text"] == "Just deployed on Friday!"
 
         # Verify FIFO parameters are not sent for standard queue
         assert "MessageGroupId" not in call_args.kwargs
@@ -116,21 +78,25 @@ class TestSQSJobQueue:
     async def test_retrieves_next_emoji_job_for_processing(
         self, sqs_queue, mock_sqs_client
     ):
-        """Test dequeuing job receives wrapped message from SQS."""
+        """Test dequeuing job receives job data directly from SQS."""
         # Arrange
-        wrapped_message = {
-            "message_type": "emoji_generation",
-            "payload": {
-                "job_id": "job_123",
-                "message_text": "test message",
-                "user_description": "test emoji",
-                "user_id": "U12345",
-                "channel_id": "C67890",
-                "timestamp": "123.456",
-                "team_id": "T11111",
-                "status": "pending",
-                "created_at": "2023-01-01T12:00:00+00:00",
-            },
+        job_message = {
+            "job_id": "job_123",
+            "message_text": "test message",
+            "user_description": "test emoji",
+            "user_id": "U12345",
+            "channel_id": "C67890",
+            "timestamp": "123.456",
+            "team_id": "T11111",
+            "status": "pending",
+            "created_at": "2023-01-01T12:00:00+00:00",
+            "sharing_preferences": {
+                "share_location": "original_channel",
+                "instruction_visibility": "everyone",
+                "include_upload_instructions": True,
+                "image_size": "full_size",
+                "thread_ts": None
+            }
         }
 
         mock_sqs_client.receive_message.return_value = {
@@ -138,7 +104,7 @@ class TestSQSJobQueue:
                 {
                     "MessageId": "msg_123",
                     "ReceiptHandle": "receipt_123",
-                    "Body": str(wrapped_message).replace("'", '"'),  # JSON-like format
+                    "Body": json.dumps(job_message),
                 }
             ]
         }
