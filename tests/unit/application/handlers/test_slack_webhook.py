@@ -40,6 +40,38 @@ class TestSlackWebhookHandler:
 
         # Assert
         assert result is not None
+        mock_emoji_service.queue_modal_opening.assert_called_once()
+
+    async def test_handles_message_action_payload_fallback_to_sync(
+        self, webhook_handler, mock_emoji_service
+    ):
+        """Test webhook handler falls back to sync modal opening if queue fails."""
+        # Arrange
+        payload = {
+            "type": "message_action",
+            "callback_id": "create_emoji_reaction",
+            "trigger_id": "123456789.987654321.abcdefghijklmnopqrstuvwxyz",
+            "user": {"id": "U12345", "name": "testuser"},
+            "channel": {"id": "C67890", "name": "general"},
+            "message": {
+                "text": "Just deployed on Friday afternoon!",
+                "ts": "1234567890.123456",
+                "user": "U98765",
+            },
+            "team": {"id": "T11111"},
+        }
+
+        # Mock queue_modal_opening to fail, should fallback to sync
+        mock_emoji_service.queue_modal_opening.side_effect = ValueError(
+            "Job queue not configured"
+        )
+
+        # Act
+        result = await webhook_handler.handle_message_action(payload)
+
+        # Assert
+        assert result is not None
+        mock_emoji_service.queue_modal_opening.assert_called_once()
         mock_emoji_service.initiate_emoji_creation.assert_called_once()
 
     async def test_handles_modal_submission_payload(

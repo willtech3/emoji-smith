@@ -4,6 +4,12 @@ import json
 import logging
 from typing import Any, Optional, Tuple
 from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+from emojismith.domain.entities.slack_message import SlackMessage
+from emojismith.domain.entities.queue_message import (
+    QueueMessage,
+    ModalOpeningMessage,
+    MessageType,
+)
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 
 
@@ -119,3 +125,36 @@ class SQSJobQueue(JobQueueRepository):
         # SQS handles retries through Dead Letter Queues and redrive policies
         # This would be configured in the infrastructure setup
         return 0
+
+    async def enqueue_modal_opening(
+        self, slack_message: SlackMessage, trigger_id: str
+    ) -> str:
+        """Enqueue a modal opening operation."""
+        # Create modal opening message
+        modal_message = ModalOpeningMessage.create_new(slack_message, trigger_id)
+
+        # Wrap in generic queue message
+        queue_message = QueueMessage(
+            message_type=MessageType.MODAL_OPENING, payload=modal_message
+        )
+
+        # Send to SQS
+        message_body = json.dumps(queue_message.to_dict())
+
+        async with self._session.client("sqs") as sqs_client:
+            response = await sqs_client.send_message(
+                QueueUrl=self._queue_url,
+                MessageBody=message_body,
+            )
+
+        self._logger.info(
+            "Enqueued modal opening message",
+            extra={
+                "message_id": modal_message.message_id,
+                "sqs_message_id": response["MessageId"],
+                "trigger_id": trigger_id,
+                "user_id": slack_message.user_id,
+            },
+        )
+
+        return modal_message.message_id

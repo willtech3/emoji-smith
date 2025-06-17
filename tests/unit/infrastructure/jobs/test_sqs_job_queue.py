@@ -32,6 +32,46 @@ class TestSQSJobQueue:
             queue_url="https://sqs.us-east-1.amazonaws.com/123456789/emoji-jobs",
         )
 
+    async def test_enqueues_modal_opening_message(self, sqs_queue, mock_sqs_client):
+        """Test enqueuing modal opening message sends to SQS."""
+        # Arrange
+        from emojismith.domain.entities.slack_message import SlackMessage
+
+        slack_message = SlackMessage(
+            text="Just deployed on Friday!",
+            user_id="U12345",
+            channel_id="C67890",
+            timestamp="1234567890.123456",
+            team_id="T11111",
+        )
+        trigger_id = "123456789.987654321.abcdefghijklmnopqrstuvwxyz"
+
+        mock_sqs_client.send_message.return_value = {
+            "MessageId": "msg_123",
+            "MD5OfBody": "abc123",
+        }
+
+        # Act
+        message_id = await sqs_queue.enqueue_modal_opening(slack_message, trigger_id)
+
+        # Assert
+        assert message_id is not None
+        assert mock_sqs_client.send_message.called
+        call_args = mock_sqs_client.send_message.call_args
+        assert call_args.kwargs["QueueUrl"] == sqs_queue.queue_url
+
+        # Verify message contains modal opening type and data
+        message_body = call_args.kwargs["MessageBody"]
+        import json
+
+        message_data = json.loads(message_body)
+        assert message_data["message_type"] == "modal_opening"
+        assert message_data["payload"]["trigger_id"] == trigger_id
+        assert (
+            message_data["payload"]["slack_message"]["text"]
+            == "Just deployed on Friday!"
+        )
+
     async def test_queues_emoji_generation_for_background_processing(
         self, sqs_queue, mock_sqs_client
     ):
