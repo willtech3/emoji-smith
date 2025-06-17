@@ -42,7 +42,6 @@ class TestSlackWebhookHandler:
         assert result is not None
         mock_emoji_service.initiate_emoji_creation.assert_called_once()
 
-
     async def test_handles_modal_submission_payload(
         self, webhook_handler, mock_emoji_service
     ):

@@ -119,4 +119,3 @@ class SQSJobQueue(JobQueueRepository):
         # SQS handles retries through Dead Letter Queues and redrive policies
         # This would be configured in the infrastructure setup
         return 0
-

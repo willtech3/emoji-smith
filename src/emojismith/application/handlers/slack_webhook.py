@@ -34,9 +34,7 @@ class SlackWebhookHandler:
 
         # Open modal immediately for fast response
         try:
-            await self._emoji_service.initiate_emoji_creation(
-                slack_message, trigger_id
-            )
+            await self._emoji_service.initiate_emoji_creation(slack_message, trigger_id)
             return {"status": "ok"}
         except Exception:
             self._logger.exception("Failed to initiate emoji creation")

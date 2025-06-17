@@ -187,7 +187,6 @@ class TestEmojiCreationService:
         with pytest.raises(ValueError, match="Malformed modal submission payload"):
             await emoji_service.handle_modal_submission(bad_payload)
 
-
     async def test_processes_emoji_generation_job_end_to_end(
         self,
         emoji_service,

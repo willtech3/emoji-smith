@@ -6,7 +6,7 @@ from dataclasses import dataclass
 @dataclass
 class SlackMessage:
     """Represents a Slack message for emoji creation."""
-    
+
     text: str
     user_id: str
     channel_id: str

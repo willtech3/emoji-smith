@@ -49,10 +49,7 @@ def create_webhook_handler() -> tuple[WebhookHandler, WebhookSecurityService]:
     security_service = WebhookSecurityService(signature_validator)
 
     # Create webhook handler
-    webhook_handler = WebhookHandler(
-        slack_repo=slack_repo,
-        job_queue=job_queue
-    )
+    webhook_handler = WebhookHandler(slack_repo=slack_repo, job_queue=job_queue)
 
     return webhook_handler, security_service
 

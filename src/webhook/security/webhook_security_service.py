@@ -22,7 +22,7 @@ class WebhookSecurityService:
             return self._signature_validator.validate(
                 body=request.body,
                 timestamp=request.timestamp,
-                signature=request.signature
+                signature=request.signature,
             )
         except Exception as e:
             self._logger.exception(f"Error validating webhook signature: {e}")

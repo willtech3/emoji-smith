@@ -33,7 +33,6 @@ class TestSQSJobQueue:
             queue_url="https://sqs.us-east-1.amazonaws.com/123456789/emoji-jobs",
         )
 
-
     async def test_queues_emoji_generation_for_background_processing(
         self, sqs_queue, mock_sqs_client
     ):
@@ -95,8 +94,8 @@ class TestSQSJobQueue:
                 "instruction_visibility": "everyone",
                 "include_upload_instructions": True,
                 "image_size": "full_size",
-                "thread_ts": None
-            }
+                "thread_ts": None,
+            },
         }
 
         mock_sqs_client.receive_message.return_value = {
