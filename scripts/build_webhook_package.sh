@@ -11,6 +11,15 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}Building webhook package for Lambda deployment...${NC}"
 
+# Determine project root first (before changing directories)
+if [ -d "scripts" ]; then
+    # Running from project root
+    PROJECT_ROOT=$(pwd)
+else
+    # Running from scripts directory
+    PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
+
 # Create temporary directory
 TEMP_DIR=$(mktemp -d)
 echo "Using temporary directory: $TEMP_DIR"
@@ -32,13 +41,6 @@ cd "$TEMP_DIR"
 zip -rq webhook_package.zip . -x "*.pyc" "*__pycache__*" "*.git*"
 
 # Move package to project root
-if [ -d "scripts" ]; then
-    # Running from project root
-    PROJECT_ROOT=$(pwd)
-else
-    # Running from scripts directory
-    PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-fi
 mv webhook_package.zip "$PROJECT_ROOT/"
 cd "$PROJECT_ROOT"
 
