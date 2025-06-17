@@ -32,7 +32,13 @@ cd "$TEMP_DIR"
 zip -rq webhook_package.zip . -x "*.pyc" "*__pycache__*" "*.git*"
 
 # Move package to project root
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -d "scripts" ]; then
+    # Running from project root
+    PROJECT_ROOT=$(pwd)
+else
+    # Running from scripts directory
+    PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
 mv webhook_package.zip "$PROJECT_ROOT/"
 cd "$PROJECT_ROOT"
 
