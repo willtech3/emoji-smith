@@ -5,6 +5,7 @@ from shared.domain.value_objects import (
     EmojiSharingPreferences,
     ShareLocation,
     InstructionVisibility,
+    ImageSize,
 )
 
 
@@ -17,6 +18,7 @@ class TestEmojiGenerationJobSharing:
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.ORIGINAL_CHANNEL,
             instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
         )
 
         # Act
@@ -39,7 +41,8 @@ class TestEmojiGenerationJobSharing:
         # Arrange
         prefs = EmojiSharingPreferences(
             share_location=ShareLocation.THREAD,
-            instruction_visibility=InstructionVisibility.REQUESTER_ONLY,
+            instruction_visibility=InstructionVisibility.SUBMITTER_ONLY,
+            image_size=ImageSize.EMOJI_SIZE,
             thread_ts="123.456",
         )
         job = EmojiGenerationJob.create_new(
@@ -60,7 +63,7 @@ class TestEmojiGenerationJobSharing:
         assert job_dict["sharing_preferences"]["share_location"] == "thread"
         assert (
             job_dict["sharing_preferences"]["instruction_visibility"]
-            == "requester_only"
+            == "SUBMITTER_ONLY"
         )
         assert job_dict["sharing_preferences"]["thread_ts"] == "123.456"
 
@@ -75,11 +78,12 @@ class TestEmojiGenerationJobSharing:
             "channel_id": "C456",
             "timestamp": "123.456",
             "team_id": "T789",
-            "status": "pending",
+            "status": "PENDING",
             "created_at": "2024-01-01T00:00:00+00:00",
             "sharing_preferences": {
                 "share_location": "dm",
-                "instruction_visibility": "everyone",
+                "instruction_visibility": "EVERYONE",
+                "image_size": "EMOJI_SIZE",
                 "include_upload_instructions": True,
                 "thread_ts": None,
             },
@@ -89,7 +93,7 @@ class TestEmojiGenerationJobSharing:
         job = EmojiGenerationJob.from_dict(job_dict)
 
         # Assert
-        assert job.sharing_preferences.share_location == ShareLocation.DM
+        assert job.sharing_preferences.share_location == ShareLocation.DIRECT_MESSAGE
         assert (
             job.sharing_preferences.instruction_visibility
             == InstructionVisibility.EVERYONE
@@ -98,6 +102,9 @@ class TestEmojiGenerationJobSharing:
 
     def test_job_defaults_to_new_thread_if_no_preferences(self):
         """Test job defaults to new thread when not in thread context."""
+        # Arrange
+        default_prefs = EmojiSharingPreferences.default_for_context(is_in_thread=False)
+        
         # Act
         job = EmojiGenerationJob.create_new(
             message_text="Deploy failed",
@@ -106,11 +113,12 @@ class TestEmojiGenerationJobSharing:
             channel_id="C456",
             timestamp="123.456",
             team_id="T789",
+            sharing_preferences=default_prefs,
         )
 
         # Assert
         assert job.sharing_preferences is not None
-        assert job.sharing_preferences.share_location == ShareLocation.NEW_THREAD
+        assert job.sharing_preferences.share_location == ShareLocation.ORIGINAL_CHANNEL
         assert (
             job.sharing_preferences.instruction_visibility
             == InstructionVisibility.EVERYONE
@@ -118,6 +126,11 @@ class TestEmojiGenerationJobSharing:
 
     def test_job_defaults_to_existing_thread_when_in_thread(self):
         """Test job defaults to existing thread when in thread context."""
+        # Arrange
+        default_prefs = EmojiSharingPreferences.default_for_context(
+            is_in_thread=True, thread_ts="123.456"
+        )
+        
         # Act
         job = EmojiGenerationJob.create_new(
             message_text="Bug in thread",
@@ -126,6 +139,7 @@ class TestEmojiGenerationJobSharing:
             channel_id="C456",
             timestamp="123.456",
             team_id="T789",
+            sharing_preferences=default_prefs,
             thread_ts="123.456",
         )
 

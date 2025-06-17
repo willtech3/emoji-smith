@@ -1,7 +1,7 @@
 """Tests for EmojiGenerationJob domain entity."""
 
 from shared.domain.entities import EmojiGenerationJob
-from shared.domain.value_objects import JobStatus
+from shared.domain.value_objects import JobStatus, EmojiSharingPreferences
 
 
 class TestEmojiGenerationJob:
@@ -15,6 +15,7 @@ class TestEmojiGenerationJob:
             channel_id="C1",
             timestamp="ts",
             team_id="T1",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
         )
         assert job.job_id
         assert job.status == JobStatus.PENDING
@@ -32,10 +33,11 @@ class TestEmojiGenerationJob:
             channel_id="C1",
             timestamp="ts",
             team_id="T1",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
         )
-        job.mark_processing()
-        assert job.is_processing()
-        job.mark_completed()
-        assert job.is_completed()
-        job.mark_failed()
-        assert job.is_failed()
+        job.mark_as_processing()
+        assert job.status == JobStatus.PROCESSING
+        job.mark_as_completed()
+        assert job.status == JobStatus.COMPLETED
+        job.mark_as_failed()
+        assert job.status == JobStatus.FAILED
