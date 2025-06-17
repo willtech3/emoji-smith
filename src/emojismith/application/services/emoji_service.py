@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Dict, Any, Optional
 from emojismith.domain.entities.slack_message import SlackMessage
-from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+from shared.domain.entities import EmojiGenerationJob
 from emojismith.domain.repositories.slack_repository import SlackRepository
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 from emojismith.domain.services.generation_service import EmojiGenerationService
@@ -22,12 +22,7 @@ except ImportError:
     # For tests when aiohttp is not available
     SlackFileSharingRepository = None  # type: ignore
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
-from emojismith.domain.value_objects.emoji_sharing_preferences import (
-    EmojiSharingPreferences,
-    ShareLocation,
-    InstructionVisibility,
-    ImageSize,
-)
+from shared.domain.value_objects import EmojiSharingPreferences
 
 
 class EmojiCreationService:
@@ -284,10 +279,10 @@ class EmojiCreationService:
 
         # Create sharing preferences from user selections
         thread_ts = metadata.get("thread_ts") if share_location == "thread" else None
-        sharing_preferences = EmojiSharingPreferences(
-            share_location=ShareLocation(share_location),
-            instruction_visibility=InstructionVisibility(visibility),
-            image_size=ImageSize(image_size),
+        sharing_preferences = EmojiSharingPreferences.from_form_values(
+            share_location=share_location,
+            instruction_visibility=visibility,
+            image_size=image_size,
             thread_ts=thread_ts,
         )
 
@@ -429,7 +424,11 @@ class EmojiCreationService:
             channel_id=job_data["channel_id"],
             timestamp=job_data["timestamp"],
             team_id=job_data["team_id"],
-            sharing_preferences=job_data.get("sharing_preferences"),
+            sharing_preferences=(
+                EmojiSharingPreferences.from_dict(job_data["sharing_preferences"])
+                if job_data.get("sharing_preferences")
+                else EmojiSharingPreferences.default_for_context()
+            ),
             thread_ts=job_data.get("thread_ts"),
         )
 

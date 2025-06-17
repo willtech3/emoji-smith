@@ -3,7 +3,7 @@
 import json
 import logging
 from typing import Any, Optional, Tuple
-from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+from shared.domain.entities import EmojiGenerationJob
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 
 

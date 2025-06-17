@@ -9,7 +9,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from emojismith.app import create_webhook_handler
-from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+from shared.domain.entities import EmojiGenerationJob
 
 # Configure logging
 logger = logging.getLogger(__name__)

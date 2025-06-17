@@ -1,7 +1,7 @@
 """Job queue repository protocol for domain layer."""
 
 from typing import Optional, Protocol, Tuple
-from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+from shared.domain.entities import EmojiGenerationJob
 
 
 class JobQueueRepository(Protocol):

@@ -10,9 +10,8 @@ from slack_sdk.web.async_client import AsyncWebClient
 from slack_sdk.errors import SlackApiError
 
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
-from emojismith.domain.value_objects.emoji_sharing_preferences import (
+from shared.domain.value_objects import (
     EmojiSharingPreferences,
-    ShareLocation,
     InstructionVisibility,
     ImageSize,
 )
@@ -77,13 +76,11 @@ class SlackFileSharingRepository:
 
             # Handle thread-specific sharing
             thread_ts = None
-            if preferences.share_location == ShareLocation.THREAD:
+            if preferences.thread_ts:
+                # Share in existing thread
                 thread_ts = preferences.thread_ts
                 upload_params["thread_ts"] = thread_ts
-            elif (
-                preferences.share_location == ShareLocation.NEW_THREAD
-                and original_message_ts
-            ):
+            elif original_message_ts:
                 # For new thread, we'll upload first then get the thread_ts
                 upload_params["thread_ts"] = original_message_ts
 
@@ -99,13 +96,13 @@ class SlackFileSharingRepository:
             file_url = file_info.get("url_private")
 
             # If creating new thread, get the timestamp from the file share
-            if preferences.share_location == ShareLocation.NEW_THREAD:
+            if original_message_ts and not preferences.thread_ts:
                 # For new threads, we need to post a message to create the thread
                 # The file upload alone doesn't return a thread_ts
                 message_response = await self._client.chat_postMessage(
                     channel=channel_id,
                     text=f"Generated custom emoji: :{emoji.name}:",
-                    thread_ts=original_message_ts if original_message_ts else None,
+                    thread_ts=original_message_ts,
                 )
                 thread_ts = message_response.get("ts")
 
@@ -187,7 +184,7 @@ class SlackFileSharingRepository:
             return
 
         # For requester-only, send ephemeral message with instructions
-        if preferences.instruction_visibility == InstructionVisibility.REQUESTER_ONLY:
+        if preferences.instruction_visibility == InstructionVisibility.SUBMITTER_ONLY:
             instructions = self._build_upload_instructions(emoji_name)
 
             await self._client.chat_postEphemeral(

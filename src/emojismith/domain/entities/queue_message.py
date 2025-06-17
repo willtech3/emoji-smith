@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, Any, Union
 
-from emojismith.domain.entities.emoji_generation_job import EmojiGenerationJob
+from shared.domain.entities import EmojiGenerationJob
 from emojismith.domain.entities.slack_message import SlackMessage
 
 

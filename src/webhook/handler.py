@@ -5,10 +5,8 @@ import logging
 from typing import Dict, Any
 
 from webhook.domain.slack_message import SlackMessage
-from webhook.domain.emoji_generation_job import (
-    EmojiGenerationJob,
-    EmojiSharingPreferences,
-)
+from shared.domain.entities import EmojiGenerationJob
+from shared.domain.value_objects import EmojiSharingPreferences
 from webhook.domain.slack_payloads import MessageActionPayload, ModalSubmissionPayload
 from webhook.repositories.slack_repository import SlackRepository
 from webhook.repositories.job_queue_repository import JobQueueRepository
@@ -23,35 +21,6 @@ class WebhookHandler:
         self._slack_repo = slack_repo
         self._job_queue = job_queue
         self._logger = logging.getLogger(__name__)
-
-    def _map_form_values_to_worker_format(
-        self, share_location: str, visibility: str, image_size: str
-    ) -> tuple[str, str, str]:
-        """Map Slack form values to worker-compatible enum values."""
-        # Map share location values
-        share_location_map = {
-            "channel": "ORIGINAL_CHANNEL",
-            "dm": "DIRECT_MESSAGE"
-        }
-        
-        # Map visibility values  
-        visibility_map = {
-            "visible": "EVERYONE",
-            "hidden": "SUBMITTER_ONLY"
-        }
-        
-        # Map image size values
-        size_map = {
-            "512x512": "EMOJI_SIZE",
-            "256x256": "SMALL", 
-            "1024x1024": "LARGE"
-        }
-        
-        return (
-            share_location_map.get(share_location, "ORIGINAL_CHANNEL"),
-            visibility_map.get(visibility, "EVERYONE"),
-            size_map.get(image_size, "EMOJI_SIZE")
-        )
 
     async def handle_message_action(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle Slack message action - open modal immediately."""
@@ -135,16 +104,11 @@ class WebhookHandler:
             self._logger.exception("Malformed modal submission form data")
             raise ValueError("Malformed modal submission form data") from exc
 
-        # Map form values to worker-compatible format
-        mapped_location, mapped_visibility, mapped_size = self._map_form_values_to_worker_format(
-            share_location, visibility, image_size
-        )
-
-        # Create emoji generation job
-        sharing_preferences = EmojiSharingPreferences(
-            share_location=mapped_location,
-            instruction_visibility=mapped_visibility,
-            image_size=mapped_size,
+        # Create emoji generation job with type-safe shared domain models
+        sharing_preferences = EmojiSharingPreferences.from_form_values(
+            share_location=share_location,
+            instruction_visibility=visibility,
+            image_size=image_size,
             thread_ts=metadata.get("thread_ts"),
         )
 

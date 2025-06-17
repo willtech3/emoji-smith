@@ -1,7 +1,7 @@
 """Job queue repository interface for webhook package."""
 
 from abc import ABC, abstractmethod
-from webhook.domain.emoji_generation_job import EmojiGenerationJob
+from shared.domain.entities import EmojiGenerationJob
 
 
 class JobQueueRepository(ABC):
