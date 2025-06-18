@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from typing import Dict, Any, Optional
 from emojismith.domain.entities.slack_message import SlackMessage
 from shared.domain.entities import EmojiGenerationJob
@@ -121,6 +122,19 @@ class EmojiCreationService:
                 },
                 {
                     "type": "input",
+                    "block_id": "emoji_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "name",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "e.g., 'coding_wizard' → becomes :coding_wizard:",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Emoji Name"},
+                },
+                {
+                    "type": "input",
                     "block_id": "emoji_description",
                     "element": {
                         "type": "plain_text_input",
@@ -128,8 +142,8 @@ class EmojiCreationService:
                         "placeholder": {
                             "type": "plain_text",
                             "text": (
-                                "Describe the emoji you want "
-                                "(e.g., facepalm reaction)"
+                                "e.g., 'A retro computer terminal with green text on "
+                                "black background'"
                             ),
                         },
                         "multiline": False,
@@ -255,6 +269,7 @@ class EmojiCreationService:
         state = view.get("state", {}).get("values", {})
         try:
             description = state["emoji_description"]["description"]["value"]
+            emoji_name = state["emoji_name"]["name"]["value"]
             share_location = state["share_location"]["share_location_select"][
                 "selected_option"
             ]["value"]
@@ -263,6 +278,13 @@ class EmojiCreationService:
             ]["value"]
             image_size = state["image_size"]["size_select"]["selected_option"]["value"]
             metadata = json.loads(view.get("private_metadata", "{}"))
+            if not re.fullmatch(r"[a-z0-9_]+", emoji_name):
+                raise ValueError(
+                    "Emoji name must contain only lowercase letters, "
+                    "numbers, and underscores"
+                )
+            if len(emoji_name) > 32:
+                raise ValueError("Emoji name must be 32 characters or less")
         except (KeyError, json.JSONDecodeError) as exc:
             self._logger.exception("Malformed modal submission payload")
             raise ValueError("Malformed modal submission payload") from exc
@@ -298,6 +320,7 @@ class EmojiCreationService:
                 team_id=metadata["team_id"],
                 sharing_preferences=sharing_preferences,
                 thread_ts=metadata.get("thread_ts"),
+                emoji_name=emoji_name,
             )
             # Queue job for background processing
             await self._job_queue.enqueue_job(job)
@@ -311,6 +334,7 @@ class EmojiCreationService:
                 {
                     **metadata,
                     "user_description": description,
+                    "emoji_name": emoji_name,
                     "sharing_preferences": sharing_preferences.to_dict(),
                 }
             )
@@ -328,8 +352,8 @@ class EmojiCreationService:
             description=job.user_description,
             context=job.message_text,
         )
-        # Generate emoji name from description, max 32 chars for Slack
-        name = job.user_description.replace(" ", "_").lower()[:32]
+        # Use provided emoji name, sanitize for Slack (max 32 chars)
+        name = job.emoji_name.replace(" ", "_").lower()[:32]
         emoji = await self._emoji_generator.generate(spec, name)
 
         # Determine workspace type (could be cached or configured)
@@ -430,6 +454,7 @@ class EmojiCreationService:
                 else EmojiSharingPreferences.default_for_context()
             ),
             thread_ts=job_data.get("thread_ts"),
+            emoji_name=job_data["emoji_name"],
         )
 
         # Process using the main method

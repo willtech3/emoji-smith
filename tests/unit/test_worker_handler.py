@@ -22,6 +22,7 @@ def sqs_event() -> Dict[str, Any]:
                         "job_id": "test-job-123",
                         "message_text": "Just deployed on Friday",
                         "user_description": "A test emoji",
+                        "emoji_name": "test_emoji",
                         "user_id": "U123456",
                         "channel_id": "C123456",
                         "timestamp": "1234567890.123456",
