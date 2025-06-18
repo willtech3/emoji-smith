@@ -21,7 +21,8 @@ class SQSJobQueue(JobQueueRepository):
         message_body = json.dumps(job.to_dict())
 
         response = self._sqs_client.send_message(
-            QueueUrl=self._queue_url, MessageBody=message_body,
+            QueueUrl=self._queue_url,
+            MessageBody=message_body,
         )
 
         self._logger.info(

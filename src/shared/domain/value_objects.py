@@ -234,7 +234,11 @@ class EmojiStylePreferences:
 
     @classmethod
     def from_form_values(
-        cls, style_type: str, color_scheme: str, detail_level: str, tone: str,
+        cls,
+        style_type: str,
+        color_scheme: str,
+        detail_level: str,
+        tone: str,
     ) -> "EmojiStylePreferences":
         return cls(
             style_type=StyleType.from_form_value(style_type),

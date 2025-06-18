@@ -28,7 +28,9 @@ class ModalOpeningMessage:
 
     @classmethod
     def create_new(
-        cls, slack_message: SlackMessage, trigger_id: str,
+        cls,
+        slack_message: SlackMessage,
+        trigger_id: str,
     ) -> "ModalOpeningMessage":
         """Create a new modal opening message."""
         return cls(

@@ -171,7 +171,10 @@ class TestDualLambdaE2EIntegration:
         assert job.created_at is not None
 
     async def test_webhook_performance_timing(
-        self, webhook_handler, mock_sqs_client, modal_submission_payload,
+        self,
+        webhook_handler,
+        mock_sqs_client,
+        modal_submission_payload,
     ):
         """Test webhook meets performance requirements."""
         import time
@@ -215,7 +218,9 @@ class TestDualLambdaE2EIntegration:
         assert "image_size" in sharing_prefs
 
     async def test_error_handling_no_sqs_on_failure(
-        self, webhook_handler, mock_sqs_client,
+        self,
+        webhook_handler,
+        mock_sqs_client,
     ):
         """Test error handling - no SQS messages sent on failure."""
         # Test with invalid modal payload
@@ -234,7 +239,10 @@ class TestDualLambdaE2EIntegration:
         mock_sqs_client.send_message.assert_not_called()
 
     async def test_worker_lambda_compatibility(
-        self, webhook_handler, mock_sqs_client, modal_submission_payload,
+        self,
+        webhook_handler,
+        mock_sqs_client,
+        modal_submission_payload,
     ):
         """Test that messages are fully compatible with worker Lambda."""
         # Send message through webhook
