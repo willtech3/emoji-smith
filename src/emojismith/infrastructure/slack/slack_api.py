@@ -26,7 +26,7 @@ class SlackAPIRepository:
 
         try:
             response = await self._client.admin_emoji_add(name=name, url=mock_image_url)
-            return response.get("ok", False)
+            return bool(response.get("ok", False))
         except SlackApiError as e:
             # Handle common admin permission errors gracefully
             if e.response.get("error") == "not_allowed_token_type":

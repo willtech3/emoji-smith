@@ -121,6 +121,20 @@ class EmojiCreationService:
                 },
                 {
                     "type": "input",
+                    "block_id": "emoji_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "name",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Short name (e.g., facepalm)",
+                        },
+                        "multiline": False,
+                    },
+                    "label": {"type": "plain_text", "text": "Emoji Name"},
+                },
+                {
+                    "type": "input",
                     "block_id": "emoji_description",
                     "element": {
                         "type": "plain_text_input",
@@ -254,6 +268,7 @@ class EmojiCreationService:
         view = payload.get("view", {})
         state = view.get("state", {}).get("values", {})
         try:
+            emoji_name = state["emoji_name"]["name"]["value"]
             description = state["emoji_description"]["description"]["value"]
             share_location = state["share_location"]["share_location_select"][
                 "selected_option"
@@ -270,6 +285,7 @@ class EmojiCreationService:
         self._logger.info(
             "Processing modal submission",
             extra={
+                "emoji_name": emoji_name,
                 "description": description,
                 "share_location": share_location,
                 "visibility": visibility,
@@ -292,6 +308,7 @@ class EmojiCreationService:
             job = EmojiGenerationJob.create_new(
                 message_text=metadata["message_text"],
                 user_description=description,
+                emoji_name=emoji_name,
                 user_id=metadata["user_id"],
                 channel_id=metadata["channel_id"],
                 timestamp=metadata["timestamp"],
@@ -303,7 +320,11 @@ class EmojiCreationService:
             await self._job_queue.enqueue_job(job)
             self._logger.info(
                 "Queued emoji generation job",
-                extra={"job_id": job.job_id, "description": description},
+                extra={
+                    "job_id": job.job_id,
+                    "description": description,
+                    "emoji_name": emoji_name,
+                },
             )
         else:
             # Fallback to synchronous processing for development
@@ -311,6 +332,7 @@ class EmojiCreationService:
                 {
                     **metadata,
                     "user_description": description,
+                    "emoji_name": emoji_name,
                     "sharing_preferences": sharing_preferences.to_dict(),
                 }
             )
@@ -328,8 +350,8 @@ class EmojiCreationService:
             description=job.user_description,
             context=job.message_text,
         )
-        # Generate emoji name from description, max 32 chars for Slack
-        name = job.user_description.replace(" ", "_").lower()[:32]
+        # Use provided emoji name, sanitize for Slack (max 32 chars)
+        name = job.emoji_name.replace(" ", "_").lower()[:32]
         emoji = await self._emoji_generator.generate(spec, name)
 
         # Determine workspace type (could be cached or configured)
@@ -420,6 +442,7 @@ class EmojiCreationService:
         job = EmojiGenerationJob.create_new(
             message_text=job_data["message_text"],
             user_description=job_data["user_description"],
+            emoji_name=job_data["emoji_name"],
             user_id=job_data["user_id"],
             channel_id=job_data["channel_id"],
             timestamp=job_data["timestamp"],

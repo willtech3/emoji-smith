@@ -11,6 +11,7 @@ class TestEmojiGenerationJob:
         job = EmojiGenerationJob.create_new(
             message_text="hello",
             user_description="smile",
+            emoji_name="smile",
             user_id="U1",
             channel_id="C1",
             timestamp="ts",
@@ -29,6 +30,7 @@ class TestEmojiGenerationJob:
         job = EmojiGenerationJob.create_new(
             message_text="x",
             user_description="y",
+            emoji_name="y",
             user_id="U1",
             channel_id="C1",
             timestamp="ts",

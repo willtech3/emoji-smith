@@ -53,7 +53,8 @@ class TestSlackWebhookHandler:
                 "callback_id": "emoji_creation_modal",
                 "state": {
                     "values": {
-                        "emoji_description": {"description": {"value": "facepalm"}}
+                        "emoji_name": {"name": {"value": "facepalm"}},
+                        "emoji_description": {"description": {"value": "facepalm"}},
                     }
                 },
                 "private_metadata": '{"message_text": "test", "user_id": "U123"}',

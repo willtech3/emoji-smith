@@ -115,6 +115,7 @@ class FormBlock:
     """Slack form block."""
 
     description: Optional[FormElement] = None
+    name: Optional[FormElement] = None
     share_location_select: Optional[FormSelect] = None
     visibility_select: Optional[FormSelect] = None
     size_select: Optional[FormSelect] = None
@@ -124,6 +125,7 @@ class FormBlock:
 class FormValues:
     """Slack form values."""
 
+    emoji_name: FormBlock
     emoji_description: FormBlock
     share_location: FormBlock
     instruction_visibility: FormBlock
@@ -175,6 +177,8 @@ class ModalSubmissionPayload:
                 block.description = FormElement(
                     value=block_data["description"]["value"]
                 )
+            if "name" in block_data:
+                block.name = FormElement(value=block_data["name"]["value"])
             if "share_location_select" in block_data:
                 block.share_location_select = FormSelect(
                     selected_option=block_data["share_location_select"][
@@ -192,6 +196,7 @@ class ModalSubmissionPayload:
             return block
 
         form_values = FormValues(
+            emoji_name=create_form_block(values_data["emoji_name"]),
             emoji_description=create_form_block(values_data["emoji_description"]),
             share_location=create_form_block(values_data["share_location"]),
             instruction_visibility=create_form_block(

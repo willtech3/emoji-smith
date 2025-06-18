@@ -75,6 +75,11 @@ class WebhookHandler:
         try:
             state = modal_payload.view.state.values
 
+            name_block = state["emoji_name"].name
+            if name_block is None:
+                raise ValueError("Missing emoji name")
+            emoji_name = name_block.value
+
             # Extract description with None check
             desc_block = state["emoji_description"].description
             if desc_block is None:
@@ -114,6 +119,7 @@ class WebhookHandler:
 
         job = EmojiGenerationJob.create_new(
             user_description=description,
+            emoji_name=emoji_name,
             message_text=metadata["message_text"],
             user_id=metadata["user_id"],
             channel_id=metadata["channel_id"],
@@ -171,6 +177,19 @@ class WebhookHandler:
                             f"{'...' if len(slack_message.text) > 100 else ''}\""
                         ),
                     },
+                },
+                {
+                    "type": "input",
+                    "block_id": "emoji_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "name",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Short name (e.g., facepalm)",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Emoji Name"},
                 },
                 {
                     "type": "input",

@@ -14,6 +14,7 @@ class EmojiGenerationJob:
 
     job_id: str
     user_description: str
+    emoji_name: str
     message_text: str
     user_id: str
     channel_id: str
@@ -27,7 +28,9 @@ class EmojiGenerationJob:
     @classmethod
     def create_new(
         cls,
+        *,
         user_description: str,
+        emoji_name: str,
         message_text: str,
         user_id: str,
         channel_id: str,
@@ -40,6 +43,7 @@ class EmojiGenerationJob:
         return cls(
             job_id=str(uuid.uuid4()),
             user_description=user_description,
+            emoji_name=emoji_name,
             message_text=message_text,
             user_id=user_id,
             channel_id=channel_id,
@@ -56,6 +60,7 @@ class EmojiGenerationJob:
         return {
             "job_id": self.job_id,
             "user_description": self.user_description,
+            "emoji_name": self.emoji_name,
             "message_text": self.message_text,
             "user_id": self.user_id,
             "channel_id": self.channel_id,
@@ -73,6 +78,7 @@ class EmojiGenerationJob:
         return cls(
             job_id=data["job_id"],
             user_description=data["user_description"],
+            emoji_name=data["emoji_name"],
             message_text=data["message_text"],
             user_id=data["user_id"],
             channel_id=data["channel_id"],

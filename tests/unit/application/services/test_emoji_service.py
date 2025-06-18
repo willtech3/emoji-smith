@@ -98,6 +98,7 @@ class TestEmojiCreationService:
                 "callback_id": "emoji_creation_modal",
                 "state": {
                     "values": {
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
                         },
@@ -142,6 +143,7 @@ class TestEmojiCreationService:
                 "callback_id": "emoji_creation_modal",
                 "state": {
                     "values": {
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
                         },
@@ -179,6 +181,7 @@ class TestEmojiCreationService:
         call_args = mock_job_queue.enqueue_job.call_args[0][0]
         assert call_args.message_text == "Just deployed on Friday"
         assert call_args.user_description == "frustrated developer face"
+        assert call_args.emoji_name == "facepalm"
         assert call_args.user_id == "U12345"
 
     async def test_handle_modal_submission_malformed_payload(self, emoji_service):
@@ -247,6 +250,7 @@ class TestEmojiCreationService:
         job = EmojiGenerationJob.create_new(
             message_text="The deployment failed again 😭",
             user_description="facepalm reaction",
+            emoji_name="facepalm_reaction",
             user_id="U12345",
             channel_id="C67890",
             timestamp="1234567890.123456",
@@ -302,6 +306,7 @@ class TestEmojiCreationService:
         job = EmojiGenerationJob.create_new(
             message_text="Test message",
             user_description="test emoji",
+            emoji_name="test_emoji",
             user_id="U12345",
             channel_id="C67890",
             timestamp="1234567890.123456",
@@ -348,6 +353,7 @@ class TestEmojiCreationService:
         job_data = {
             "message_text": "Test message",
             "user_description": "test emoji",
+            "emoji_name": "test_emoji",
             "user_id": "U12345",
             "channel_id": "C67890",
             "timestamp": "1234567890.123456",

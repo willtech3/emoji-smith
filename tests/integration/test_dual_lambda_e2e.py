@@ -71,6 +71,7 @@ class TestDualLambdaE2EIntegration:
                 "callback_id": "emoji_creation_modal",
                 "state": {
                     "values": {
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "emoji_description": {"description": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
@@ -146,6 +147,7 @@ class TestDualLambdaE2EIntegration:
 
         # Verify job data is correct
         assert job.user_description == "facepalm"
+        assert job.emoji_name == "facepalm"
         assert job.message_text == "Just deployed on Friday"
         assert job.user_id == "U12345"
         assert job.channel_id == "C67890"
@@ -188,6 +190,7 @@ class TestDualLambdaE2EIntegration:
         required_fields = [
             "job_id",
             "user_description",
+            "emoji_name",
             "message_text",
             "user_id",
             "channel_id",
@@ -249,6 +252,7 @@ class TestDualLambdaE2EIntegration:
 
         # Verify essential fields are preserved
         assert job_dict["user_description"] == job.user_description
+        assert job_dict["emoji_name"] == job.emoji_name
         assert job_dict["message_text"] == job.message_text
         assert job_dict["user_id"] == job.user_id
         assert (
@@ -259,4 +263,5 @@ class TestDualLambdaE2EIntegration:
         # Verify job can be recreated from dict
         job_recreated = EmojiGenerationJob.from_dict(job_dict)
         assert job_recreated.user_description == job.user_description
+        assert job_recreated.emoji_name == job.emoji_name
         assert job_recreated.job_id == job.job_id

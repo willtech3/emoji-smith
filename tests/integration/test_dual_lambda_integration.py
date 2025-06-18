@@ -59,6 +59,7 @@ class TestDualLambdaIntegration:
                 "callback_id": "emoji_creation_modal",
                 "state": {
                     "values": {
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "emoji_description": {"description": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
@@ -121,6 +122,7 @@ class TestDualLambdaIntegration:
         # Verify message body contains job data
         message_body = json.loads(sqs_call_args.kwargs["MessageBody"])
         assert message_body["user_description"] == "facepalm"
+        assert message_body["emoji_name"] == "facepalm"
         assert message_body["message_text"] == "Just deployed on Friday"
         assert message_body["user_id"] == "U12345"
         assert message_body["sharing_preferences"]["share_location"] == "channel"
@@ -191,6 +193,7 @@ class TestDualLambdaIntegration:
 
         # Verify job data is correct
         assert job.user_description == "facepalm"
+        assert job.emoji_name == "facepalm"
         assert job.message_text == "Just deployed on Friday"
         assert job.user_id == "U12345"
         assert job.channel_id == "C67890"
