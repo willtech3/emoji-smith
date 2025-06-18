@@ -225,3 +225,28 @@ class TestWorkerHandler:
 
             # Should not raise an exception
             _load_secrets_from_aws()
+
+    @patch.dict(
+        "os.environ",
+        {
+            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "OPENAI_API_KEY": "sk-test",
+        },
+    )
+    def test_logs_expired_trigger_id(self, sqs_event, context, caplog):
+        """Worker logs helpful message when trigger_id is expired."""
+        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
+            mock_create.return_value = Mock(
+                process_emoji_generation_job=Mock(
+                    side_effect=Exception("expired_trigger_id")
+                )
+            )
+            with patch("asyncio.run") as mock_run:
+                mock_run.side_effect = Exception("expired_trigger_id")
+                with caplog.at_level("ERROR"):
+                    handler(sqs_event, context)
+                    assert any(
+                        "Expired trigger_id detected" in rec.message
+                        for rec in caplog.records
+                    )

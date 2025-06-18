@@ -87,6 +87,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         except Exception as e:
             logger.exception(f"Failed to process SQS record: {e}")
 
+            if "expired_trigger_id" in str(e):
+                logger.error(
+                    "Expired trigger_id detected. "
+                    "Ensure Slack interactions are handled by the webhook "
+                    "Lambda to avoid modal timeouts."
+                )
+
             # Add to batch item failures for SQS retry
             batch_item_failures.append(
                 {"itemIdentifier": record.get("messageId", "unknown")}
