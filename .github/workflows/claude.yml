@@ -31,6 +31,11 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
       - name: Claude Code Action
         uses: anthropics/claude-code-action@beta
         with:
@@ -46,8 +51,8 @@ jobs:
           # Optional: Specify allowed tools (default: all)
           # allowed_tools: "edit_file,create_file,read_file,run_command"
           
-          # Optional: Custom prompt for this workflow
-          prompt: |
+          # Optional: Custom instructions for this workflow
+          custom_instructions: |
             You are a helpful AI assistant for the Emoji Smith project - a Slack bot that generates custom emojis using AI. 
             
             When responding to issues or PRs:
