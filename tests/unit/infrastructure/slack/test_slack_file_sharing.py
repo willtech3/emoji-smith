@@ -268,3 +268,108 @@ class TestSlackFileSharingRepository:
         assert result.success is False
         assert result.error == "file_size_too_large"
         assert result.file_url is None
+
+    async def test_no_duplicate_emoji_messages_for_new_thread(
+        self, file_sharing_repo, mock_slack_client, sample_emoji
+    ):
+        """Test that new thread creation doesn't produce duplicate emoji messages."""
+        # Arrange
+        prefs = EmojiSharingPreferences(
+            share_location=ShareLocation.NEW_THREAD,
+            instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
+            include_upload_instructions=True,
+        )
+        channel_id = "C123456"
+        original_message_ts = "1234567890.000111"
+
+        # Mock file upload response
+        mock_slack_client.files_upload_v2.return_value = {
+            "ok": True,
+            "file": {"id": "F123456", "url_private": "https://files.slack.com/..."},
+        }
+
+        # Mock thread creation response
+        mock_slack_client.chat_postMessage.return_value = {
+            "ok": True,
+            "ts": "1234567890.123456",
+        }
+
+        # Act
+        result = await file_sharing_repo.share_emoji_file(
+            emoji=sample_emoji,
+            channel_id=channel_id,
+            preferences=prefs,
+            requester_user_id="U789012",
+            original_message_ts=original_message_ts,
+        )
+
+        # Assert
+        assert result.success is True
+
+        # Verify file upload was called once
+        mock_slack_client.files_upload_v2.assert_called_once()
+        upload_args = mock_slack_client.files_upload_v2.call_args[1]
+
+        # For new thread: file upload should NOT have initial_comment
+        # (to avoid duplicate with the separate thread message)
+        assert "initial_comment" not in upload_args
+
+        # Verify exactly one thread message was posted
+        mock_slack_client.chat_postMessage.assert_called_once()
+        message_args = mock_slack_client.chat_postMessage.call_args[1]
+
+        # Thread message should contain the emoji name and instructions
+        message_text = message_args["text"]
+        assert "Generated custom emoji: :test_emoji:" in message_text
+        assert "workspace" in message_text.lower()  # Instructions included
+        assert message_args["thread_ts"] == original_message_ts
+
+        # Verify no additional ephemeral messages for EVERYONE visibility
+        mock_slack_client.chat_postEphemeral.assert_not_called()
+
+    async def test_existing_thread_uses_initial_comment_not_separate_message(
+        self, file_sharing_repo, mock_slack_client, sample_emoji
+    ):
+        """Test existing thread sharing uses initial_comment, not separate message."""
+        # Arrange
+        thread_ts = "1234567890.123456"
+        prefs = EmojiSharingPreferences(
+            share_location=ShareLocation.THREAD,
+            instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
+            include_upload_instructions=True,
+            thread_ts=thread_ts,
+        )
+        channel_id = "C123456"
+
+        # Mock file upload response
+        mock_slack_client.files_upload_v2.return_value = {
+            "ok": True,
+            "file": {"id": "F123456", "url_private": "https://files.slack.com/..."},
+        }
+
+        # Act
+        result = await file_sharing_repo.share_emoji_file(
+            emoji=sample_emoji,
+            channel_id=channel_id,
+            preferences=prefs,
+            requester_user_id="U789012",
+        )
+
+        # Assert
+        assert result.success is True
+
+        # Verify file upload was called with initial_comment
+        upload_args = mock_slack_client.files_upload_v2.call_args[1]
+        assert "initial_comment" in upload_args
+
+        initial_comment = upload_args["initial_comment"]
+        assert "Generated custom emoji: :test_emoji:" in initial_comment
+        assert "workspace" in initial_comment.lower()  # Instructions included
+
+        # Verify NO separate thread message was posted for existing thread
+        mock_slack_client.chat_postMessage.assert_not_called()
+
+        # Verify no additional ephemeral messages for EVERYONE visibility
+        mock_slack_client.chat_postEphemeral.assert_not_called()
