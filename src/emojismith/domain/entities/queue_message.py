@@ -1,10 +1,8 @@
 """Queue message entities for different operation types."""
 
-import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, Any, Union
+from typing import Dict, Any
 
 from shared.domain.entities import EmojiGenerationJob
 
