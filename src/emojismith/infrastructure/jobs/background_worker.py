@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from typing import Any
-from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from shared.domain.repositories.job_queue_repository import JobQueueRepository
 from emojismith.application.services.emoji_service import EmojiCreationService
 
 

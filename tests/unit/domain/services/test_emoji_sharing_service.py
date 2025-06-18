@@ -9,7 +9,7 @@ from emojismith.domain.services.emoji_sharing_service import (
     FileSharingFallbackStrategy,
 )
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
-from emojismith.domain.entities.slack_message import SlackMessage
+from shared.domain.slack_message import SlackMessage
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
     ShareLocation,

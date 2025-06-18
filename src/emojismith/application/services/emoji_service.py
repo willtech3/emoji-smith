@@ -3,8 +3,8 @@
 import logging
 from typing import Dict, Any, Optional
 from shared.domain.entities import EmojiGenerationJob
-from emojismith.domain.repositories.slack_repository import SlackRepository
-from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from shared.domain.repositories.slack_repository import SlackRepository
+from shared.domain.repositories.job_queue_repository import JobQueueRepository
 from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingService,

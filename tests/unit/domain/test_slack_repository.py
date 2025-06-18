@@ -1,6 +1,10 @@
 """Tests for SlackRepository protocol interface."""
 
-from emojismith.domain.repositories.slack_repository import SlackRepository
+from shared.domain.repositories.slack_repository import (
+    SlackEmojiRepository,
+    SlackModalRepository,
+    SlackRepository,
+)
 
 
 def test_slack_repository_protocol_methods_exist() -> None:
@@ -10,3 +14,9 @@ def test_slack_repository_protocol_methods_exist() -> None:
     assert hasattr(
         SlackRepository, "add_emoji_reaction"
     ), "add_emoji_reaction must be defined"
+
+
+def test_interface_composition() -> None:
+    """SlackRepository should extend both modal and emoji interfaces."""
+    assert issubclass(SlackRepository, SlackModalRepository)
+    assert issubclass(SlackRepository, SlackEmojiRepository)

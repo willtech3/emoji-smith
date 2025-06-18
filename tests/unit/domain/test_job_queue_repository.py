@@ -1,6 +1,10 @@
 """Tests for JobQueueRepository protocol interface."""
 
-from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from shared.domain.repositories.job_queue_repository import (
+    JobQueueConsumer,
+    JobQueueProducer,
+    JobQueueRepository,
+)
 
 
 def test_job_queue_repository_protocol_defines_methods():
@@ -11,3 +15,9 @@ def test_job_queue_repository_protocol_defines_methods():
     assert hasattr(JobQueueRepository, "get_job_status")
     assert hasattr(JobQueueRepository, "update_job_status")
     assert hasattr(JobQueueRepository, "retry_failed_jobs")
+
+
+def test_job_queue_interface_composition() -> None:
+    """Combined repository extends producer and consumer."""
+    assert issubclass(JobQueueRepository, JobQueueProducer)
+    assert issubclass(JobQueueRepository, JobQueueConsumer)

@@ -1,13 +1,7 @@
-"""Job queue repository interface for webhook package."""
+"""Compatibility wrapper for job queue producer."""
 
-from abc import ABC, abstractmethod
-from shared.domain.entities import EmojiGenerationJob
+from shared.domain.repositories.job_queue_repository import JobQueueProducer
 
+JobQueueRepository = JobQueueProducer
 
-class JobQueueRepository(ABC):
-    """Repository interface for job queue operations."""
-
-    @abstractmethod
-    async def enqueue_job(self, job: EmojiGenerationJob) -> str:
-        """Enqueue an emoji generation job."""
-        pass
+__all__ = ["JobQueueRepository"]

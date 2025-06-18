@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any, Optional, Tuple
 from shared.domain.entities import EmojiGenerationJob
-from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from shared.domain.repositories.job_queue_repository import JobQueueRepository
 
 
 class SQSJobQueue(JobQueueRepository):

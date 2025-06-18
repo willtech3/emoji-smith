@@ -1,21 +1,5 @@
-"""Slack repository protocol for domain layer."""
+"""Re-export SlackRepository protocol from shared package."""
 
-from typing import Dict, Any, Protocol
+from shared.domain.repositories.slack_repository import SlackRepository
 
-
-class SlackRepository(Protocol):
-    """Protocol for Slack API operations."""
-
-    async def open_modal(self, trigger_id: str, view: Dict[str, Any]) -> None:
-        """Open modal dialog in Slack."""
-        ...
-
-    async def upload_emoji(self, name: str, image_data: bytes) -> bool:
-        """Upload custom emoji to Slack workspace."""
-        ...
-
-    async def add_emoji_reaction(
-        self, emoji_name: str, channel_id: str, timestamp: str
-    ) -> None:
-        """Add emoji reaction to a message."""
-        ...
+__all__ = ["SlackRepository"]

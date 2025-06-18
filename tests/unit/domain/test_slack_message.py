@@ -1,7 +1,7 @@
 """Tests for SlackMessage domain entity."""
 
 import pytest
-from emojismith.domain.entities.slack_message import SlackMessage
+from shared.domain.slack_message import SlackMessage
 
 
 class TestSlackMessage:

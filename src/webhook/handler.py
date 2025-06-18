@@ -12,15 +12,15 @@ from shared.domain.value_objects import (
     EmojiStylePreferences,
 )
 from webhook.domain.slack_payloads import MessageActionPayload, ModalSubmissionPayload
-from webhook.repositories.slack_repository import SlackRepository
-from webhook.repositories.job_queue_repository import JobQueueRepository
+from shared.domain.repositories.slack_repository import SlackModalRepository
+from shared.domain.repositories.job_queue_repository import JobQueueProducer
 
 
 class WebhookHandler:
     """Handles Slack webhook events with immediate modal opening."""
 
     def __init__(
-        self, slack_repo: SlackRepository, job_queue: JobQueueRepository
+        self, slack_repo: SlackModalRepository, job_queue: JobQueueProducer
     ) -> None:
         self._slack_repo = slack_repo
         self._job_queue = job_queue
