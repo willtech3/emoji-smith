@@ -121,12 +121,15 @@ class TestEmojiSharingFlow:
         upload_args = mock_slack_client.files_upload_v2.call_args[1]
         assert upload_args["filename"] == "facepalm.png"
         assert upload_args["channels"] == ["C789012"]
-        assert "upload" in upload_args["initial_comment"].lower()
+        # For new thread: no initial_comment on file upload (to avoid duplicates)
+        assert "initial_comment" not in upload_args
 
-        # 6. Verify thread was created
+        # 6. Verify thread was created with upload instructions
         mock_slack_client.chat_postMessage.assert_called_once()
         message_args = mock_slack_client.chat_postMessage.call_args[1]
         assert message_args["channel"] == "C789012"
+        # Instructions should be in the thread message instead
+        assert "upload" in message_args["text"].lower()
 
     async def test_flow_shares_to_existing_thread_when_requested(
         self, emoji_service, mock_slack_client

@@ -71,8 +71,14 @@ class SlackFileSharingRepository:
                 ],  # files_upload_v2 expects a list of channel IDs
                 "file": image_data,
                 "title": f"Custom Emoji: :{emoji.name}:",
-                "initial_comment": self._build_initial_comment(emoji.name, preferences),
             }
+
+            # Add initial comment only if not creating a new thread
+            # (to avoid duplicate message when we post separately for thread creation)
+            if not (original_message_ts and not preferences.thread_ts):
+                upload_params["initial_comment"] = self._build_initial_comment(
+                    emoji.name, preferences
+                )
 
             # Handle thread-specific sharing
             thread_ts = None
@@ -99,22 +105,30 @@ class SlackFileSharingRepository:
             if original_message_ts and not preferences.thread_ts:
                 # For new threads, we need to post a message to create the thread
                 # The file upload alone doesn't return a thread_ts
+                # Include initial comment content since not added to file upload
+                thread_message = self._build_initial_comment(
+                    emoji.name, preferences
+                )
                 message_response = await self._client.chat_postMessage(
                     channel=channel_id,
-                    text=f"Generated custom emoji: :{emoji.name}:",
+                    text=thread_message,
                     thread_ts=original_message_ts,
                 )
                 thread_ts = message_response.get("ts")
 
             # Post additional instructions if needed
             if preferences.include_upload_instructions:
-                await self._post_instructions(
-                    channel_id=channel_id,
-                    thread_ts=thread_ts,
-                    emoji_name=emoji.name,
-                    preferences=preferences,
-                    requester_user_id=requester_user_id,
-                )
+                # Skip posting additional instructions if we just created a new thread
+                # and already included them in the thread message
+                is_new_thread = original_message_ts and not preferences.thread_ts
+                if not is_new_thread:
+                    await self._post_instructions(
+                        channel_id=channel_id,
+                        thread_ts=thread_ts,
+                        emoji_name=emoji.name,
+                        preferences=preferences,
+                        requester_user_id=requester_user_id,
+                    )
 
             return FileSharingResult(
                 success=True,
