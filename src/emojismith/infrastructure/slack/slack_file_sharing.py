@@ -106,9 +106,7 @@ class SlackFileSharingRepository:
                 # For new threads, we need to post a message to create the thread
                 # The file upload alone doesn't return a thread_ts
                 # Include initial comment content since not added to file upload
-                thread_message = self._build_initial_comment(
-                    emoji.name, preferences
-                )
+                thread_message = self._build_initial_comment(emoji.name, preferences)
                 message_response = await self._client.chat_postMessage(
                     channel=channel_id,
                     text=thread_message,
