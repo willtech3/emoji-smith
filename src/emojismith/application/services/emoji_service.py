@@ -160,9 +160,7 @@ class EmojiCreationService:
                     "type": "section",
                     "text": {"type": "mrkdwn", "text": "*Style Preferences*"},
                 },
-                {
-                    "type": "divider"
-                },
+                {"type": "divider"},
                 {
                     "type": "input",
                     "block_id": "style_type",
@@ -280,12 +278,10 @@ class EmojiCreationService:
                     "label": {"type": "plain_text", "text": "Tone"},
                 },
                 {
-                    "type": "section", 
+                    "type": "section",
                     "text": {"type": "mrkdwn", "text": "*Sharing Options*"},
                 },
-                {
-                    "type": "divider"
-                },
+                {"type": "divider"},
                 {
                     "type": "input",
                     "block_id": "share_location",
@@ -411,14 +407,25 @@ class EmojiCreationService:
             ]["value"]
             image_size = state["image_size"]["size_select"]["selected_option"]["value"]
             try:
-                style_type = state["style_type"]["style_select"]["selected_option"]["value"]
-                color_scheme = state["color_scheme"]["color_select"]["selected_option"]["value"] 
-                detail_level = state["detail_level"]["detail_select"]["selected_option"]["value"]
+                style_type = state["style_type"]["style_select"]["selected_option"][
+                    "value"
+                ]
+                color_scheme = state["color_scheme"]["color_select"]["selected_option"][
+                    "value"
+                ]
+                detail_level = state["detail_level"]["detail_select"][
+                    "selected_option"
+                ]["value"]
                 tone = state["tone"]["tone_select"]["selected_option"]["value"]
             except KeyError as e:
                 self._logger.warning(f"Missing style preference: {e}")
                 # Use safe defaults
-                style_type, color_scheme, detail_level, tone = "cartoon", "auto", "simple", "fun"
+                style_type, color_scheme, detail_level, tone = (
+                    "cartoon",
+                    "auto",
+                    "simple",
+                    "fun",
+                )
             metadata = json.loads(view.get("private_metadata", "{}"))
             if not re.fullmatch(r"[a-z0-9_]+", emoji_name):
                 raise ValueError(

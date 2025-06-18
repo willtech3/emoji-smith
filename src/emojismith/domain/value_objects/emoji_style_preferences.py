@@ -71,21 +71,29 @@ class EmojiStylePreferences:
     def to_prompt_fragment(self) -> str:
         """Generate natural language prompt fragment for AI."""
         parts = [f"in {self.style_type.value} style"]
-        
+
         if self.color_scheme != ColorScheme.AUTO:
-            color_text = "bright and vibrant" if self.color_scheme == ColorScheme.BRIGHT else self.color_scheme.value
+            color_text = (
+                "bright and vibrant"
+                if self.color_scheme == ColorScheme.BRIGHT
+                else self.color_scheme.value
+            )
             parts.append(f"with {color_text} colors")
-        
-        detail_text = "clean and simple" if self.detail_level == DetailLevel.SIMPLE else "highly detailed"
+
+        detail_text = (
+            "clean and simple"
+            if self.detail_level == DetailLevel.SIMPLE
+            else "highly detailed"
+        )
         parts.append(detail_text)
-        
+
         tone_adjectives = {
             Tone.FUN: "playful and fun",
-            Tone.NEUTRAL: "neutral and balanced", 
-            Tone.EXPRESSIVE: "expressive and dynamic"
+            Tone.NEUTRAL: "neutral and balanced",
+            Tone.EXPRESSIVE: "expressive and dynamic",
         }
         parts.append(tone_adjectives.get(self.tone, "fun"))
-        
+
         return ", ".join(parts)
 
     @classmethod
@@ -115,7 +123,7 @@ class EmojiStylePreferences:
     def from_dict(cls, data: dict[str, str]) -> "EmojiStylePreferences":
         """Create from dictionary with validation."""
         import logging
-        
+
         try:
             return cls(
                 style_type=StyleType(data.get("style_type", "cartoon")),
