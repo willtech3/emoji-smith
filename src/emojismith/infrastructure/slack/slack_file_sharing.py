@@ -212,10 +212,10 @@ class SlackFileSharingRepository:
             f"*Your custom emoji `:{emoji_name}:` is ready!*\n\n"
             "To add it to the workspace:\n"
             "1. Download the image from the file above\n"
-            "2. Go to Slack → Preferences → Emoji\n"
-            "3. Click 'Add Custom Emoji'\n"
+            "2. Click the smiley icon in the message box\n"
+            "3. Select 'Add emoji'\n"
             f"4. Upload the image and name it `{emoji_name}`\n"
-            "5. Click 'Save'\n\n"
+            "5. Click 'Add'\n\n"
             f"Then use it by typing `:{emoji_name}:` anywhere! 🚀"
         )
 
