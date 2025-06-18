@@ -89,7 +89,8 @@ class WebhookHandler:
 
             if not re.fullmatch(r"[a-z0-9_]+", emoji_name):
                 raise ValueError(
-                    "Emoji name must contain only lowercase letters, numbers, and underscores"
+                    "Emoji name must contain only lowercase letters, "
+                    "numbers, and underscores"
                 )
             if len(emoji_name) > 32:
                 raise ValueError("Emoji name must be 32 characters or less")
