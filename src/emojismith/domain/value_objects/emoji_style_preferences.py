@@ -69,11 +69,23 @@ class EmojiStylePreferences:
     tone: Tone = Tone.FUN
 
     def to_prompt_fragment(self) -> str:
+        """Generate natural language prompt fragment for AI."""
         parts = [f"in {self.style_type.value} style"]
+        
         if self.color_scheme != ColorScheme.AUTO:
-            parts.append(f"with {self.color_scheme.value} colors")
-        parts.append(f"{self.detail_level.value} detail")
-        parts.append(f"{self.tone.value} tone")
+            color_text = "bright and vibrant" if self.color_scheme == ColorScheme.BRIGHT else self.color_scheme.value
+            parts.append(f"with {color_text} colors")
+        
+        detail_text = "clean and simple" if self.detail_level == DetailLevel.SIMPLE else "highly detailed"
+        parts.append(detail_text)
+        
+        tone_adjectives = {
+            Tone.FUN: "playful and fun",
+            Tone.NEUTRAL: "neutral and balanced", 
+            Tone.EXPRESSIVE: "expressive and dynamic"
+        }
+        parts.append(tone_adjectives.get(self.tone, "fun"))
+        
         return ", ".join(parts)
 
     @classmethod
@@ -101,9 +113,16 @@ class EmojiStylePreferences:
 
     @classmethod
     def from_dict(cls, data: dict[str, str]) -> "EmojiStylePreferences":
-        return cls(
-            style_type=StyleType(data.get("style_type", "cartoon")),
-            color_scheme=ColorScheme(data.get("color_scheme", "auto")),
-            detail_level=DetailLevel(data.get("detail_level", "simple")),
-            tone=Tone(data.get("tone", "fun")),
-        )
+        """Create from dictionary with validation."""
+        import logging
+        
+        try:
+            return cls(
+                style_type=StyleType(data.get("style_type", "cartoon")),
+                color_scheme=ColorScheme(data.get("color_scheme", "auto")),
+                detail_level=DetailLevel(data.get("detail_level", "simple")),
+                tone=Tone(data.get("tone", "fun")),
+            )
+        except (ValueError, KeyError) as e:
+            logging.getLogger(__name__).warning(f"Invalid style preferences: {e}")
+            return cls()  # Return safe defaults
