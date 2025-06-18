@@ -1,11 +1,8 @@
 """Tests for EmojiSpecification value object."""
 
 import pytest
-from emojismith.domain.value_objects import (
-    EmojiSpecification,
-    EmojiStylePreferences,
-)
-from emojismith.domain.value_objects.emoji_style_preferences import StyleType
+from emojismith.domain.value_objects import EmojiSpecification
+from shared.domain.value_objects import EmojiStylePreferences, StyleType
 
 
 class TestEmojiSpecification:

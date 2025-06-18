@@ -163,6 +163,16 @@ class SlackFileSharingRepository:
             # Return full size image
             return BytesIO(emoji.image_data)
 
+    def _build_emoji_upload_steps(self, emoji_name: str) -> str:
+        """Build the step-by-step emoji upload instructions."""
+        return (
+            "1. Right-click the image and save it\n"
+            "2. Click the smiley icon in the message box\n"
+            "3. Select 'Add emoji'\n"
+            f"4. Upload the image and name it `{emoji_name}`\n"
+            "5. Click 'Add'"
+        )
+
     def _build_initial_comment(
         self, emoji_name: str, preferences: EmojiSharingPreferences
     ) -> str:
@@ -170,12 +180,8 @@ class SlackFileSharingRepository:
         comment = f"Generated custom emoji: :{emoji_name}:"
 
         if preferences.include_upload_instructions:
-            comment += "\n\n*To add this emoji to your workspace:*"
-            comment += "\n1. Right-click the image and save it"
-            comment += "\n2. Click the smiley icon in the message box"
-            comment += "\n3. Select 'Add emoji'"
-            comment += f"\n4. Upload the image and name it `{emoji_name}`"
-            comment += "\n5. Click 'Add'"
+            comment += "\n\n*To add this emoji to your workspace:*\n"
+            comment += self._build_emoji_upload_steps(emoji_name)
             comment += (
                 f"\n\nThen you can use it by typing `:{emoji_name}:` in any message! 🎉"
             )
@@ -211,11 +217,7 @@ class SlackFileSharingRepository:
         return (
             f"*Your custom emoji `:{emoji_name}:` is ready!*\n\n"
             "To add it to the workspace:\n"
-            "1. Download the image from the file above\n"
-            "2. Click the smiley icon in the message box\n"
-            "3. Select 'Add emoji'\n"
-            f"4. Upload the image and name it `{emoji_name}`\n"
-            "5. Click 'Add'\n\n"
+            f"{self._build_emoji_upload_steps(emoji_name)}\n\n"
             f"Then use it by typing `:{emoji_name}:` anywhere! 🚀"
         )
 
