@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import boto3
 from botocore.exceptions import ClientError
-from mangum import Mangum  # type: ignore[import]
+from mangum import Mangum
 
 # Lazy import - only import create_app when actually needed
 
