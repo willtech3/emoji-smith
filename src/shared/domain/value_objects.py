@@ -69,6 +69,29 @@ class JobStatus(Enum):
 
 
 @dataclass(frozen=True)
+class StylePreferences:
+    """User-selected style preferences for emoji generation."""
+
+    style: str
+    color_scheme: str
+    detail_level: str
+    tone: str
+
+    def to_prompt_fragment(self) -> str:
+        """Convert preferences to a natural language prompt fragment."""
+        parts = []
+        if self.style:
+            parts.append(f"in {self.style} style")
+        if self.color_scheme:
+            parts.append(f"using a {self.color_scheme} color scheme")
+        if self.detail_level:
+            parts.append(f"with {self.detail_level} detail")
+        if self.tone:
+            parts.append(f"in a {self.tone} tone")
+        return " ".join(parts)
+
+
+@dataclass(frozen=True)
 class EmojiSharingPreferences:
     """User preferences for emoji sharing and visibility."""
 

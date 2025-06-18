@@ -40,7 +40,10 @@ class TestSQSJobQueue:
         # Arrange
         from shared.domain.entities import EmojiGenerationJob
 
-        from shared.domain.value_objects import EmojiSharingPreferences
+        from shared.domain.value_objects import (
+            EmojiSharingPreferences,
+            StylePreferences,
+        )
 
         job = EmojiGenerationJob.create_new(
             message_text="Just deployed on Friday!",
@@ -51,6 +54,12 @@ class TestSQSJobQueue:
             timestamp="1234567890.123456",
             team_id="T11111",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
         )
         mock_sqs_client.send_message.return_value = {
             "MessageId": "msg_123",
@@ -101,6 +110,12 @@ class TestSQSJobQueue:
                 "image_size": "EMOJI_SIZE",
                 "thread_ts": None,
             },
+            "style_preferences": {
+                "style": "cartoon",
+                "color_scheme": "bright",
+                "detail_level": "simple",
+                "tone": "fun",
+            },
         }
 
         mock_sqs_client.receive_message.return_value = {
@@ -128,7 +143,10 @@ class TestSQSJobQueue:
         # Arrange: create dummy job with receipt_handle
         from shared.domain.entities import EmojiGenerationJob
 
-        from shared.domain.value_objects import EmojiSharingPreferences
+        from shared.domain.value_objects import (
+            EmojiSharingPreferences,
+            StylePreferences,
+        )
 
         job = EmojiGenerationJob.create_new(
             message_text="x",
@@ -139,6 +157,12 @@ class TestSQSJobQueue:
             timestamp="ts",
             team_id="T1",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
         )
         receipt_handle = "rh"
 

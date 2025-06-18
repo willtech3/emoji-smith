@@ -8,6 +8,7 @@ from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.domain.entities.slack_message import SlackMessage
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.services.generation_service import EmojiGenerationService
+from shared.domain.value_objects import StylePreferences
 
 
 class TestEmojiCreationService:
@@ -205,6 +206,12 @@ class TestEmojiCreationService:
             "timestamp": "1234567890.123456",
             "team_id": "T11111",
             "emoji_name": "facepalm",
+            "style_preferences": {
+                "style": "cartoon",
+                "color_scheme": "bright",
+                "detail_level": "simple",
+                "tone": "fun",
+            },
         }
 
         # Mock successful file sharing for standard workspace
@@ -240,7 +247,10 @@ class TestEmojiCreationService:
         """Test processing emoji generation job from job entity."""
         # Arrange
         from shared.domain.entities import EmojiGenerationJob
-        from shared.domain.value_objects import EmojiSharingPreferences
+        from shared.domain.value_objects import (
+            EmojiSharingPreferences,
+            StylePreferences,
+        )
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from io import BytesIO
@@ -255,6 +265,12 @@ class TestEmojiCreationService:
             timestamp="1234567890.123456",
             team_id="T11111",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
         )
 
         # Mock successful file sharing for standard workspace
@@ -296,7 +312,10 @@ class TestEmojiCreationService:
         """Test processing emoji generation job when file sharing fails gracefully."""
         # Arrange
         from shared.domain.entities import EmojiGenerationJob
-        from shared.domain.value_objects import EmojiSharingPreferences
+        from shared.domain.value_objects import (
+            EmojiSharingPreferences,
+            StylePreferences,
+        )
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from io import BytesIO
@@ -311,6 +330,12 @@ class TestEmojiCreationService:
             timestamp="1234567890.123456",
             team_id="T11111",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
         )
 
         # Mock file sharing failure for standard workspace
@@ -357,6 +382,12 @@ class TestEmojiCreationService:
             "channel_id": "C67890",
             "timestamp": "1234567890.123456",
             "team_id": "T11111",
+            "style_preferences": {
+                "style": "cartoon",
+                "color_scheme": "bright",
+                "detail_level": "simple",
+                "tone": "fun",
+            },
         }
 
         # Mock file sharing failure for standard workspace

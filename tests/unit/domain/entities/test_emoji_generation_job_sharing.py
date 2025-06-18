@@ -6,6 +6,7 @@ from shared.domain.value_objects import (
     ShareLocation,
     InstructionVisibility,
     ImageSize,
+    StylePreferences,
 )
 
 
@@ -31,6 +32,12 @@ class TestEmojiGenerationJobSharing:
             timestamp="123.456",
             team_id="T789",
             sharing_preferences=prefs,
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
         )
 
         # Assert
@@ -55,6 +62,12 @@ class TestEmojiGenerationJobSharing:
             timestamp="123.456",
             team_id="T789",
             sharing_preferences=prefs,
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
         )
 
         # Act
@@ -90,6 +103,12 @@ class TestEmojiGenerationJobSharing:
                 "include_upload_instructions": True,
                 "thread_ts": None,
             },
+            "style_preferences": {
+                "style": "cartoon",
+                "color_scheme": "bright",
+                "detail_level": "simple",
+                "tone": "fun",
+            },
         }
 
         # Act
@@ -118,6 +137,12 @@ class TestEmojiGenerationJobSharing:
             timestamp="123.456",
             team_id="T789",
             sharing_preferences=default_prefs,
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
         )
 
         # Assert
@@ -146,6 +171,12 @@ class TestEmojiGenerationJobSharing:
             team_id="T789",
             sharing_preferences=default_prefs,
             thread_ts="123.456",
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
         )
 
         # Assert

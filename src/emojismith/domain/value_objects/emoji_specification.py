@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from shared.domain.value_objects import StylePreferences
+
 
 @dataclass(frozen=True)
 class EmojiSpecification:
@@ -7,7 +9,7 @@ class EmojiSpecification:
 
     description: str
     context: str
-    style: str = "cartoon"
+    style_preferences: StylePreferences
 
     def __post_init__(self) -> None:
         if not self.description:
@@ -16,8 +18,9 @@ class EmojiSpecification:
             raise ValueError("context is required")
 
     def to_prompt(self) -> str:
-        """Combine context and description into a single prompt."""
+        """Combine context, description and style into a single prompt."""
         base = f"{self.context.strip()} {self.description.strip()}"
-        if self.style:
-            return f"{base} in {self.style} style"
+        fragment = self.style_preferences.to_prompt_fragment()
+        if fragment:
+            return f"{base} {fragment}".strip()
         return base

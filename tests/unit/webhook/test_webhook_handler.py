@@ -92,6 +92,20 @@ class TestWebhookHandler:
                         "image_size": {
                             "size_select": {"selected_option": {"value": "512x512"}}
                         },
+                        "style_select_block": {
+                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        },
+                        "color_scheme": {
+                            "color_scheme_select": {
+                                "selected_option": {"value": "auto"}
+                            }
+                        },
+                        "detail_level": {
+                            "detail_level_select": {
+                                "selected_option": {"value": "simple"}
+                            }
+                        },
+                        "tone": {"tone_select": {"selected_option": {"value": "fun"}}},
                     }
                 },
                 "private_metadata": (

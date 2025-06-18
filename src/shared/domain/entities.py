@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
-from shared.domain.value_objects import EmojiSharingPreferences, JobStatus
+from shared.domain.value_objects import (
+    EmojiSharingPreferences,
+    JobStatus,
+    StylePreferences,
+)
 
 
 @dataclass
@@ -22,6 +26,7 @@ class EmojiGenerationJob:
     emoji_name: str
     status: JobStatus
     sharing_preferences: EmojiSharingPreferences
+    style_preferences: StylePreferences
     thread_ts: Optional[str]
     created_at: datetime
 
@@ -37,6 +42,7 @@ class EmojiGenerationJob:
         timestamp: str,
         team_id: str,
         sharing_preferences: EmojiSharingPreferences,
+        style_preferences: StylePreferences,
         thread_ts: Optional[str] = None,
     ) -> "EmojiGenerationJob":
         """Create a new emoji generation job."""
@@ -51,6 +57,7 @@ class EmojiGenerationJob:
             emoji_name=emoji_name,
             status=JobStatus.PENDING,
             sharing_preferences=sharing_preferences,
+            style_preferences=style_preferences,
             thread_ts=thread_ts,
             created_at=datetime.now(timezone.utc),
         )
@@ -68,6 +75,12 @@ class EmojiGenerationJob:
             "emoji_name": self.emoji_name,
             "status": self.status.value,
             "sharing_preferences": self.sharing_preferences.to_dict(),
+            "style_preferences": {
+                "style": self.style_preferences.style,
+                "color_scheme": self.style_preferences.color_scheme,
+                "detail_level": self.style_preferences.detail_level,
+                "tone": self.style_preferences.tone,
+            },
             "thread_ts": self.thread_ts,
             "created_at": self.created_at.isoformat(),
         }
@@ -87,6 +100,12 @@ class EmojiGenerationJob:
             status=JobStatus(data["status"]),
             sharing_preferences=EmojiSharingPreferences.from_dict(
                 data["sharing_preferences"]
+            ),
+            style_preferences=StylePreferences(
+                style=data["style_preferences"]["style"],
+                color_scheme=data["style_preferences"]["color_scheme"],
+                detail_level=data["style_preferences"]["detail_level"],
+                tone=data["style_preferences"]["tone"],
             ),
             thread_ts=data.get("thread_ts"),
             created_at=datetime.fromisoformat(data["created_at"]),

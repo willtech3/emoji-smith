@@ -1,7 +1,11 @@
 """Tests for EmojiGenerationJob domain entity."""
 
 from shared.domain.entities import EmojiGenerationJob
-from shared.domain.value_objects import JobStatus, EmojiSharingPreferences
+from shared.domain.value_objects import (
+    JobStatus,
+    EmojiSharingPreferences,
+    StylePreferences,
+)
 
 
 class TestEmojiGenerationJob:
@@ -16,6 +20,12 @@ class TestEmojiGenerationJob:
             timestamp="ts",
             team_id="T1",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
             emoji_name="smile",
         )
         assert job.job_id
@@ -35,6 +45,12 @@ class TestEmojiGenerationJob:
             timestamp="ts",
             team_id="T1",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            style_preferences=StylePreferences(
+                style="cartoon",
+                color_scheme="bright",
+                detail_level="simple",
+                tone="fun",
+            ),
             emoji_name="y",
         )
         job.mark_as_processing()
