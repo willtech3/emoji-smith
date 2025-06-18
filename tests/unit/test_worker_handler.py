@@ -7,6 +7,12 @@ from unittest.mock import Mock, patch
 from typing import Dict, Any
 
 from src.worker_handler import handler
+from emojismith.domain.entities.slack_message import SlackMessage
+from emojismith.domain.entities.queue_message import (
+    ModalOpeningMessage,
+    QueueMessage,
+    MessageType,
+)
 
 
 @pytest.fixture
@@ -47,6 +53,29 @@ def sqs_event() -> Dict[str, Any]:
                 "eventSource": "aws:sqs",
                 "eventSourceARN": "arn:aws:sqs:us-east-1:123456789012:test-queue",
                 "awsRegion": "us-east-1",
+            }
+        ]
+    }
+
+
+@pytest.fixture
+def modal_opening_event() -> Dict[str, Any]:
+    """Sample SQS event containing a modal opening message."""
+    slack_message = SlackMessage(
+        text="hello",
+        user_id="U1",
+        channel_id="C1",
+        timestamp="123.456",
+        team_id="T1",
+    )
+    modal_msg = ModalOpeningMessage.create_new(slack_message, trigger_id="TRIG")
+    queue_msg = QueueMessage(message_type=MessageType.MODAL_OPENING, payload=modal_msg)
+    return {
+        "Records": [
+            {
+                "messageId": "modal-msg",
+                "receiptHandle": "modal-receipt",
+                "body": json.dumps(queue_msg.to_dict()),
             }
         ]
     }
@@ -110,6 +139,26 @@ class TestWorkerHandler:
                 mock_run.return_value = None
                 handler(sqs_event, context)
                 service._slack_repo.open_modal.assert_not_called()
+
+    @patch.dict(
+        "os.environ",
+        {
+            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "OPENAI_API_KEY": "sk-test",
+        },
+    )
+    def test_modal_opening_message_is_ignored(self, modal_opening_event, context):
+        """Worker should ignore modal opening messages from SQS."""
+        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
+            service = Mock(process_emoji_generation_job=Mock())
+            mock_create.return_value = service
+            with patch("asyncio.run") as mock_run:
+                mock_run.return_value = None
+                result = handler(modal_opening_event, context)
+
+                mock_run.assert_not_called()
+                assert result == {"batchItemFailures": []}
 
     @patch.dict(
         "os.environ",

@@ -10,6 +10,12 @@ from botocore.exceptions import ClientError
 
 from emojismith.app import create_worker_emoji_service
 from shared.domain.entities import EmojiGenerationJob
+from typing import cast
+from emojismith.domain.entities.queue_message import (
+    QueueMessage,
+    MessageType,
+    ModalOpeningMessage,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -70,8 +76,23 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # Parse the SQS message body
             message_body = json.loads(record["body"])
 
-            # Parse emoji generation job directly
-            job = EmojiGenerationJob.from_dict(message_body)
+            job: EmojiGenerationJob
+            if "message_type" in message_body:
+                queue_message = QueueMessage.from_dict(message_body)
+                if queue_message.message_type == MessageType.MODAL_OPENING:
+                    modal_msg = cast(ModalOpeningMessage, queue_message.payload)
+                    logger.warning(
+                        "Received modal opening message in worker; ignoring",
+                        extra={"message_id": modal_msg.message_id},
+                    )
+                    continue
+                if queue_message.message_type != MessageType.EMOJI_GENERATION:
+                    raise ValueError(
+                        f"Unsupported message type: {queue_message.message_type}"
+                    )
+                job = cast(EmojiGenerationJob, queue_message.payload)
+            else:
+                job = EmojiGenerationJob.from_dict(message_body)
 
             logger.info(
                 f"Processing emoji generation job: {job.job_id} for user {job.user_id}"
