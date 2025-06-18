@@ -7,7 +7,10 @@ from typing import Dict, Any
 
 from webhook.domain.slack_message import SlackMessage
 from shared.domain.entities import EmojiGenerationJob
-from shared.domain.value_objects import EmojiSharingPreferences
+from shared.domain.value_objects import (
+    EmojiSharingPreferences,
+    EmojiStylePreferences,
+)
 from webhook.domain.slack_payloads import MessageActionPayload, ModalSubmissionPayload
 from webhook.repositories.slack_repository import SlackRepository
 from webhook.repositories.job_queue_repository import JobQueueRepository
@@ -113,6 +116,26 @@ class WebhookHandler:
                 raise ValueError("Missing image size")
             image_size = size_select["selected_option"]["value"]
 
+            style_block = state["style_type"].style_select
+            if style_block is None:
+                raise ValueError("Missing style type")
+            style_type = style_block["selected_option"]["value"]
+
+            color_block = state["color_scheme"].color_select
+            if color_block is None:
+                raise ValueError("Missing color scheme")
+            color_scheme = color_block["selected_option"]["value"]
+
+            detail_block = state["detail_level"].detail_select
+            if detail_block is None:
+                raise ValueError("Missing detail level")
+            detail_level = detail_block["selected_option"]["value"]
+
+            tone_block = state["tone"].tone_select
+            if tone_block is None:
+                raise ValueError("Missing tone")
+            tone = tone_block["selected_option"]["value"]
+
             metadata = json.loads(modal_payload.view.private_metadata)
         except (KeyError, json.JSONDecodeError, ValueError) as exc:
             self._logger.exception("Malformed modal submission form data")
@@ -136,6 +159,12 @@ class WebhookHandler:
             sharing_preferences=sharing_preferences,
             thread_ts=metadata.get("thread_ts"),
             emoji_name=emoji_name,
+            style_preferences=EmojiStylePreferences.from_form_values(
+                style_type=style_type,
+                color_scheme=color_scheme,
+                detail_level=detail_level,
+                tone=tone,
+            ),
         )
 
         # Queue job for worker Lambda
@@ -212,6 +241,123 @@ class WebhookHandler:
                         },
                     },
                     "label": {"type": "plain_text", "text": "Emoji Description"},
+                },
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": "*Style Preferences*"},
+                },
+                {"type": "divider"},
+                {
+                    "type": "input",
+                    "block_id": "style_type",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "style_select",
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Cartoon"},
+                                "value": "cartoon",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Realistic"},
+                                "value": "realistic",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Minimalist"},
+                                "value": "minimalist",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Pixel Art"},
+                                "value": "pixel_art",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Cartoon"},
+                            "value": "cartoon",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Style"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "color_scheme",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "color_select",
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Bright"},
+                                "value": "bright",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Muted"},
+                                "value": "muted",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Monochrome"},
+                                "value": "monochrome",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Auto"},
+                                "value": "auto",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Auto"},
+                            "value": "auto",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Color Scheme"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "detail_level",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "detail_select",
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Simple"},
+                                "value": "simple",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Detailed"},
+                                "value": "detailed",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Simple"},
+                            "value": "simple",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Detail Level"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "tone",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "tone_select",
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Fun"},
+                                "value": "fun",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Neutral"},
+                                "value": "neutral",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Expressive"},
+                                "value": "expressive",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Fun"},
+                            "value": "fun",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Tone"},
                 },
                 {
                     "type": "input",
