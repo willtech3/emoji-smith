@@ -146,7 +146,7 @@ def _create_sqs_job_queue() -> JobQueueRepository:
     start = time.time()
     try:
         logger.info("📦 Importing aioboto3...")
-        import aioboto3
+        import aioboto3  # type: ignore[import-untyped]
         from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 
         import_time = time.time() - start
