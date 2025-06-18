@@ -74,6 +74,7 @@ class TestEmojiServiceModalSharing:
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
                         },
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
                                 "selected_option": {"value": "channel"}

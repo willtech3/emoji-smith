@@ -81,6 +81,11 @@ class WebhookHandler:
                 raise ValueError("Missing emoji description")
             description = desc_block.value
 
+            name_block = state["emoji_name"].name
+            if name_block is None:
+                raise ValueError("Missing emoji name")
+            emoji_name = name_block.value
+
             # Extract share location with None check
             share_select = state["share_location"].share_location_select
             if share_select is None:
@@ -113,6 +118,7 @@ class WebhookHandler:
         )
 
         job = EmojiGenerationJob.create_new(
+            emoji_name=emoji_name,
             user_description=description,
             message_text=metadata["message_text"],
             user_id=metadata["user_id"],
@@ -184,6 +190,19 @@ class WebhookHandler:
                         },
                     },
                     "label": {"type": "plain_text", "text": "Emoji Description"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "emoji_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "name",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Short name (e.g., facepalm)",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Emoji Name"},
                 },
                 {
                     "type": "input",

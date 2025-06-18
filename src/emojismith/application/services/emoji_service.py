@@ -141,6 +141,20 @@ class EmojiCreationService:
                 },
                 {
                     "type": "input",
+                    "block_id": "emoji_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "name",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Short name (e.g., facepalm)",
+                        },
+                        "multiline": False,
+                    },
+                    "label": {"type": "plain_text", "text": "Emoji Name"},
+                },
+                {
+                    "type": "input",
                     "block_id": "share_location",
                     "element": {
                         "type": "static_select",
@@ -255,6 +269,7 @@ class EmojiCreationService:
         state = view.get("state", {}).get("values", {})
         try:
             description = state["emoji_description"]["description"]["value"]
+            emoji_name = state["emoji_name"]["name"]["value"]
             share_location = state["share_location"]["share_location_select"][
                 "selected_option"
             ]["value"]
@@ -290,6 +305,7 @@ class EmojiCreationService:
         if self._job_queue:
             # Create job entity in application service
             job = EmojiGenerationJob.create_new(
+                emoji_name=emoji_name,
                 message_text=metadata["message_text"],
                 user_description=description,
                 user_id=metadata["user_id"],
@@ -311,6 +327,7 @@ class EmojiCreationService:
                 {
                     **metadata,
                     "user_description": description,
+                    "emoji_name": emoji_name,
                     "sharing_preferences": sharing_preferences.to_dict(),
                 }
             )
@@ -328,8 +345,8 @@ class EmojiCreationService:
             description=job.user_description,
             context=job.message_text,
         )
-        # Generate emoji name from description, max 32 chars for Slack
-        name = job.user_description.replace(" ", "_").lower()[:32]
+        # Use provided emoji name or derive from description
+        name = job.emoji_name or job.user_description.replace(" ", "_").lower()[:32]
         emoji = await self._emoji_generator.generate(spec, name)
 
         # Determine workspace type (could be cached or configured)
@@ -418,6 +435,8 @@ class EmojiCreationService:
         """Generate emoji using dict payload, upload to Slack, and add reaction."""
         # Convert dict to job entity for consistent processing
         job = EmojiGenerationJob.create_new(
+            emoji_name=job_data.get("emoji_name")
+            or job_data["user_description"].replace(" ", "_").lower()[:32],
             message_text=job_data["message_text"],
             user_description=job_data["user_description"],
             user_id=job_data["user_id"],

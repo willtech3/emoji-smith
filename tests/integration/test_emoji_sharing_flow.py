@@ -88,6 +88,7 @@ class TestEmojiSharingFlow:
                 "state": {
                     "values": {
                         "emoji_description": {"description": {"value": "facepalm"}},
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
                                 "selected_option": {"value": "new_thread"}
@@ -140,6 +141,7 @@ class TestEmojiSharingFlow:
                 "state": {
                     "values": {
                         "emoji_description": {"description": {"value": "bug"}},
+                        "emoji_name": {"name": {"value": "bug"}},
                         "share_location": {
                             "share_location_select": {
                                 "selected_option": {"value": "thread"}

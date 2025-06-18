@@ -101,6 +101,7 @@ class TestEmojiCreationService:
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
                         },
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
                                 "selected_option": {"value": "new_thread"}
@@ -145,6 +146,7 @@ class TestEmojiCreationService:
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
                         },
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
                                 "selected_option": {"value": "new_thread"}
@@ -245,6 +247,7 @@ class TestEmojiCreationService:
         from PIL import Image
 
         job = EmojiGenerationJob.create_new(
+            emoji_name="facepalm_reaction",
             message_text="The deployment failed again 😭",
             user_description="facepalm reaction",
             user_id="U12345",
@@ -300,6 +303,7 @@ class TestEmojiCreationService:
         from PIL import Image
 
         job = EmojiGenerationJob.create_new(
+            emoji_name="test_emoji",
             message_text="Test message",
             user_description="test emoji",
             user_id="U12345",

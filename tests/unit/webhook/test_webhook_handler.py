@@ -78,6 +78,7 @@ class TestWebhookHandler:
                 "state": {
                     "values": {
                         "emoji_description": {"description": {"value": "facepalm"}},
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
                                 "selected_option": {"value": "channel"}

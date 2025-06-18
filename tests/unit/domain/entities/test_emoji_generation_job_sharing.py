@@ -23,6 +23,7 @@ class TestEmojiGenerationJobSharing:
 
         # Act
         job = EmojiGenerationJob.create_new(
+            emoji_name="facepalm",
             message_text="Deploy failed",
             user_description="facepalm",
             user_id="U123",
@@ -46,6 +47,7 @@ class TestEmojiGenerationJobSharing:
             thread_ts="123.456",
         )
         job = EmojiGenerationJob.create_new(
+            emoji_name="bug_emoji",
             message_text="Bug report",
             user_description="bug emoji",
             user_id="U123",
@@ -72,6 +74,7 @@ class TestEmojiGenerationJobSharing:
         # Arrange
         job_dict = {
             "job_id": "test-123",
+            "emoji_name": "facepalm",
             "message_text": "Deploy failed",
             "user_description": "facepalm",
             "user_id": "U123",
@@ -107,6 +110,7 @@ class TestEmojiGenerationJobSharing:
 
         # Act
         job = EmojiGenerationJob.create_new(
+            emoji_name="facepalm",
             message_text="Deploy failed",
             user_description="facepalm",
             user_id="U123",
@@ -133,6 +137,7 @@ class TestEmojiGenerationJobSharing:
 
         # Act
         job = EmojiGenerationJob.create_new(
+            emoji_name="bug_emoji",
             message_text="Bug in thread",
             user_description="bug emoji",
             user_id="U123",

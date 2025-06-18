@@ -9,6 +9,7 @@ class TestEmojiGenerationJob:
 
     def test_create_new_and_to_from_dict(self):
         job = EmojiGenerationJob.create_new(
+            emoji_name="smile",
             message_text="hello",
             user_description="smile",
             user_id="U1",
@@ -27,6 +28,7 @@ class TestEmojiGenerationJob:
 
     def test_status_transitions(self):
         job = EmojiGenerationJob.create_new(
+            emoji_name="y",
             message_text="x",
             user_description="y",
             user_id="U1",

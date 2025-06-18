@@ -43,6 +43,7 @@ class TestSQSJobQueue:
         from shared.domain.value_objects import EmojiSharingPreferences
 
         job = EmojiGenerationJob.create_new(
+            emoji_name="facepalm",
             message_text="Just deployed on Friday!",
             user_description="facepalm reaction",
             user_id="U12345",
@@ -129,6 +130,7 @@ class TestSQSJobQueue:
         from shared.domain.value_objects import EmojiSharingPreferences
 
         job = EmojiGenerationJob.create_new(
+            emoji_name="y",
             message_text="x",
             user_description="y",
             user_id="U1",

@@ -13,6 +13,7 @@ class EmojiGenerationJob:
     """Domain entity representing an emoji generation job."""
 
     job_id: str
+    emoji_name: str
     user_description: str
     message_text: str
     user_id: str
@@ -27,6 +28,7 @@ class EmojiGenerationJob:
     @classmethod
     def create_new(
         cls,
+        emoji_name: str,
         user_description: str,
         message_text: str,
         user_id: str,
@@ -39,6 +41,7 @@ class EmojiGenerationJob:
         """Create a new emoji generation job."""
         return cls(
             job_id=str(uuid.uuid4()),
+            emoji_name=emoji_name,
             user_description=user_description,
             message_text=message_text,
             user_id=user_id,
@@ -55,6 +58,7 @@ class EmojiGenerationJob:
         """Convert to dictionary for serialization."""
         return {
             "job_id": self.job_id,
+            "emoji_name": self.emoji_name,
             "user_description": self.user_description,
             "message_text": self.message_text,
             "user_id": self.user_id,
@@ -70,8 +74,13 @@ class EmojiGenerationJob:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "EmojiGenerationJob":
         """Create from dictionary."""
+        emoji_name = data.get("emoji_name")
+        if not emoji_name:
+            emoji_name = data["user_description"].replace(" ", "_").lower()[:32]
+
         return cls(
             job_id=data["job_id"],
+            emoji_name=emoji_name,
             user_description=data["user_description"],
             message_text=data["message_text"],
             user_id=data["user_id"],
