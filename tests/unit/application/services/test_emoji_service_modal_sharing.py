@@ -56,6 +56,10 @@ class TestEmojiServiceModalSharing:
         assert "share_location" in block_ids
         assert "instruction_visibility" in block_ids
         assert "image_size" in block_ids
+        assert "style_type" in block_ids
+        assert "color_scheme" in block_ids
+        assert "detail_level" in block_ids
+        assert "tone" in block_ids
 
         # Check private metadata contains necessary info
         metadata = json.loads(view["private_metadata"])
@@ -89,6 +93,16 @@ class TestEmojiServiceModalSharing:
                         "image_size": {
                             "size_select": {"selected_option": {"value": "emoji_size"}}
                         },
+                        "style_type": {
+                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        },
+                        "color_scheme": {
+                            "color_select": {"selected_option": {"value": "auto"}}
+                        },
+                        "detail_level": {
+                            "detail_select": {"selected_option": {"value": "simple"}}
+                        },
+                        "tone": {"tone_select": {"selected_option": {"value": "fun"}}},
                     }
                 },
                 "private_metadata": json.dumps(

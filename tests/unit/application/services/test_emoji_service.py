@@ -115,6 +115,16 @@ class TestEmojiCreationService:
                         "image_size": {
                             "size_select": {"selected_option": {"value": "emoji_size"}}
                         },
+                        "style_type": {
+                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        },
+                        "color_scheme": {
+                            "color_select": {"selected_option": {"value": "auto"}}
+                        },
+                        "detail_level": {
+                            "detail_select": {"selected_option": {"value": "simple"}}
+                        },
+                        "tone": {"tone_select": {"selected_option": {"value": "fun"}}},
                     }
                 },
                 "private_metadata": (
@@ -160,6 +170,16 @@ class TestEmojiCreationService:
                         "image_size": {
                             "size_select": {"selected_option": {"value": "emoji_size"}}
                         },
+                        "style_type": {
+                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        },
+                        "color_scheme": {
+                            "color_select": {"selected_option": {"value": "auto"}}
+                        },
+                        "detail_level": {
+                            "detail_select": {"selected_option": {"value": "simple"}}
+                        },
+                        "tone": {"tone_select": {"selected_option": {"value": "fun"}}},
                     }
                 },
                 "private_metadata": (

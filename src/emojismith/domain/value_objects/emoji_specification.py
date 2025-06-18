@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from .emoji_style_preferences import EmojiStylePreferences
 
 
 @dataclass(frozen=True)
@@ -7,7 +9,7 @@ class EmojiSpecification:
 
     description: str
     context: str
-    style: str = "cartoon"
+    style: EmojiStylePreferences = field(default_factory=EmojiStylePreferences)
 
     def __post_init__(self) -> None:
         if not self.description:
@@ -19,5 +21,5 @@ class EmojiSpecification:
         """Combine context and description into a single prompt."""
         base = f"{self.context.strip()} {self.description.strip()}"
         if self.style:
-            return f"{base} in {self.style} style"
+            return f"{base} {self.style.to_prompt_fragment()}"
         return base

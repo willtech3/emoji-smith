@@ -1,11 +1,12 @@
 """Shared domain entities for emoji generation."""
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
 from shared.domain.value_objects import EmojiSharingPreferences, JobStatus
+from emojismith.domain.value_objects import EmojiStylePreferences
 
 
 @dataclass
@@ -22,8 +23,11 @@ class EmojiGenerationJob:
     emoji_name: str
     status: JobStatus
     sharing_preferences: EmojiSharingPreferences
-    thread_ts: Optional[str]
     created_at: datetime
+    thread_ts: Optional[str] = None
+    style_preferences: EmojiStylePreferences = field(
+        default_factory=EmojiStylePreferences
+    )
 
     @classmethod
     def create_new(
@@ -37,6 +41,7 @@ class EmojiGenerationJob:
         timestamp: str,
         team_id: str,
         sharing_preferences: EmojiSharingPreferences,
+        style_preferences: EmojiStylePreferences | None = None,
         thread_ts: Optional[str] = None,
     ) -> "EmojiGenerationJob":
         """Create a new emoji generation job."""
@@ -53,6 +58,7 @@ class EmojiGenerationJob:
             sharing_preferences=sharing_preferences,
             thread_ts=thread_ts,
             created_at=datetime.now(timezone.utc),
+            style_preferences=style_preferences or EmojiStylePreferences(),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -68,6 +74,7 @@ class EmojiGenerationJob:
             "emoji_name": self.emoji_name,
             "status": self.status.value,
             "sharing_preferences": self.sharing_preferences.to_dict(),
+            "style_preferences": self.style_preferences.to_dict(),
             "thread_ts": self.thread_ts,
             "created_at": self.created_at.isoformat(),
         }
@@ -87,6 +94,9 @@ class EmojiGenerationJob:
             status=JobStatus(data["status"]),
             sharing_preferences=EmojiSharingPreferences.from_dict(
                 data["sharing_preferences"]
+            ),
+            style_preferences=EmojiStylePreferences.from_dict(
+                data.get("style_preferences", {})
             ),
             thread_ts=data.get("thread_ts"),
             created_at=datetime.fromisoformat(data["created_at"]),
