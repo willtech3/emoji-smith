@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from typing import Dict, Any
 
 from webhook.domain.slack_message import SlackMessage
@@ -81,6 +82,14 @@ class WebhookHandler:
                 raise ValueError("Missing emoji description")
             description = desc_block.value
 
+            name_block = state["emoji_name"].name
+            if name_block is None:
+                raise ValueError("Missing emoji name")
+            emoji_name = name_block.value
+
+            if not re.fullmatch(r"[a-z0-9_]+", emoji_name):
+                raise ValueError("Invalid emoji name")
+
             # Extract share location with None check
             share_select = state["share_location"].share_location_select
             if share_select is None:
@@ -121,6 +130,7 @@ class WebhookHandler:
             team_id=metadata["team_id"],
             sharing_preferences=sharing_preferences,
             thread_ts=metadata.get("thread_ts"),
+            emoji_name=emoji_name,
         )
 
         # Queue job for worker Lambda
@@ -174,13 +184,26 @@ class WebhookHandler:
                 },
                 {
                     "type": "input",
+                    "block_id": "emoji_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "name",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "e.g., 'terminal' (will become :terminal:)",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Emoji Name"},
+                },
+                {
+                    "type": "input",
                     "block_id": "emoji_description",
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "description",
                         "placeholder": {
                             "type": "plain_text",
-                            "text": "Describe the emoji you want...",
+                            "text": "e.g., 'A retro computer terminal with green text'",
                         },
                     },
                     "label": {"type": "plain_text", "text": "Emoji Description"},

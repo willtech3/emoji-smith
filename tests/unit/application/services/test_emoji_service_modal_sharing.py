@@ -52,6 +52,7 @@ class TestEmojiServiceModalSharing:
 
         # Check that view contains sharing preference blocks
         block_ids = [block.get("block_id") for block in view["blocks"]]
+        assert "emoji_name" in block_ids
         assert "share_location" in block_ids
         assert "instruction_visibility" in block_ids
         assert "image_size" in block_ids
@@ -71,6 +72,7 @@ class TestEmojiServiceModalSharing:
                 "callback_id": "emoji_creation_modal",
                 "state": {
                     "values": {
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
                         },

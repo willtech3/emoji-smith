@@ -16,6 +16,7 @@ class TestEmojiGenerationJob:
             timestamp="ts",
             team_id="T1",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            emoji_name="smile",
         )
         assert job.job_id
         assert job.status == JobStatus.PENDING
@@ -34,6 +35,7 @@ class TestEmojiGenerationJob:
             timestamp="ts",
             team_id="T1",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            emoji_name="y",
         )
         job.mark_as_processing()
         assert job.status == JobStatus.PROCESSING

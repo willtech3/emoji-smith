@@ -98,6 +98,7 @@ class TestEmojiCreationService:
                 "callback_id": "emoji_creation_modal",
                 "state": {
                     "values": {
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
                         },
@@ -142,6 +143,7 @@ class TestEmojiCreationService:
                 "callback_id": "emoji_creation_modal",
                 "state": {
                     "values": {
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "emoji_description": {
                             "description": {"value": "frustrated developer face"}
                         },

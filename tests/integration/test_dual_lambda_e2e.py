@@ -71,6 +71,7 @@ class TestDualLambdaE2EIntegration:
                 "callback_id": "emoji_creation_modal",
                 "state": {
                     "values": {
+                        "emoji_name": {"name": {"value": "facepalm"}},
                         "emoji_description": {"description": {"value": "facepalm"}},
                         "share_location": {
                             "share_location_select": {
@@ -193,6 +194,7 @@ class TestDualLambdaE2EIntegration:
             "channel_id",
             "team_id",
             "timestamp",
+            "emoji_name",
             "sharing_preferences",
         ]
 
