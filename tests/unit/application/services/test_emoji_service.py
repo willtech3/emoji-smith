@@ -112,6 +112,20 @@ class TestEmojiCreationService:
                                 "selected_option": {"value": "everyone"}
                             }
                         },
+                        "style_type": {
+                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        },
+                        "color_scheme": {
+                            "color_scheme_select": {
+                                "selected_option": {"value": "auto"}
+                            }
+                        },
+                        "detail_level": {
+                            "detail_level_select": {
+                                "selected_option": {"value": "simple"}
+                            }
+                        },
+                        "tone": {"tone_select": {"selected_option": {"value": "fun"}}},
                         "image_size": {
                             "size_select": {"selected_option": {"value": "emoji_size"}}
                         },
@@ -157,6 +171,20 @@ class TestEmojiCreationService:
                                 "selected_option": {"value": "everyone"}
                             }
                         },
+                        "style_type": {
+                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        },
+                        "color_scheme": {
+                            "color_scheme_select": {
+                                "selected_option": {"value": "auto"}
+                            }
+                        },
+                        "detail_level": {
+                            "detail_level_select": {
+                                "selected_option": {"value": "simple"}
+                            }
+                        },
+                        "tone": {"tone_select": {"selected_option": {"value": "fun"}}},
                         "image_size": {
                             "size_select": {"selected_option": {"value": "emoji_size"}}
                         },

@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
-from shared.domain.value_objects import EmojiSharingPreferences, JobStatus
+from shared.domain.value_objects import (
+    EmojiSharingPreferences,
+    JobStatus,
+    EmojiStylePreferences,
+)
 
 
 @dataclass
@@ -23,6 +27,7 @@ class EmojiGenerationJob:
     status: JobStatus
     sharing_preferences: EmojiSharingPreferences
     thread_ts: Optional[str]
+    style_preferences: EmojiStylePreferences | None
     created_at: datetime
 
     @classmethod
@@ -38,6 +43,7 @@ class EmojiGenerationJob:
         team_id: str,
         sharing_preferences: EmojiSharingPreferences,
         thread_ts: Optional[str] = None,
+        style_preferences: EmojiStylePreferences | None = None,
     ) -> "EmojiGenerationJob":
         """Create a new emoji generation job."""
         return cls(
@@ -52,6 +58,7 @@ class EmojiGenerationJob:
             status=JobStatus.PENDING,
             sharing_preferences=sharing_preferences,
             thread_ts=thread_ts,
+            style_preferences=style_preferences,
             created_at=datetime.now(timezone.utc),
         )
 
@@ -69,6 +76,9 @@ class EmojiGenerationJob:
             "status": self.status.value,
             "sharing_preferences": self.sharing_preferences.to_dict(),
             "thread_ts": self.thread_ts,
+            "style_preferences": (
+                self.style_preferences.to_dict() if self.style_preferences else None
+            ),
             "created_at": self.created_at.isoformat(),
         }
 
@@ -89,6 +99,11 @@ class EmojiGenerationJob:
                 data["sharing_preferences"]
             ),
             thread_ts=data.get("thread_ts"),
+            style_preferences=(
+                EmojiStylePreferences.from_dict(data["style_preferences"])
+                if data.get("style_preferences")
+                else None
+            ),
             created_at=datetime.fromisoformat(data["created_at"]),
         )
 

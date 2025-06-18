@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from shared.domain.value_objects import EmojiStylePreferences
+
 
 @dataclass(frozen=True)
 class EmojiSpecification:
@@ -7,7 +9,7 @@ class EmojiSpecification:
 
     description: str
     context: str
-    style: str = "cartoon"
+    style_preferences: EmojiStylePreferences = EmojiStylePreferences()
 
     def __post_init__(self) -> None:
         if not self.description:
@@ -18,6 +20,9 @@ class EmojiSpecification:
     def to_prompt(self) -> str:
         """Combine context and description into a single prompt."""
         base = f"{self.context.strip()} {self.description.strip()}"
-        if self.style:
-            return f"{base} in {self.style} style"
-        return base
+        prefs = self.style_preferences
+        return (
+            f"{base} in {prefs.style_type.value} style with "
+            f"{prefs.color_scheme.value} colors "
+            f"{prefs.detail_level.value} detail and {prefs.tone.value} tone"
+        )

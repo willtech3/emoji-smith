@@ -53,6 +53,10 @@ class TestEmojiServiceModalSharing:
         # Check that view contains sharing preference blocks
         block_ids = [block.get("block_id") for block in view["blocks"]]
         assert "emoji_name" in block_ids
+        assert "style_type" in block_ids
+        assert "color_scheme" in block_ids
+        assert "detail_level" in block_ids
+        assert "tone" in block_ids
         assert "share_location" in block_ids
         assert "instruction_visibility" in block_ids
         assert "image_size" in block_ids
@@ -86,6 +90,20 @@ class TestEmojiServiceModalSharing:
                                 "selected_option": {"value": "everyone"}
                             }
                         },
+                        "style_type": {
+                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        },
+                        "color_scheme": {
+                            "color_scheme_select": {
+                                "selected_option": {"value": "auto"}
+                            }
+                        },
+                        "detail_level": {
+                            "detail_level_select": {
+                                "selected_option": {"value": "simple"}
+                            }
+                        },
+                        "tone": {"tone_select": {"selected_option": {"value": "fun"}}},
                         "image_size": {
                             "size_select": {"selected_option": {"value": "emoji_size"}}
                         },

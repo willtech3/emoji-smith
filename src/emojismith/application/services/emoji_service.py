@@ -23,7 +23,10 @@ except ImportError:
     # For tests when aiohttp is not available
     SlackFileSharingRepository = None  # type: ignore
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
-from shared.domain.value_objects import EmojiSharingPreferences
+from shared.domain.value_objects import (
+    EmojiSharingPreferences,
+    EmojiStylePreferences,
+)
 
 
 class EmojiCreationService:
@@ -155,6 +158,122 @@ class EmojiCreationService:
                 },
                 {
                     "type": "input",
+                    "block_id": "style_type",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "style_select",
+                        "placeholder": {"type": "plain_text", "text": "Style"},
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Cartoon"},
+                                "value": "cartoon",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Realistic"},
+                                "value": "realistic",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Minimalist"},
+                                "value": "minimalist",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Pixel Art"},
+                                "value": "pixel_art",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Cartoon"},
+                            "value": "cartoon",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Style"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "color_scheme",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "color_scheme_select",
+                        "placeholder": {"type": "plain_text", "text": "Colors"},
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Bright"},
+                                "value": "bright",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Muted"},
+                                "value": "muted",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Monochrome"},
+                                "value": "monochrome",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Auto"},
+                                "value": "auto",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Auto"},
+                            "value": "auto",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Color Scheme"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "detail_level",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "detail_level_select",
+                        "placeholder": {"type": "plain_text", "text": "Detail"},
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Simple"},
+                                "value": "simple",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Detailed"},
+                                "value": "detailed",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Simple"},
+                            "value": "simple",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Detail Level"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "tone",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "tone_select",
+                        "placeholder": {"type": "plain_text", "text": "Tone"},
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Fun"},
+                                "value": "fun",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Neutral"},
+                                "value": "neutral",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Expressive"},
+                                "value": "expressive",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Fun"},
+                            "value": "fun",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Tone"},
+                },
+                {
+                    "type": "input",
                     "block_id": "share_location",
                     "element": {
                         "type": "static_select",
@@ -277,6 +396,14 @@ class EmojiCreationService:
                 "selected_option"
             ]["value"]
             image_size = state["image_size"]["size_select"]["selected_option"]["value"]
+            style_type = state["style_type"]["style_select"]["selected_option"]["value"]
+            color_scheme = state["color_scheme"]["color_scheme_select"][
+                "selected_option"
+            ]["value"]
+            detail_level = state["detail_level"]["detail_level_select"][
+                "selected_option"
+            ]["value"]
+            tone = state["tone"]["tone_select"]["selected_option"]["value"]
             metadata = json.loads(view.get("private_metadata", "{}"))
             if not re.fullmatch(r"[a-z0-9_]+", emoji_name):
                 raise ValueError(
@@ -296,6 +423,10 @@ class EmojiCreationService:
                 "share_location": share_location,
                 "visibility": visibility,
                 "image_size": image_size,
+                "style_type": style_type,
+                "color_scheme": color_scheme,
+                "detail_level": detail_level,
+                "tone": tone,
             },
         )
 
@@ -306,6 +437,12 @@ class EmojiCreationService:
             instruction_visibility=visibility,
             image_size=image_size,
             thread_ts=thread_ts,
+        )
+        style_preferences = EmojiStylePreferences.from_form_values(
+            style_type=style_type,
+            color_scheme=color_scheme,
+            detail_level=detail_level,
+            tone=tone,
         )
 
         # Extract metadata from modal
@@ -320,6 +457,7 @@ class EmojiCreationService:
                 team_id=metadata["team_id"],
                 sharing_preferences=sharing_preferences,
                 thread_ts=metadata.get("thread_ts"),
+                style_preferences=style_preferences,
                 emoji_name=emoji_name,
             )
             # Queue job for background processing
@@ -336,6 +474,7 @@ class EmojiCreationService:
                     "user_description": description,
                     "emoji_name": emoji_name,
                     "sharing_preferences": sharing_preferences.to_dict(),
+                    "style_preferences": style_preferences.to_dict(),
                 }
             )
 
@@ -351,6 +490,7 @@ class EmojiCreationService:
         spec = EmojiSpecification(
             description=job.user_description,
             context=job.message_text,
+            style_preferences=job.style_preferences or EmojiStylePreferences(),
         )
         # Use provided emoji name, sanitize for Slack (max 32 chars)
         name = job.emoji_name.replace(" ", "_").lower()[:32]
@@ -452,6 +592,11 @@ class EmojiCreationService:
                 EmojiSharingPreferences.from_dict(job_data["sharing_preferences"])
                 if job_data.get("sharing_preferences")
                 else EmojiSharingPreferences.default_for_context()
+            ),
+            style_preferences=(
+                EmojiStylePreferences.from_dict(job_data["style_preferences"])
+                if job_data.get("style_preferences")
+                else None
             ),
             thread_ts=job_data.get("thread_ts"),
             emoji_name=job_data["emoji_name"],
