@@ -67,4 +67,5 @@ def create_app():  # type: ignore[no-untyped-def]
     """Placeholder function - worker Lambda shouldn't need FastAPI app."""
     # TODO: Remove this function when worker Lambda is converted to SQS event handler
     from fastapi import FastAPI
+
     return FastAPI(title="Worker Lambda - Should not receive HTTP requests")

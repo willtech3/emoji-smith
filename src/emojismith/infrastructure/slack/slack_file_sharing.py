@@ -129,23 +129,15 @@ class SlackFileSharingRepository:
                     )
 
             return FileSharingResult(
-                success=True,
-                thread_ts=thread_ts,
-                file_url=file_url,
+                success=True, thread_ts=thread_ts, file_url=file_url,
             )
 
         except SlackApiError as e:
             self._logger.error(f"Slack API error sharing file: {e}")
-            return FileSharingResult(
-                success=False,
-                error=str(e),
-            )
+            return FileSharingResult(success=False, error=str(e),)
         except Exception as e:
             self._logger.error(f"Unexpected error sharing file: {e}")
-            return FileSharingResult(
-                success=False,
-                error=f"Unexpected error: {e}",
-            )
+            return FileSharingResult(success=False, error=f"Unexpected error: {e}",)
 
     async def _prepare_image_data(
         self, emoji: GeneratedEmoji, image_size: ImageSize

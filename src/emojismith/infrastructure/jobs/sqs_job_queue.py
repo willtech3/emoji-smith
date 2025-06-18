@@ -27,8 +27,7 @@ class SQSJobQueue(JobQueueRepository):
 
         async with self._session.client("sqs") as sqs_client:
             response = await sqs_client.send_message(
-                QueueUrl=self._queue_url,
-                MessageBody=message_body,
+                QueueUrl=self._queue_url, MessageBody=message_body,
             )
 
         self._logger.info(

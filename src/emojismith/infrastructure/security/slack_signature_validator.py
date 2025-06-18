@@ -103,8 +103,6 @@ class SlackSignatureValidator(SignatureValidator):
         return (
             "v0="
             + hmac.new(
-                self._signing_secret.encode("utf-8"),
-                sig_basestring,
-                hashlib.sha256,
+                self._signing_secret.encode("utf-8"), sig_basestring, hashlib.sha256,
             ).hexdigest()
         )

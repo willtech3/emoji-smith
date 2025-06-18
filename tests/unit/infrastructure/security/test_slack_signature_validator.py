@@ -36,9 +36,7 @@ class TestSlackSignatureValidator:
         signature = (
             "v0="
             + hmac.new(
-                signing_secret.encode("utf-8"),
-                sig_basestring,
-                hashlib.sha256,
+                signing_secret.encode("utf-8"), sig_basestring, hashlib.sha256,
             ).hexdigest()
         )
 
