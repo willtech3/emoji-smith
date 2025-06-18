@@ -25,6 +25,7 @@ class TestEmojiGenerationJobSharing:
         job = EmojiGenerationJob.create_new(
             message_text="Deploy failed",
             user_description="facepalm",
+            emoji_name="facepalm",
             user_id="U123",
             channel_id="C456",
             timestamp="123.456",
@@ -48,6 +49,7 @@ class TestEmojiGenerationJobSharing:
         job = EmojiGenerationJob.create_new(
             message_text="Bug report",
             user_description="bug emoji",
+            emoji_name="bug_emoji",
             user_id="U123",
             channel_id="C456",
             timestamp="123.456",
@@ -74,6 +76,7 @@ class TestEmojiGenerationJobSharing:
             "job_id": "test-123",
             "message_text": "Deploy failed",
             "user_description": "facepalm",
+            "emoji_name": "facepalm",
             "user_id": "U123",
             "channel_id": "C456",
             "timestamp": "123.456",
@@ -109,6 +112,7 @@ class TestEmojiGenerationJobSharing:
         job = EmojiGenerationJob.create_new(
             message_text="Deploy failed",
             user_description="facepalm",
+            emoji_name="facepalm",
             user_id="U123",
             channel_id="C456",
             timestamp="123.456",
@@ -135,6 +139,7 @@ class TestEmojiGenerationJobSharing:
         job = EmojiGenerationJob.create_new(
             message_text="Bug in thread",
             user_description="bug emoji",
+            emoji_name="bug_emoji",
             user_id="U123",
             channel_id="C456",
             timestamp="123.456",

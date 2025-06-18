@@ -128,7 +128,7 @@ class EmojiCreationService:
                         "action_id": "name",
                         "placeholder": {
                             "type": "plain_text",
-                            "text": "e.g., 'terminal' (will become :terminal:)",
+                            "text": "e.g., 'coding_wizard' → becomes :coding_wizard:",
                         },
                     },
                     "label": {"type": "plain_text", "text": "Emoji Name"},
@@ -279,7 +279,11 @@ class EmojiCreationService:
             image_size = state["image_size"]["size_select"]["selected_option"]["value"]
             metadata = json.loads(view.get("private_metadata", "{}"))
             if not re.fullmatch(r"[a-z0-9_]+", emoji_name):
-                raise KeyError
+                raise ValueError(
+                    "Emoji name must contain only lowercase letters, numbers, and underscores"
+                )
+            if len(emoji_name) > 32:
+                raise ValueError("Emoji name must be 32 characters or less")
         except (KeyError, json.JSONDecodeError) as exc:
             self._logger.exception("Malformed modal submission payload")
             raise ValueError("Malformed modal submission payload") from exc
@@ -347,12 +351,8 @@ class EmojiCreationService:
             description=job.user_description,
             context=job.message_text,
         )
-        # Use provided emoji name or derive from description
-        name = (
-            job.emoji_name
-            if job.emoji_name is not None
-            else job.user_description.replace(" ", "_").lower()[:32]
-        )
+        # Use provided emoji name, sanitize for Slack (max 32 chars)
+        name = job.emoji_name.replace(" ", "_").lower()[:32]
         emoji = await self._emoji_generator.generate(spec, name)
 
         # Determine workspace type (could be cached or configured)
@@ -453,7 +453,7 @@ class EmojiCreationService:
                 else EmojiSharingPreferences.default_for_context()
             ),
             thread_ts=job_data.get("thread_ts"),
-            emoji_name=job_data.get("emoji_name"),
+            emoji_name=job_data["emoji_name"],
         )
 
         # Process using the main method

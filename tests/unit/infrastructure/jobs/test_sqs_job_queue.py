@@ -45,6 +45,7 @@ class TestSQSJobQueue:
         job = EmojiGenerationJob.create_new(
             message_text="Just deployed on Friday!",
             user_description="facepalm reaction",
+            emoji_name="facepalm_reaction",
             user_id="U12345",
             channel_id="C67890",
             timestamp="1234567890.123456",
@@ -86,6 +87,7 @@ class TestSQSJobQueue:
             "job_id": "job_123",
             "message_text": "test message",
             "user_description": "test emoji",
+            "emoji_name": "test_emoji",
             "user_id": "U12345",
             "channel_id": "C67890",
             "timestamp": "123.456",
@@ -131,6 +133,7 @@ class TestSQSJobQueue:
         job = EmojiGenerationJob.create_new(
             message_text="x",
             user_description="y",
+            emoji_name="y",
             user_id="U1",
             channel_id="C1",
             timestamp="ts",

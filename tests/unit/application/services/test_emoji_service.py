@@ -249,6 +249,7 @@ class TestEmojiCreationService:
         job = EmojiGenerationJob.create_new(
             message_text="The deployment failed again 😭",
             user_description="facepalm reaction",
+            emoji_name="facepalm_reaction",
             user_id="U12345",
             channel_id="C67890",
             timestamp="1234567890.123456",
@@ -304,6 +305,7 @@ class TestEmojiCreationService:
         job = EmojiGenerationJob.create_new(
             message_text="Test message",
             user_description="test emoji",
+            emoji_name="test_emoji",
             user_id="U12345",
             channel_id="C67890",
             timestamp="1234567890.123456",
@@ -350,6 +352,7 @@ class TestEmojiCreationService:
         job_data = {
             "message_text": "Test message",
             "user_description": "test emoji",
+            "emoji_name": "test_emoji",
             "user_id": "U12345",
             "channel_id": "C67890",
             "timestamp": "1234567890.123456",

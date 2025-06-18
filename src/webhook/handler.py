@@ -88,7 +88,11 @@ class WebhookHandler:
             emoji_name = name_block.value
 
             if not re.fullmatch(r"[a-z0-9_]+", emoji_name):
-                raise ValueError("Invalid emoji name")
+                raise ValueError(
+                    "Emoji name must contain only lowercase letters, numbers, and underscores"
+                )
+            if len(emoji_name) > 32:
+                raise ValueError("Emoji name must be 32 characters or less")
 
             # Extract share location with None check
             share_select = state["share_location"].share_location_select
@@ -190,7 +194,7 @@ class WebhookHandler:
                         "action_id": "name",
                         "placeholder": {
                             "type": "plain_text",
-                            "text": "e.g., 'terminal' (will become :terminal:)",
+                            "text": "e.g., 'coding_wizard' → becomes :coding_wizard:",
                         },
                     },
                     "label": {"type": "plain_text", "text": "Emoji Name"},

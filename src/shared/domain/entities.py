@@ -19,7 +19,7 @@ class EmojiGenerationJob:
     channel_id: str
     timestamp: str
     team_id: str
-    emoji_name: Optional[str]
+    emoji_name: str
     status: JobStatus
     sharing_preferences: EmojiSharingPreferences
     thread_ts: Optional[str]
@@ -28,7 +28,9 @@ class EmojiGenerationJob:
     @classmethod
     def create_new(
         cls,
+        *,
         user_description: str,
+        emoji_name: str,
         message_text: str,
         user_id: str,
         channel_id: str,
@@ -36,7 +38,6 @@ class EmojiGenerationJob:
         team_id: str,
         sharing_preferences: EmojiSharingPreferences,
         thread_ts: Optional[str] = None,
-        emoji_name: Optional[str] = None,
     ) -> "EmojiGenerationJob":
         """Create a new emoji generation job."""
         return cls(
@@ -82,7 +83,7 @@ class EmojiGenerationJob:
             channel_id=data["channel_id"],
             timestamp=data["timestamp"],
             team_id=data["team_id"],
-            emoji_name=data.get("emoji_name"),
+            emoji_name=data["emoji_name"],
             status=JobStatus(data["status"]),
             sharing_preferences=EmojiSharingPreferences.from_dict(
                 data["sharing_preferences"]
