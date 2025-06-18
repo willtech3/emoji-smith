@@ -7,8 +7,15 @@ from typing import Dict, Any
 
 from webhook.domain.slack_message import SlackMessage
 from shared.domain.entities import EmojiGenerationJob
-from shared.domain.value_objects import EmojiSharingPreferences
-from webhook.domain.slack_payloads import MessageActionPayload, ModalSubmissionPayload
+from shared.domain.value_objects import (
+    EmojiSharingPreferences,
+    EmojiStylePreferences,
+)
+from webhook.domain.slack_payloads import (
+    MessageActionPayload,
+    ModalSubmissionPayload,
+    FormBlock,
+)
 from webhook.repositories.slack_repository import SlackRepository
 from webhook.repositories.job_queue_repository import JobQueueRepository
 
@@ -113,6 +120,22 @@ class WebhookHandler:
                 raise ValueError("Missing image size")
             image_size = size_select["selected_option"]["value"]
 
+            style_select = getattr(state, "style_type", FormBlock()).style_select
+            color_select = getattr(state, "color_scheme", FormBlock()).color_select
+            detail_select = getattr(state, "detail_level", FormBlock()).detail_select
+            tone_select = getattr(state, "tone", FormBlock()).tone_select
+
+            style_type = (
+                style_select["selected_option"]["value"] if style_select else "cartoon"
+            )
+            color_scheme = (
+                color_select["selected_option"]["value"] if color_select else "auto"
+            )
+            detail_level = (
+                detail_select["selected_option"]["value"] if detail_select else "simple"
+            )
+            tone = tone_select["selected_option"]["value"] if tone_select else "fun"
+
             metadata = json.loads(modal_payload.view.private_metadata)
         except (KeyError, json.JSONDecodeError, ValueError) as exc:
             self._logger.exception("Malformed modal submission form data")
@@ -136,6 +159,12 @@ class WebhookHandler:
             sharing_preferences=sharing_preferences,
             thread_ts=metadata.get("thread_ts"),
             emoji_name=emoji_name,
+            style_preferences=EmojiStylePreferences.from_form_values(
+                style_type,
+                color_scheme,
+                detail_level,
+                tone,
+            ),
         )
 
         # Queue job for worker Lambda
@@ -212,6 +241,127 @@ class WebhookHandler:
                         },
                     },
                     "label": {"type": "plain_text", "text": "Emoji Description"},
+                },
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": "*Style Preferences*"},
+                },
+                {"type": "divider"},
+                {
+                    "type": "input",
+                    "block_id": "style_type",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "style_select",
+                        "placeholder": {"type": "plain_text", "text": "Style"},
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Cartoon"},
+                                "value": "cartoon",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Realistic"},
+                                "value": "realistic",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Minimalist"},
+                                "value": "minimalist",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Pixel Art"},
+                                "value": "pixel_art",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Cartoon"},
+                            "value": "cartoon",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Style"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "color_scheme",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "color_select",
+                        "placeholder": {"type": "plain_text", "text": "Color scheme"},
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Bright"},
+                                "value": "bright",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Muted"},
+                                "value": "muted",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Monochrome"},
+                                "value": "monochrome",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Auto"},
+                                "value": "auto",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Auto"},
+                            "value": "auto",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Color Scheme"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "detail_level",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "detail_select",
+                        "placeholder": {"type": "plain_text", "text": "Detail"},
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Simple"},
+                                "value": "simple",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Detailed"},
+                                "value": "detailed",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Simple"},
+                            "value": "simple",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Detail Level"},
+                },
+                {
+                    "type": "input",
+                    "block_id": "tone",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "tone_select",
+                        "placeholder": {"type": "plain_text", "text": "Tone"},
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Fun"},
+                                "value": "fun",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Neutral"},
+                                "value": "neutral",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Expressive"},
+                                "value": "expressive",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Fun"},
+                            "value": "fun",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Tone"},
                 },
                 {
                     "type": "input",
