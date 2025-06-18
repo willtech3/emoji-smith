@@ -1,12 +1,18 @@
 """Tests for SlackRepository protocol interface."""
 
-from emojismith.domain.repositories.slack_repository import SlackRepository
+from emojismith.domain.repositories.slack_repository import (
+    SlackModalRepository,
+    SlackEmojiRepository,
+    SlackRepository,
+)
 
 
 def test_slack_repository_protocol_methods_exist() -> None:
-    """SlackRepository protocol defines required methods."""
-    assert hasattr(SlackRepository, "open_modal"), "open_modal must be defined"
-    assert hasattr(SlackRepository, "upload_emoji"), "upload_emoji must be defined"
-    assert hasattr(
-        SlackRepository, "add_emoji_reaction"
-    ), "add_emoji_reaction must be defined"
+    """Slack repository protocols define required methods."""
+    assert hasattr(SlackModalRepository, "open_modal")
+    assert hasattr(SlackEmojiRepository, "upload_emoji")
+    assert hasattr(SlackEmojiRepository, "add_emoji_reaction")
+    # Combined interface should include all modal and emoji methods
+    assert hasattr(SlackRepository, "open_modal")
+    assert hasattr(SlackRepository, "upload_emoji")
+    assert hasattr(SlackRepository, "add_emoji_reaction")

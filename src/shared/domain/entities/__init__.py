@@ -1,15 +1,17 @@
-"""Shared domain entities for emoji generation."""
+"""Entity classes shared across packages."""
 
-import uuid
 from dataclasses import dataclass, field
+import uuid
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from typing import Dict, Any, Optional
 
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
     EmojiStylePreferences,
     JobStatus,
 )
+
+from .slack_message import SlackMessage
 
 
 @dataclass
@@ -116,3 +118,6 @@ class EmojiGenerationJob:
     def mark_as_failed(self) -> None:
         """Mark job as failed."""
         self.status = JobStatus.FAILED
+
+
+__all__ = ["SlackMessage", "EmojiGenerationJob"]

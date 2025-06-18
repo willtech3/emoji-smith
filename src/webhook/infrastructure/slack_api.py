@@ -4,10 +4,10 @@ import logging
 from typing import Dict, Any
 from slack_sdk.web.async_client import AsyncWebClient
 
-from webhook.repositories.slack_repository import SlackRepository
+from shared.domain.repositories import SlackModalRepository
 
 
-class SlackAPIRepository(SlackRepository):
+class SlackAPIRepository(SlackModalRepository):
     """Slack API implementation using slack-sdk."""
 
     def __init__(self, client: AsyncWebClient) -> None:

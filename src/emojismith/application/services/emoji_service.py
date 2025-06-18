@@ -65,7 +65,7 @@ class EmojiCreationService:
         workspace_type = await self._detect_workspace_type()
 
         # Create sharing context
-        from emojismith.domain.entities.slack_message import SlackMessage
+        from shared.domain.entities.slack_message import SlackMessage
 
         original_message = SlackMessage(
             text=job.message_text,

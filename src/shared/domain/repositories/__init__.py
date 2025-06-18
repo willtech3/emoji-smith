@@ -1,4 +1,4 @@
-"""Domain repository interfaces."""
+"""Shared repository interfaces for Slack and job queues."""
 
 from .slack_repository import (
     SlackModalRepository,
@@ -6,7 +6,6 @@ from .slack_repository import (
     SlackRepository,
 )
 from .job_queue_repository import JobQueueProducer, JobQueueConsumer, JobQueueRepository
-from .image_processor import ImageProcessor
 
 __all__ = [
     "SlackModalRepository",
@@ -15,5 +14,4 @@ __all__ = [
     "JobQueueProducer",
     "JobQueueConsumer",
     "JobQueueRepository",
-    "ImageProcessor",
 ]

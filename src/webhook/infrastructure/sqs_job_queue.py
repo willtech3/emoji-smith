@@ -4,11 +4,11 @@ import json
 import logging
 import boto3
 
-from webhook.repositories.job_queue_repository import JobQueueRepository
+from shared.domain.repositories import JobQueueProducer
 from shared.domain.entities import EmojiGenerationJob
 
 
-class SQSJobQueue(JobQueueRepository):
+class SQSJobQueue(JobQueueProducer):
     """SQS implementation of job queue for webhook package."""
 
     def __init__(self, queue_url: str) -> None:
