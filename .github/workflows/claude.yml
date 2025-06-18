@@ -46,7 +46,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           
           # Optional: Limit conversation turns to prevent runaway costs
-          max_turns: 5
+          # max_turns: 15
           
           # Optional: Specify allowed tools (default: all)
           # allowed_tools: "edit_file,create_file,read_file,run_command"
