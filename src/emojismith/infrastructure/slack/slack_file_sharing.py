@@ -172,10 +172,10 @@ class SlackFileSharingRepository:
         if preferences.include_upload_instructions:
             comment += "\n\n*To add this emoji to your workspace:*"
             comment += "\n1. Right-click the image and save it"
-            comment += "\n2. Go to Slack → Preferences → Emoji"
-            comment += "\n3. Click 'Add Custom Emoji'"
+            comment += "\n2. Click the smiley icon in the message box"
+            comment += "\n3. Select 'Add emoji'"
             comment += f"\n4. Upload the image and name it `{emoji_name}`"
-            comment += "\n5. Click 'Save'"
+            comment += "\n5. Click 'Add'"
             comment += (
                 f"\n\nThen you can use it by typing `:{emoji_name}:` in any message! 🎉"
             )
