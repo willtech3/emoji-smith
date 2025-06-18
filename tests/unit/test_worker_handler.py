@@ -81,15 +81,34 @@ class TestWorkerHandler:
     )
     def test_lambda_handler_success(self, sqs_event, context):
         """Test successful processing of SQS message."""
-        with patch("src.worker_handler.create_webhook_handler") as mock_create:
+        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
             with patch("asyncio.run") as mock_run:
-                mock_create.return_value = (None, None)
+                mock_create.return_value = Mock(process_emoji_generation_job=Mock())
                 mock_run.return_value = None
 
                 result = handler(sqs_event, context)
 
                 assert result == {"batchItemFailures": []}
                 mock_run.assert_called_once()
+
+    @patch.dict(
+        "os.environ",
+        {
+            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "OPENAI_API_KEY": "sk-test",
+        },
+    )
+    def test_worker_never_opens_modal(self, sqs_event, context):
+        """Ensure worker emoji service does not open Slack modals."""
+        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
+            service = Mock(process_emoji_generation_job=Mock())
+            service._slack_repo = Mock(open_modal=Mock())
+            mock_create.return_value = service
+            with patch("asyncio.run") as mock_run:
+                mock_run.return_value = None
+                handler(sqs_event, context)
+                service._slack_repo.open_modal.assert_not_called()
 
     @patch.dict(
         "os.environ",
@@ -111,7 +130,7 @@ class TestWorkerHandler:
             ]
         }
 
-        with patch("src.worker_handler.create_webhook_handler") as mock_create:
+        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
             mock_create.return_value = (None, None)
 
             result = handler(invalid_event, context)
@@ -130,9 +149,13 @@ class TestWorkerHandler:
     )
     def test_lambda_handler_processing_error(self, sqs_event, context):
         """Test handling of processing errors."""
-        with patch("src.worker_handler.create_webhook_handler") as mock_create:
+        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
             with patch("asyncio.run") as mock_run:
-                mock_create.return_value = (None, None)
+                mock_create.return_value = Mock(
+                    process_emoji_generation_job=Mock(
+                        side_effect=Exception("Processing failed")
+                    )
+                )
                 mock_run.side_effect = Exception("Processing failed")
 
                 result = handler(sqs_event, context)
@@ -166,7 +189,7 @@ class TestWorkerHandler:
             ]
         }
 
-        with patch("src.worker_handler.create_webhook_handler") as mock_create:
+        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
             mock_create.return_value = (None, None)
 
             result = handler(incomplete_event, context)

@@ -8,7 +8,7 @@ from typing import Any, Dict
 import boto3
 from botocore.exceptions import ClientError
 
-from emojismith.app import create_webhook_handler
+from emojismith.app import create_worker_emoji_service
 from shared.domain.entities import EmojiGenerationJob
 
 # Configure logging
@@ -60,50 +60,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     # No need to load from Secrets Manager at runtime
 
     # Initialize the emoji service
-    _, _ = create_webhook_handler()  # This sets up dependencies
-    from emojismith.application.services.emoji_service import EmojiCreationService
-    from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
-    from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
-    from emojismith.infrastructure.image.processing import PillowImageProcessor
-    from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
-    from emojismith.domain.services.generation_service import EmojiGenerationService
-    from emojismith.domain.services.emoji_validation_service import (
-        EmojiValidationService,
-    )
-    from emojismith.infrastructure.slack.slack_file_sharing import (
-        SlackFileSharingRepository,
-    )
-    from slack_sdk.web.async_client import AsyncWebClient
-    from openai import AsyncOpenAI
-
-    # Recreate dependencies (since Lambda is stateless)
-    slack_token = os.getenv("SLACK_BOT_TOKEN")
-    slack_client = AsyncWebClient(token=slack_token)
-    slack_repo = SlackAPIRepository(slack_client)
-
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    openai_client = AsyncOpenAI(api_key=openai_api_key)
-    chat_model = os.getenv("OPENAI_CHAT_MODEL", "o3")
-    openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
-    image_processor = PillowImageProcessor()
-
-    image_validator = PILImageValidator()
-    emoji_validation_service = EmojiValidationService(image_validator)
-
-    generator = EmojiGenerationService(
-        openai_repo=openai_repo,
-        image_processor=image_processor,
-        emoji_validator=emoji_validation_service,
-    )
-
-    file_sharing_repo = SlackFileSharingRepository(slack_client)
-
-    emoji_service = EmojiCreationService(
-        slack_repo=slack_repo,
-        emoji_generator=generator,
-        job_queue=None,  # Worker doesn't need to queue jobs
-        file_sharing_repo=file_sharing_repo,
-    )
+    emoji_service = create_worker_emoji_service()
 
     # Process SQS records
     batch_item_failures = []
