@@ -5,8 +5,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
-from shared.domain.value_objects import EmojiSharingPreferences, JobStatus
-from emojismith.domain.value_objects import EmojiStylePreferences
+from shared.domain.value_objects import (
+    EmojiSharingPreferences,
+    EmojiStylePreferences,
+    JobStatus,
+)
 
 
 @dataclass

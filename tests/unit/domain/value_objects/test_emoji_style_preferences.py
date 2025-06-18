@@ -1,4 +1,4 @@
-from emojismith.domain.value_objects import EmojiStylePreferences
+from shared.domain.value_objects import EmojiStylePreferences
 
 
 class TestEmojiStylePreferences:

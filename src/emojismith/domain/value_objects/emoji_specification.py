@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from .emoji_style_preferences import EmojiStylePreferences
+from shared.domain.value_objects import EmojiStylePreferences
 
 
 @dataclass(frozen=True)

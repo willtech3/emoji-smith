@@ -5,7 +5,7 @@ from emojismith.domain.value_objects import (
     EmojiSpecification,
     EmojiStylePreferences,
 )
-from emojismith.domain.value_objects.emoji_style_preferences import StyleType
+from shared.domain.value_objects import StyleType
 
 
 class TestEmojiSpecification:

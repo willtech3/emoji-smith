@@ -328,6 +328,22 @@ class TestSlackFileSharingRepository:
         # Verify no additional ephemeral messages for EVERYONE visibility
         mock_slack_client.chat_postEphemeral.assert_not_called()
 
+    async def test_instruction_methods_consistent(self, file_sharing_repo) -> None:
+        """Ensure instruction helper methods stay in sync."""
+        prefs = EmojiSharingPreferences(
+            share_location=ShareLocation.NEW_THREAD,
+            instruction_visibility=InstructionVisibility.EVERYONE,
+            image_size=ImageSize.EMOJI_SIZE,
+            include_upload_instructions=True,
+        )
+
+        steps = file_sharing_repo._build_emoji_upload_steps("demo")
+        comment = file_sharing_repo._build_initial_comment("demo", prefs)
+        instructions = file_sharing_repo._build_upload_instructions("demo")
+
+        assert steps in instructions
+        assert steps in comment
+
     async def test_existing_thread_uses_initial_comment_not_separate_message(
         self, file_sharing_repo, mock_slack_client, sample_emoji
     ):

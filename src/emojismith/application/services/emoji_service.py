@@ -23,9 +23,7 @@ except ImportError:
     # For tests when aiohttp is not available
     SlackFileSharingRepository = None  # type: ignore
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
-from emojismith.domain.value_objects.emoji_style_preferences import (
-    EmojiStylePreferences,
-)
+from shared.domain.value_objects import EmojiStylePreferences
 from shared.domain.value_objects import EmojiSharingPreferences
 
 
