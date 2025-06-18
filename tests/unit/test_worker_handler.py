@@ -119,6 +119,35 @@ class TestWorkerHandler:
             "OPENAI_API_KEY": "sk-test",
         },
     )
+    def test_modal_payload_is_ignored(self, context):
+        """Modal opening payloads should be skipped with a failure."""
+        modal_event = {
+            "Records": [
+                {
+                    "messageId": "modal-id",
+                    "receiptHandle": "rh",
+                    "body": json.dumps({"trigger_id": "123"}),
+                }
+            ]
+        }
+
+        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
+            service = Mock(process_emoji_generation_job=Mock())
+            mock_create.return_value = service
+
+            result = handler(modal_event, context)
+
+            assert result == {"batchItemFailures": [{"itemIdentifier": "modal-id"}]}
+            service.process_emoji_generation_job.assert_not_called()
+
+    @patch.dict(
+        "os.environ",
+        {
+            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "OPENAI_API_KEY": "sk-test",
+        },
+    )
     def test_lambda_handler_invalid_json(self, context):
         """Test handling of invalid JSON in message body."""
         invalid_event = {

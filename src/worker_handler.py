@@ -70,6 +70,17 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # Parse the SQS message body
             message_body = json.loads(record["body"])
 
+            # Ignore messages that contain a trigger_id for modal opening
+            if "trigger_id" in message_body:
+                logger.warning(
+                    "Received modal opening payload in worker; ignoring to avoid expired trigger_id",
+                    extra={"message_id": record.get("messageId")},
+                )
+                batch_item_failures.append(
+                    {"itemIdentifier": record.get("messageId", "unknown")}
+                )
+                continue
+
             # Parse emoji generation job directly
             job = EmojiGenerationJob.from_dict(message_body)
 
