@@ -64,12 +64,12 @@ def create_app() -> FastAPI:
 
     webhook_handler, security_service = create_webhook_handler()
 
-    @app.get("/health")  # type: ignore[misc]
+    @app.get("/health")
     async def health_check() -> Dict[str, str]:
         """Health check endpoint."""
         return {"status": "healthy"}
 
-    @app.post("/slack/events")  # type: ignore[misc]
+    @app.post("/slack/events")
     async def slack_events(request: Request) -> Dict[str, Any]:
         """Handle Slack webhook events with security and form data parsing."""
         # Get raw body and headers for security validation
@@ -118,7 +118,7 @@ def create_app() -> FastAPI:
             return await webhook_handler.handle_modal_submission(payload)
         return {"status": "ignored"}
 
-    @app.post("/slack/interactive")  # type: ignore[misc]
+    @app.post("/slack/interactive")
     async def slack_interactive(request: Request) -> Dict[str, Any]:
         """Handle Slack interactive components (modals, buttons, etc.)."""
         # Use the same logic as slack_events since interactive components

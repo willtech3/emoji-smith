@@ -25,9 +25,7 @@ class SlackAPIRepository:
         mock_image_url = f"https://example.com/emojis/{name}.png"
 
         try:
-            response: Dict[str, Any] = await self._client.admin_emoji_add(
-                name=name, url=mock_image_url
-            )
+            response = await self._client.admin_emoji_add(name=name, url=mock_image_url)
             return bool(response.get("ok", False))
         except SlackApiError as e:
             # Handle common admin permission errors gracefully
