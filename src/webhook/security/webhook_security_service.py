@@ -4,20 +4,18 @@ import logging
 from typing import Optional
 
 from webhook.domain.webhook_request import WebhookRequest
-from webhook.security.slack_signature_validator import (
-    SlackSignatureValidator,
-    MissingSigningSecretError,
-)
+from webhook.domain.signature_validator import SignatureValidator
+from webhook.infrastructure.slack_signature_validator import MissingSigningSecretError
 
 
 class WebhookSecurityService:
     """Service for validating webhook security and handling security events."""
 
-    def __init__(self, signature_validator: SlackSignatureValidator) -> None:
+    def __init__(self, signature_validator: SignatureValidator) -> None:
         """Initialize webhook security service.
 
         Args:
-            signature_validator: SlackSignatureValidator instance for signature
+            signature_validator: SignatureValidator instance for signature
                 verification
         """
         self._signature_validator = signature_validator
