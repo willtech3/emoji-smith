@@ -5,8 +5,8 @@ import logging
 import os
 from typing import Any, Dict
 
-import boto3
-from botocore.exceptions import ClientError
+import boto3  # type: ignore[import-untyped]
+from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 from emojismith.app import create_webhook_handler
 from shared.domain.entities import EmojiGenerationJob
@@ -59,8 +59,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     # Secrets are now injected as environment variables at deploy time
     # No need to load from Secrets Manager at runtime
 
-    # Initialize the emoji service
-    _, _ = create_webhook_handler()  # This sets up dependencies
+    # Initialize the emoji service - worker does not open modals
     from emojismith.application.services.emoji_service import EmojiCreationService
     from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
     from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository

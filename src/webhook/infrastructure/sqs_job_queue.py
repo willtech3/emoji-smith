@@ -2,7 +2,7 @@
 
 import json
 import logging
-import boto3
+import boto3  # type: ignore[import-untyped]
 
 from webhook.repositories.job_queue_repository import JobQueueRepository
 from shared.domain.entities import EmojiGenerationJob

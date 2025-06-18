@@ -5,8 +5,8 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
-import boto3
-from botocore.exceptions import ClientError
+import boto3  # type: ignore[import-untyped]
+from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 from mangum import Mangum
 
 # Lazy import - only import create_app when actually needed

@@ -81,15 +81,43 @@ class TestWorkerHandler:
     )
     def test_lambda_handler_success(self, sqs_event, context):
         """Test successful processing of SQS message."""
-        with patch("src.worker_handler.create_webhook_handler") as mock_create:
-            with patch("asyncio.run") as mock_run:
-                mock_create.return_value = (None, None)
-                mock_run.return_value = None
+        with patch("asyncio.run") as mock_run:
+            mock_run.return_value = None
 
-                result = handler(sqs_event, context)
+            result = handler(sqs_event, context)
 
-                assert result == {"batchItemFailures": []}
-                mock_run.assert_called_once()
+            assert result == {"batchItemFailures": []}
+            mock_run.assert_called_once()
+
+    @patch.dict(
+        "os.environ",
+        {
+            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "OPENAI_API_KEY": "sk-test",
+        },
+    )
+    def test_worker_does_not_open_modal(self, sqs_event, context):
+        """Ensure modal logic is not executed in the worker."""
+        with (
+            patch(
+                "emojismith.infrastructure.slack.slack_api.SlackAPIRepository"
+            ) as mock_repo_cls,
+            patch("slack_sdk.web.async_client.AsyncWebClient"),
+            patch("openai.AsyncOpenAI"),
+            patch(
+                "emojismith.infrastructure.slack.slack_file_sharing.SlackFileSharingRepository"
+            ),
+            patch("asyncio.run") as mock_run,
+        ):
+            repo = Mock()
+            repo.open_modal = Mock()
+            mock_repo_cls.return_value = repo
+            mock_run.return_value = None
+
+            handler(sqs_event, context)
+
+            repo.open_modal.assert_not_called()
 
     @patch.dict(
         "os.environ",
@@ -111,14 +139,9 @@ class TestWorkerHandler:
             ]
         }
 
-        with patch("src.worker_handler.create_webhook_handler") as mock_create:
-            mock_create.return_value = (None, None)
+        result = handler(invalid_event, context)
 
-            result = handler(invalid_event, context)
-
-            assert result == {
-                "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
-            }
+        assert result == {"batchItemFailures": [{"itemIdentifier": "test-message-id"}]}
 
     @patch.dict(
         "os.environ",
@@ -130,16 +153,14 @@ class TestWorkerHandler:
     )
     def test_lambda_handler_processing_error(self, sqs_event, context):
         """Test handling of processing errors."""
-        with patch("src.worker_handler.create_webhook_handler") as mock_create:
-            with patch("asyncio.run") as mock_run:
-                mock_create.return_value = (None, None)
-                mock_run.side_effect = Exception("Processing failed")
+        with patch("asyncio.run") as mock_run:
+            mock_run.side_effect = Exception("Processing failed")
 
-                result = handler(sqs_event, context)
+            result = handler(sqs_event, context)
 
-                assert result == {
-                    "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
-                }
+            assert result == {
+                "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
+            }
 
     @patch.dict(
         "os.environ",
@@ -166,14 +187,9 @@ class TestWorkerHandler:
             ]
         }
 
-        with patch("src.worker_handler.create_webhook_handler") as mock_create:
-            mock_create.return_value = (None, None)
+        result = handler(incomplete_event, context)
 
-            result = handler(incomplete_event, context)
-
-            assert result == {
-                "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
-            }
+        assert result == {"batchItemFailures": [{"itemIdentifier": "test-message-id"}]}
 
     def test_secrets_loading_success(self):
         """Test successful loading of secrets from AWS."""
