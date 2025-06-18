@@ -119,6 +119,10 @@ class FormBlock:
     share_location_select: Optional[FormSelect] = None
     visibility_select: Optional[FormSelect] = None
     size_select: Optional[FormSelect] = None
+    style_select: Optional[FormSelect] = None
+    color_select: Optional[FormSelect] = None
+    detail_select: Optional[FormSelect] = None
+    tone_select: Optional[FormSelect] = None
 
 
 @dataclass
@@ -130,6 +134,10 @@ class FormValues:
     share_location: FormBlock
     instruction_visibility: FormBlock
     image_size: FormBlock
+    style_type: FormBlock
+    color_scheme: FormBlock
+    detail_level: FormBlock
+    tone: FormBlock
 
     def __getitem__(self, key: str) -> FormBlock:
         """Allow dict-like access for compatibility."""
@@ -193,6 +201,22 @@ class ModalSubmissionPayload:
                 block.size_select = FormSelect(
                     selected_option=block_data["size_select"]["selected_option"]
                 )
+            if "style_select" in block_data:
+                block.style_select = FormSelect(
+                    selected_option=block_data["style_select"]["selected_option"]
+                )
+            if "color_select" in block_data:
+                block.color_select = FormSelect(
+                    selected_option=block_data["color_select"]["selected_option"]
+                )
+            if "detail_select" in block_data:
+                block.detail_select = FormSelect(
+                    selected_option=block_data["detail_select"]["selected_option"]
+                )
+            if "tone_select" in block_data:
+                block.tone_select = FormSelect(
+                    selected_option=block_data["tone_select"]["selected_option"]
+                )
             return block
 
         form_values = FormValues(
@@ -203,6 +227,10 @@ class ModalSubmissionPayload:
                 values_data["instruction_visibility"]
             ),
             image_size=create_form_block(values_data["image_size"]),
+            style_type=create_form_block(values_data["style_type"]),
+            color_scheme=create_form_block(values_data["color_scheme"]),
+            detail_level=create_form_block(values_data["detail_level"]),
+            tone=create_form_block(values_data["tone"]),
         )
 
         view = ModalView(

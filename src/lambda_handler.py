@@ -76,7 +76,7 @@ def get_app() -> "FastAPI":
 
         total_time = time.time() - start_total
         logger.info(f"✅ Total app initialization: {total_time:.3f}s")
-    return _app
+    return _app  # type: ignore[no-any-return]
 
 
 def handler(event: dict, context: Any) -> Any:
