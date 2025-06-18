@@ -7,7 +7,7 @@ import urllib.parse
 from typing import Dict, Any
 
 from fastapi import FastAPI, Request, HTTPException
-from mangum import Mangum
+from mangum import Mangum  # type: ignore[import]
 from slack_sdk.web.async_client import AsyncWebClient
 
 from webhook.handler import WebhookHandler
