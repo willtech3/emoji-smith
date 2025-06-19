@@ -29,8 +29,7 @@ class SlackEmojiRepository(Protocol):
 
     async def add_emoji_reaction(
         self, emoji_name: str, channel_id: str, timestamp: str
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 @runtime_checkable
