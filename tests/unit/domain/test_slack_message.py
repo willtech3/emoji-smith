@@ -1,7 +1,7 @@
 """Tests for SlackMessage domain entity."""
 
 import pytest
-from emojismith.domain.entities.slack_message import SlackMessage
+from shared.domain.entities.slack_message import SlackMessage
 
 
 class TestSlackMessage:
@@ -72,3 +72,18 @@ class TestSlackMessage:
         context = message.get_context_for_ai()
         assert "The deployment failed again 😭" in context
         assert len(context) <= 200  # Should be truncated for AI context
+
+    def test_to_dict_round_trip(self) -> None:
+        """SlackMessage can be serialized and restored."""
+        message = SlackMessage(
+            text="round trip",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="1.2",
+            team_id="T1",
+        )
+
+        data = message.to_dict()
+        restored = SlackMessage.from_dict(data)
+
+        assert restored == message

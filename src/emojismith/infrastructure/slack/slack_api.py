@@ -5,8 +5,10 @@ from typing import Dict, Any
 from slack_sdk.web.async_client import AsyncWebClient
 from slack_sdk.errors import SlackApiError
 
+from shared.domain.repositories import SlackRepository
 
-class SlackAPIRepository:
+
+class SlackAPIRepository(SlackRepository):
     """Concrete implementation of SlackRepository using Slack SDK."""
 
     def __init__(self, slack_client: AsyncWebClient) -> None:

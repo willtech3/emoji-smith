@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Protocol
 
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
-from emojismith.domain.entities.slack_message import SlackMessage
+from shared.domain.entities.slack_message import SlackMessage
 from shared.domain.value_objects import EmojiSharingPreferences
 
 
