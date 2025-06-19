@@ -7,6 +7,7 @@ from .slack_repository import (
 )
 from .job_queue_repository import JobQueueProducer, JobQueueConsumer, JobQueueRepository
 from .image_processor import ImageProcessor
+from .file_sharing_repository import FileSharingRepository, FileSharingResult
 
 __all__ = [
     "SlackModalRepository",
@@ -16,4 +17,6 @@ __all__ = [
     "JobQueueConsumer",
     "JobQueueRepository",
     "ImageProcessor",
+    "FileSharingRepository",
+    "FileSharingResult",
 ]

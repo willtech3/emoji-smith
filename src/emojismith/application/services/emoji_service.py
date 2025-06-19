@@ -5,20 +5,13 @@ from typing import Dict, Any, Optional
 from shared.domain.entities import EmojiGenerationJob
 from emojismith.domain.repositories.slack_repository import SlackRepository
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from emojismith.domain.repositories.file_sharing_repository import FileSharingRepository
 from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingService,
     EmojiSharingContext,
     WorkspaceType,
 )
-
-try:
-    from emojismith.infrastructure.slack.slack_file_sharing import (
-        SlackFileSharingRepository,
-    )
-except ImportError:
-    # For tests when aiohttp is not available
-    SlackFileSharingRepository = None  # type: ignore
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from shared.domain.value_objects import (
     EmojiStylePreferences,
@@ -36,7 +29,7 @@ class EmojiCreationService:
         slack_repo: SlackRepository,
         emoji_generator: EmojiGenerationService,
         job_queue: Optional[JobQueueRepository] = None,
-        file_sharing_repo: Optional[Any] = None,
+        file_sharing_repo: Optional[FileSharingRepository] = None,
         sharing_service: Optional[EmojiSharingService] = None,
     ) -> None:
         self._slack_repo = slack_repo
