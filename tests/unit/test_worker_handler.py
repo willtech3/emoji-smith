@@ -212,11 +212,11 @@ class TestWorkerHandler:
     def test_secrets_loading_success(self):
         """Test successful loading of secrets from AWS."""
         from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
-        
+
         # Reset singleton state
         AWSSecretsLoader._instance = None
         AWSSecretsLoader._loaded = False
-        
+
         with patch("boto3.client") as mock_boto_client:
             with patch.dict("os.environ", {"SECRETS_NAME": "test-secrets"}):
                 mock_secrets_client = Mock()
@@ -235,11 +235,11 @@ class TestWorkerHandler:
     def test_secrets_loading_no_secrets_name(self):
         """Test graceful handling when SECRETS_NAME is not set."""
         from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
-        
+
         # Reset singleton state
         AWSSecretsLoader._instance = None
         AWSSecretsLoader._loaded = False
-        
+
         with patch.dict("os.environ", {}, clear=True):
             # Should not raise an exception
             AWSSecretsLoader().load_secrets()
