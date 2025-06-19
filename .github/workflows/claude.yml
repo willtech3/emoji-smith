@@ -4,15 +4,15 @@ on:
   # Trigger when someone comments @claude in issues
   issue_comment:
     types: [created]
-  
-  # Trigger when someone comments @claude in PR reviews  
+
+  # Trigger when someone comments @claude in PR reviews
   pull_request_review:
     types: [submitted]
-    
+
   # Trigger when someone comments @claude in PR review comments
   pull_request_review_comment:
     types: [created]
-    
+
   # Trigger when an issue is created with @claude in the body
   issues:
     types: [opened]
@@ -27,34 +27,34 @@ jobs:
   claude-assistant:
     # Only run if the comment or issue body contains @claude
     if: contains(github.event.comment.body, '@claude') || contains(github.event.issue.body, '@claude') || contains(github.event.review.body, '@claude')
-    
+
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: Claude Code Action
         uses: anthropics/claude-code-action@beta
         with:
           # Anthropic API key for Claude access
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
+
           # GitHub token for repository access
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          
+
           # Optional: Limit conversation turns to prevent runaway costs
           # max_turns: 15
-          
+
           # Optional: Specify allowed tools (default: all)
           # allowed_tools: "edit_file,create_file,read_file,run_command"
-          
+
           # Optional: Custom instructions for this workflow
           custom_instructions: |
-            You are a helpful AI assistant for the Emoji Smith project - a Slack bot that generates custom emojis using AI. 
-            
+            You are a helpful AI assistant for the Emoji Smith project - a Slack bot that generates custom emojis using AI.
+
             When responding to issues or PRs:
             - Follow the coding standards and architecture patterns defined in CLAUDE.md
             - Use Test-Driven Development (TDD) with comprehensive unit tests
@@ -62,11 +62,11 @@ jobs:
             - Ensure all code changes include appropriate error handling and logging
             - Run code quality checks (black, flake8, mypy, bandit, pytest) before committing
             - Focus on emoji generation, Slack integration, and AWS Lambda deployment
-            
+
             For code reviews:
             - Check compliance with Python PEP 8 and type hints
             - Verify proper dependency injection and repository patterns
             - Ensure security best practices (no hardcoded secrets, proper validation)
             - Validate test coverage and TDD compliance
-            
+
             Always be helpful, concise, and focus on maintaining high code quality.

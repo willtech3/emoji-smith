@@ -24,7 +24,7 @@ For enhanced functionality, install the Claude GitHub App:
 ```markdown
 I need help implementing the modal field separation described in issue #170.
 
-@claude can you create a feature branch and implement the two-field modal 
+@claude can you create a feature branch and implement the two-field modal
 with separate emoji name and description fields?
 ```
 
@@ -64,22 +64,22 @@ with separate emoji name and description fields?
 ### 1. Be Specific in Requests
 ```markdown
 # Good
-@claude implement the SlackChannel.from_dict() method following the pattern 
+@claude implement the SlackChannel.from_dict() method following the pattern
 established in SlackUser.from_dict(), including comprehensive unit tests
 
-# Less helpful  
+# Less helpful
 @claude fix the slack stuff
 ```
 
 ### 2. Reference Context
 ```markdown
-@claude looking at issue #172, can you remove the modal opening logic 
+@claude looking at issue #172, can you remove the modal opening logic
 from the worker Lambda and ensure it only handles emoji generation?
 ```
 
 ### 3. Request Incremental Changes
 ```markdown
-@claude create a feature branch for issue #169 and update just the 
+@claude create a feature branch for issue #169 and update just the
 instruction text to match current Slack UI
 ```
 
