@@ -132,11 +132,16 @@ class TestEmojiSharingService:
         assert strategy.preferences.share_location == ShareLocation.THREAD
         assert strategy.preferences.thread_ts == "1234567890.123456"
 
-    def test_detects_workspace_type_from_permissions(self, sharing_service):
-        """Test service can detect workspace type from available permissions."""
-        # This would check API permissions in real implementation
-        # For now, we'll test the method exists
-        assert hasattr(sharing_service, "detect_workspace_type")
+    def test_workspace_type_is_stored(self, sharing_service):
+        """Test service stores the workspace type provided at initialization."""
+        # Default workspace type should be STANDARD
+        assert sharing_service._workspace_type == WorkspaceType.STANDARD
+
+        # Test with explicit workspace type
+        enterprise_service = EmojiSharingService(
+            workspace_type=WorkspaceType.ENTERPRISE_GRID
+        )
+        assert enterprise_service._workspace_type == WorkspaceType.ENTERPRISE_GRID
 
 
 class TestEmojiSharingContext:

@@ -60,6 +60,14 @@ class FileSharingFallbackStrategy:
 class EmojiSharingService:
     """Domain service that determines appropriate sharing strategy."""
 
+    def __init__(self, workspace_type: WorkspaceType = WorkspaceType.STANDARD) -> None:
+        """Initialize with workspace type.
+
+        Args:
+            workspace_type: The type of Slack workspace. Defaults to STANDARD.
+        """
+        self._workspace_type = workspace_type
+
     def determine_sharing_strategy(
         self, context: EmojiSharingContext
     ) -> SharingStrategy:
@@ -69,30 +77,3 @@ class EmojiSharingService:
         else:
             # Free and Standard workspaces use file sharing fallback
             return FileSharingFallbackStrategy(preferences=context.preferences)
-
-    async def detect_workspace_type(self) -> WorkspaceType:
-        """Detect workspace type from available permissions.
-
-        If detection fails (e.g. missing scopes or API error), we log a warning and
-        gracefully fall back to a `STANDARD` workspace assumption so that the
-        application continues using the file-sharing strategy instead of
-        crashing.
-        """
-        try:
-            # TODO: Implement real permission introspection once method is chosen.
-            # For now we pessimise to ENTERPRISE_GRID only if an explicit env
-            # var is set.
-            import os
-
-            force_enterprise = os.getenv("EMOJISMITH_FORCE_ENTERPRISE", "false")
-            if force_enterprise.lower() == "true":
-                return WorkspaceType.ENTERPRISE_GRID
-            return WorkspaceType.STANDARD
-        except Exception as exc:  # pragma: no cover – defensive safety net
-            import logging
-
-            logging.getLogger(__name__).warning(
-                "Unable to auto-detect workspace type – defaulting to STANDARD: %s",
-                exc,
-            )
-            return WorkspaceType.STANDARD

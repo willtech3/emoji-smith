@@ -10,6 +10,10 @@ from slack_sdk.web.async_client import AsyncWebClient
 from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.services.generation_service import EmojiGenerationService
+from emojismith.domain.services.emoji_sharing_service import (
+    EmojiSharingService,
+    WorkspaceType,
+)
 from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
 from emojismith.infrastructure.image.processing import PillowImageProcessor
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
@@ -54,11 +58,21 @@ def create_worker_emoji_service() -> EmojiCreationService:
 
     file_sharing_repo = SlackFileSharingRepository(slack_client)
 
+    # Determine workspace type from environment
+    workspace_type = WorkspaceType.STANDARD
+    force_enterprise = os.getenv("EMOJISMITH_FORCE_ENTERPRISE", "false")
+    if force_enterprise.lower() == "true":
+        workspace_type = WorkspaceType.ENTERPRISE_GRID
+
+    # Create sharing service with injected workspace type
+    sharing_service = EmojiSharingService(workspace_type=workspace_type)
+
     return EmojiCreationService(
         slack_repo=slack_repo,
         emoji_generator=generator,
         job_queue=None,
         file_sharing_repo=file_sharing_repo,
+        sharing_service=sharing_service,
     )
 
 

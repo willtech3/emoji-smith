@@ -54,8 +54,8 @@ class EmojiCreationService:
         name = job.emoji_name.replace(" ", "_").lower()[:32]
         emoji = await self._emoji_generator.generate(spec, name)
 
-        # Determine workspace type (could be cached or configured)
-        workspace_type = await self._detect_workspace_type()
+        # Get workspace type from sharing service
+        workspace_type = self._sharing_service._workspace_type
 
         # Create sharing context
         from shared.domain.entities.slack_message import SlackMessage
@@ -129,12 +129,6 @@ class EmojiCreationService:
             "Successfully processed emoji generation job",
             extra={"job_id": job.job_id, "emoji_name": name},
         )
-
-    async def _detect_workspace_type(self) -> WorkspaceType:
-        """Detect workspace type based on available permissions."""
-        # For now, we assume standard workspace since Enterprise Grid is rare
-        # In production, this could check API permissions or be configured
-        return WorkspaceType.STANDARD
 
     async def process_emoji_generation_job_dict(self, job_data: Dict[str, Any]) -> None:
         """Generate emoji using dict payload, upload to Slack, and add reaction."""
