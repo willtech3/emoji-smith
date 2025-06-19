@@ -27,7 +27,12 @@ uv pip install -r requirements-dev.lock
 # CRITICAL: Always activate virtual environment before any commands
 source .venv/bin/activate  # Must be activated for correct Python version (3.12)
 
-# Code quality checks (run before committing)
+# Install pre-commit hooks (one-time setup)
+pre-commit install
+
+# Code quality checks (automatically run by pre-commit on git commit)
+pre-commit run --all-files  # Run manually on all files
+# Or run individual tools:
 black --check src/ tests/
 flake8 src/ tests/
 mypy src/
@@ -36,6 +41,31 @@ pytest --cov=src tests/
 
 # Local development
 python -m src.emojismith.dev_server  # Local FastAPI server for testing
+```
+
+## Pre-commit Hooks
+
+### Automated Code Quality Checks
+Pre-commit hooks are configured to ensure code quality before commits:
+- **black** - Automatically formats code to PEP 8 standards
+- **flake8** - Checks for code style and potential errors
+- **mypy** - Performs static type checking
+- **bandit** - Scans for security vulnerabilities
+- **pre-commit hooks** - Trailing whitespace, end-of-file fixes, YAML validation
+
+### Pre-commit Usage
+```bash
+# Install hooks (one-time setup after cloning)
+pre-commit install
+
+# Run hooks manually on all files
+pre-commit run --all-files
+
+# Run hooks on staged files (happens automatically on git commit)
+git commit -m "your message"  # hooks run automatically
+
+# Skip hooks temporarily (use sparingly)
+git commit -m "your message" --no-verify
 ```
 
 ## Code Style Guidelines

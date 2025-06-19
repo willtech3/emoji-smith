@@ -8,7 +8,6 @@ from aws_cdk import (
     aws_sqs as sqs,
     aws_iam as iam,
     aws_secretsmanager as secretsmanager,
-    aws_logs as logs,
     aws_ecr as ecr,
 )
 from constructs import Construct
@@ -17,7 +16,7 @@ from constructs import Construct
 class EmojiSmithStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        
+
         # Get image URI from context (required for container deployment)
         image_uri = self.node.try_get_context("imageUri")
         if not image_uri:
@@ -69,10 +68,12 @@ class EmojiSmithStack(Stack):
                         "cloudformation:ListStacks",
                     ],
                     resources=[
-                        f"arn:aws:cloudformation:{self.region}:{self.account}:stack/EmojiSmithStack/*"
+                        f"arn:aws:cloudformation:{self.region}:"
+                        f"{self.account}:stack/EmojiSmithStack/*"
                     ],
                 ),
-                # S3 permissions for CDK assets (CDK creates bucket for deployment artifacts)
+                # S3 permissions for CDK assets
+                # (CDK creates bucket for deployment artifacts)
                 iam.PolicyStatement(
                     actions=[
                         "s3:GetObject",
@@ -102,7 +103,8 @@ class EmojiSmithStack(Stack):
                         "ecr:CompleteLayerUpload",
                     ],
                     resources=[
-                        f"arn:aws:ecr:{self.region}:{self.account}:repository/emoji-smith"
+                        f"arn:aws:ecr:{self.region}:"
+                        f"{self.account}:repository/emoji-smith"
                     ],
                 ),
                 # Additional ECR permission that requires wildcard
@@ -113,9 +115,7 @@ class EmojiSmithStack(Stack):
                 # Specific IAM permissions for pass role (CDK needs this)
                 iam.PolicyStatement(
                     actions=["iam:PassRole"],
-                    resources=[
-                        f"arn:aws:iam::{self.account}:role/EmojiSmithStack-*"
-                    ],
+                    resources=[f"arn:aws:iam::{self.account}:role/EmojiSmithStack-*"],
                 ),
                 # CDK bootstrap permissions
                 iam.PolicyStatement(
@@ -124,7 +124,8 @@ class EmojiSmithStack(Stack):
                         "ssm:GetParameters",
                     ],
                     resources=[
-                        f"arn:aws:ssm:{self.region}:{self.account}:parameter/cdk-bootstrap/*"
+                        f"arn:aws:ssm:{self.region}:"
+                        f"{self.account}:parameter/cdk-bootstrap/*"
                     ],
                 ),
                 # STS permissions for CDK role assumption
@@ -132,9 +133,7 @@ class EmojiSmithStack(Stack):
                     actions=[
                         "sts:AssumeRole",
                     ],
-                    resources=[
-                        f"arn:aws:iam::{self.account}:role/cdk-*"
-                    ],
+                    resources=[f"arn:aws:iam::{self.account}:role/cdk-*"],
                 ),
                 # Read-only permissions to check existing resources
                 iam.PolicyStatement(
@@ -184,18 +183,21 @@ class EmojiSmithStack(Stack):
         self.processing_queue.grant_send_messages(lambda_role)
         self.processing_queue.grant_consume_messages(lambda_role)
 
-        # Secrets are now injected as environment variables at deploy time
-        # No runtime Secrets Manager access needed
+        # Secrets are now injected as environment variables at
+        # deploy time. No runtime Secrets Manager access needed
 
         # Create CloudWatch log groups
-        # Note: CDK will auto-generate function names like "EmojiSmithStack-EmojiSmithWebhook[hash]"
+        # Note: CDK will auto-generate function names like
+        # "EmojiSmithStack-EmojiSmithWebhook[hash]"
         # We'll let Lambda create the log groups automatically to avoid naming conflicts
 
         # Create webhook Lambda (package deployment for fast cold start)
         # Look for webhook package in common locations
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..")
+        )
         webhook_package_path = None
-        
+
         # Try project root first (most common)
         candidate_path = os.path.join(project_root, "webhook_package.zip")
         if os.path.exists(candidate_path):
@@ -207,8 +209,10 @@ class EmojiSmithStack(Stack):
                 webhook_package_path = candidate_path
             else:
                 # Fallback to relative path for backwards compatibility
-                webhook_package_path = os.path.join(os.path.dirname(__file__), "..", "..", "webhook_package.zip")
-        
+                webhook_package_path = os.path.join(
+                    os.path.dirname(__file__), "..", "..", "webhook_package.zip"
+                )
+
         self.webhook_lambda = _lambda.Function(
             self,
             "EmojiSmithWebhook",
@@ -225,12 +229,16 @@ class EmojiSmithStack(Stack):
                 "PYTHONOPTIMIZE": "1",
                 "PYTHONDONTWRITEBYTECODE": "1",
                 # Secrets injected at deploy time for performance
-                "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json("SLACK_BOT_TOKEN").unsafe_unwrap(),
-                "SLACK_SIGNING_SECRET": self.secrets.secret_value_from_json("SLACK_SIGNING_SECRET").unsafe_unwrap(),
+                "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json(
+                    "SLACK_BOT_TOKEN"
+                ).unsafe_unwrap(),
+                "SLACK_SIGNING_SECRET": self.secrets.secret_value_from_json(
+                    "SLACK_SIGNING_SECRET"
+                ).unsafe_unwrap(),
             },
         )
 
-        # Provisioned concurrency removed - lazy loading + memory optimization 
+        # Provisioned concurrency removed - lazy loading + memory optimization
         # should achieve sub-3s performance for low-volume usage (8-10 calls/day)
         # without the $9.30/month cost of keeping 3 warm containers
 
@@ -250,8 +258,8 @@ class EmojiSmithStack(Stack):
         self.processing_queue.grant_consume_messages(worker_lambda_role)
         self.processing_dlq.grant_consume_messages(worker_lambda_role)
 
-        # Secrets are now injected as environment variables at deploy time
-        # No runtime Secrets Manager access needed
+        # Secrets are now injected as environment variables at
+        # deploy time. No runtime Secrets Manager access needed
 
         # Use same container image for worker Lambda
         worker_lambda_code = _lambda.Code.from_ecr_image(
@@ -276,10 +284,18 @@ class EmojiSmithStack(Stack):
                 "SQS_QUEUE_URL": self.processing_queue.queue_url,
                 "LOG_LEVEL": "INFO",
                 # Secrets injected at deploy time for performance
-                "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json("SLACK_BOT_TOKEN").unsafe_unwrap(),
-                "SLACK_SIGNING_SECRET": self.secrets.secret_value_from_json("SLACK_SIGNING_SECRET").unsafe_unwrap(),
-                "OPENAI_API_KEY": self.secrets.secret_value_from_json("OPENAI_API_KEY").unsafe_unwrap(),
-                "OPENAI_CHAT_MODEL": self.secrets.secret_value_from_json("OPENAI_CHAT_MODEL").unsafe_unwrap(),
+                "SLACK_BOT_TOKEN": self.secrets.secret_value_from_json(
+                    "SLACK_BOT_TOKEN"
+                ).unsafe_unwrap(),
+                "SLACK_SIGNING_SECRET": self.secrets.secret_value_from_json(
+                    "SLACK_SIGNING_SECRET"
+                ).unsafe_unwrap(),
+                "OPENAI_API_KEY": self.secrets.secret_value_from_json(
+                    "OPENAI_API_KEY"
+                ).unsafe_unwrap(),
+                "OPENAI_CHAT_MODEL": self.secrets.secret_value_from_json(
+                    "OPENAI_CHAT_MODEL"
+                ).unsafe_unwrap(),
             },
         )
 
