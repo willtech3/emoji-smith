@@ -135,13 +135,13 @@ class TestEmojiSharingService:
     def test_workspace_type_is_stored(self, sharing_service):
         """Test service stores the workspace type provided at initialization."""
         # Default workspace type should be STANDARD
-        assert sharing_service._workspace_type == WorkspaceType.STANDARD
+        assert sharing_service.workspace_type == WorkspaceType.STANDARD
 
         # Test with explicit workspace type
         enterprise_service = EmojiSharingService(
             workspace_type=WorkspaceType.ENTERPRISE_GRID
         )
-        assert enterprise_service._workspace_type == WorkspaceType.ENTERPRISE_GRID
+        assert enterprise_service.workspace_type == WorkspaceType.ENTERPRISE_GRID
 
 
 class TestEmojiSharingContext:
