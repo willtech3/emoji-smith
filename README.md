@@ -118,6 +118,22 @@ aws secretsmanager create-secret --name "emoji-smith/production" --secret-string
 - **"mind blown explosion"** on brilliant ideas
 - **"typing furiously"** on coding discussions
 
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Default | Values |
+|----------|-------------|---------|---------|
+| `SLACK_BOT_TOKEN` | Slack bot user OAuth token | Required | `xoxb-...` |
+| `SLACK_SIGNING_SECRET` | Slack app signing secret | Required | `...` |
+| `OPENAI_API_KEY` | OpenAI API key for DALL-E | Required | `sk-...` |
+| `OPENAI_CHAT_MODEL` | Chat model for prompt enhancement | `o3` | `o3`, `gpt-4`, `gpt-3.5-turbo` |
+| `EMOJISMITH_FORCE_ENTERPRISE` | Force Enterprise Grid mode | `false` | `true`, `false` |
+| `SQS_QUEUE_URL` | AWS SQS queue URL (production) | None | AWS SQS URL |
+| `AWS_SECRETS_NAME` | AWS Secrets Manager name | None | `emoji-smith/production` |
+
+**Note on `EMOJISMITH_FORCE_ENTERPRISE`**: This environment variable allows you to simulate Enterprise Grid workspace behavior in development/testing. When set to `true`, the bot will attempt direct emoji uploads. Invalid values (anything other than `true` or `false`) will log a warning and default to `false`.
+
 ## 🛠️ Development
 
 ### Feature Branch Workflow
