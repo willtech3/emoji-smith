@@ -205,7 +205,7 @@ class TestSlackSignatureValidator:
     def test_validate_at_replay_window_boundary_returns_false(
         self, mock_time, validator
     ):
-        """Test validation at exactly replay window boundary is rejected for security."""
+        """Test validation at replay window boundary is rejected for security."""
         current_time = 1000000
         mock_time.return_value = current_time
 
@@ -406,7 +406,7 @@ class TestSlackSignatureValidator:
 
     @pytest.mark.parametrize("time_offset", [-300, 300])
     def test_replay_window_boundary_cases(self, validator, time_offset):
-        """Test replay window boundary cases - exactly at boundary should be rejected for security."""
+        """Test replay window boundary cases - boundary should be rejected."""
         with patch(
             "webhook.infrastructure.slack_signature_validator.time.time"
         ) as mock_time:
