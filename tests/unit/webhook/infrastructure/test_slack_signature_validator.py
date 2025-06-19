@@ -294,15 +294,17 @@ class TestSlackSignatureValidator:
 
         validator.validate(body, timestamp, invalid_signature)
         assert "Webhook signature validation failed" in caplog.text
-        
+
         # Check log records for structured logging
-        failure_records = [r for r in caplog.records if "signature validation failed" in r.getMessage()]
+        failure_records = [
+            r for r in caplog.records if "signature validation failed" in r.getMessage()
+        ]
         assert len(failure_records) == 1
-        
+
         log_record = failure_records[0]
         # Should log body hash in extra, not raw body
-        assert hasattr(log_record, 'body_hash')
-        assert hasattr(log_record, 'timestamp')
+        assert hasattr(log_record, "body_hash")
+        assert hasattr(log_record, "timestamp")
         # Should not log raw body anywhere
         assert '{"test": "data"}' not in caplog.text
 
@@ -419,7 +421,9 @@ class TestSlackSignatureValidator:
             signature = validator._compute_expected_signature(sig_basestring)
 
             result = validator.validate(body, timestamp, signature)
-            assert result is False  # Exactly at boundary should be rejected for security
+            assert (
+                result is False
+            )  # Exactly at boundary should be rejected for security
 
     @pytest.mark.parametrize("time_offset", [-301, 301])
     def test_replay_window_outside_boundary_cases(self, validator, time_offset):
