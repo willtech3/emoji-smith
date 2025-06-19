@@ -1,7 +1,6 @@
 """Slack file sharing repository implementation."""
 
 import logging
-from dataclasses import dataclass
 from typing import Optional, Any, Dict
 from io import BytesIO
 from PIL import Image
@@ -10,6 +9,7 @@ from slack_sdk.web.async_client import AsyncWebClient
 from slack_sdk.errors import SlackApiError
 
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+from emojismith.domain.repositories.file_sharing_repository import FileSharingResult
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
     InstructionVisibility,
@@ -18,16 +18,6 @@ from shared.domain.value_objects import (
 
 # Slack limits file uploads to 1–10 MB depending on plan; use safe lower bound.
 MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024  # 8 MiB
-
-
-@dataclass
-class FileSharingResult:
-    """Result of file sharing operation."""
-
-    success: bool
-    thread_ts: Optional[str] = None
-    file_url: Optional[str] = None
-    error: Optional[str] = None
 
 
 class SlackFileSharingRepository:

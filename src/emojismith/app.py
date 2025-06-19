@@ -14,6 +14,9 @@ from emojismith.infrastructure.image.pil_image_validator import PILImageValidato
 from emojismith.infrastructure.image.processing import PillowImageProcessor
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
+from emojismith.infrastructure.slack.slack_file_sharing import (
+    SlackFileSharingRepository,
+)
 
 # Profile imports to identify bottlenecks
 logger = logging.getLogger(__name__)
@@ -47,10 +50,6 @@ def create_worker_emoji_service() -> EmojiCreationService:
         openai_repo=openai_repo,
         image_processor=image_processor,
         emoji_validator=emoji_validation_service,
-    )
-
-    from emojismith.infrastructure.slack.slack_file_sharing import (
-        SlackFileSharingRepository,
     )
 
     file_sharing_repo = SlackFileSharingRepository(slack_client)
