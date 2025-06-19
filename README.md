@@ -196,8 +196,11 @@ emoji-smith/
 │   │   ├── openai/         # OpenAI API implementations
 │   │   └── aws/            # AWS service integrations
 │   ├── app.py             # FastAPI application factory
-│   ├── lambda_handler.py   # AWS Lambda entrypoint
 │   └── dev_server.py       # Local development server
+├── src/emojismith/infrastructure/aws/
+│   ├── lambda_handler.py   # AWS Lambda entrypoint
+│   ├── webhook_handler.py  # Slack webhook entrypoint
+│   └── worker_handler.py   # SQS worker entrypoint
 ├── tests/                  # 🧪 Test Suite (TDD)
 │   ├── unit/              # Domain and application logic tests
 │   ├── integration/       # Infrastructure integration tests

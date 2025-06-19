@@ -106,8 +106,8 @@ source = ["src"]
 omit = [
     "tests/*", 
     "src/emojismith/dev_server.py",
-    "src/webhook_handler.py",  # FastAPI wiring - covered by integration tests
-    "src/lambda_handler.py",   # Legacy handler to be removed
+    "src/emojismith/infrastructure/aws/webhook_handler.py",  # FastAPI wiring - covered by integration tests
+    "src/emojismith/infrastructure/aws/lambda_handler.py",   # Legacy handler to be removed
 ]
 
 [tool.coverage.report]
