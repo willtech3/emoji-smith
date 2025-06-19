@@ -1,14 +1,12 @@
 """Domain interface for signature validation."""
 
-from abc import ABC, abstractmethod
 from typing import Protocol
-
 from webhook.domain.webhook_request import WebhookRequest
 
 
 class SignatureValidator(Protocol):
     """Protocol for webhook signature validation.
-    
+
     This protocol defines the interface for validating webhook signatures
     according to the domain requirements, without being tied to any specific
     implementation details or external dependencies.

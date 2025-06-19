@@ -4,20 +4,18 @@ import hashlib
 import hmac
 import time
 import logging
-from typing import Optional
-
-from webhook.domain.signature_validator import SignatureValidator
 from webhook.domain.webhook_request import WebhookRequest
 
 
 class MissingSigningSecretError(Exception):
     """Raised when the Slack signing secret is not configured."""
+
     pass
 
 
 class SlackSignatureValidator:
     """Validates Slack webhook signatures using HMAC-SHA256.
-    
+
     This implementation follows Slack's signature verification algorithm
     and includes replay attack prevention with configurable time windows.
     """
@@ -40,7 +38,9 @@ class SlackSignatureValidator:
         self._replay_window = replay_window_seconds
         self._logger = logging.getLogger(__name__)
 
-    def validate(self, body: bytes, timestamp: str | None, signature: str | None) -> bool:
+    def validate(
+        self, body: bytes, timestamp: str | None, signature: str | None
+    ) -> bool:
         """Validate Slack webhook signature.
 
         Implements Slack's signature verification algorithm:
@@ -87,7 +87,7 @@ class SlackSignatureValidator:
             if not signature.startswith("v0="):
                 self._logger.warning("Signature does not have required v0= prefix")
                 return False
-            
+
             received_digest = signature[3:]  # Remove "v0=" prefix
             expected_digest = expected_signature[3:]  # Remove "v0=" prefix
 
@@ -98,7 +98,9 @@ class SlackSignatureValidator:
                 self._logger.warning(
                     "Webhook signature validation failed",
                     extra={
-                        "body_hash": hashlib.sha256(body).hexdigest()[:8],  # Safe logging
+                        "body_hash": hashlib.sha256(body).hexdigest()[
+                            :8
+                        ],  # Safe logging
                         "timestamp": timestamp,
                     },
                 )
