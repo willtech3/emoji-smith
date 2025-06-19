@@ -13,6 +13,11 @@ from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
 class TestAWSSecretsLoader:
     """Test the AWSSecretsLoader class."""
 
+    def setup_method(self):
+        """Reset singleton before each test."""
+        AWSSecretsLoader._instance = None
+        AWSSecretsLoader._loaded = False
+
     def test_skips_when_secrets_name_not_set(self, caplog):
         """Should skip loading when SECRETS_NAME is not set."""
         loader = AWSSecretsLoader()

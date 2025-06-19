@@ -46,6 +46,7 @@ def get_app() -> "FastAPI":
 
         total_time = time.time() - start_total
         logger.info(f"✅ Total app initialization: {total_time:.3f}s")
+    # Cast is needed because mypy can't infer the type through the lazy import
     return cast("FastAPI", _app)
 
 

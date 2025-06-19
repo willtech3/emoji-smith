@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -12,9 +12,19 @@ from botocore.exceptions import ClientError
 class AWSSecretsLoader:
     """Load secrets from AWS Secrets Manager."""
 
+    _instance: Optional[AWSSecretsLoader] = None
+    _loaded: bool = False
+
+    def __new__(cls, secrets_name: str | None = None) -> AWSSecretsLoader:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, secrets_name: str | None = None) -> None:
-        self._secrets_name = secrets_name or os.environ.get("SECRETS_NAME")
-        self._logger = logging.getLogger(__name__)
+        if not self._loaded:
+            self._secrets_name = secrets_name or os.environ.get("SECRETS_NAME")
+            self._logger = logging.getLogger(__name__)
+            self.__class__._loaded = True
 
     def load_secrets(self) -> Dict[str, Any]:
         """Load secrets and inject them into environment variables."""

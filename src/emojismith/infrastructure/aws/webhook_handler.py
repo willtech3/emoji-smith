@@ -63,7 +63,13 @@ def create_webhook_handler() -> tuple[WebhookHandler, WebhookSecurityService]:
 def create_app() -> FastAPI:
     """Create FastAPI application for webhook processing."""
     if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-        _secrets_loader.load_secrets()
+        try:
+            _secrets_loader.load_secrets()
+        except Exception as e:
+            logger.error(
+                f"Failed to load secrets, continuing with environment variables: {e}"
+            )
+            # Continue with existing environment variables
 
     app = FastAPI(
         title="Emoji Smith Webhook",
