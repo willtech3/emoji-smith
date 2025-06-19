@@ -195,8 +195,10 @@ emoji-smith/
 │   │   ├── slack/          # Slack API implementations
 │   │   ├── openai/         # OpenAI API implementations
 │   │   └── aws/            # AWS service integrations
+│   │       ├── lambda_handler.py   # AWS Lambda entrypoint
+│   │       ├── webhook_handler.py  # FastAPI webhook handler
+│   │       └── worker_handler.py   # SQS worker handler
 │   ├── app.py             # FastAPI application factory
-│   ├── lambda_handler.py   # AWS Lambda entrypoint
 │   └── dev_server.py       # Local development server
 ├── tests/                  # 🧪 Test Suite (TDD)
 │   ├── unit/              # Domain and application logic tests

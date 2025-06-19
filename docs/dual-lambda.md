@@ -21,7 +21,7 @@ Emoji Smith uses a dual Lambda architecture to optimize performance and cost:
 ```bash
 # Terminal 1: Start webhook server
 source .venv/bin/activate
-uvicorn src.webhook_handler:app --reload --port 8000
+uvicorn emojismith.infrastructure.aws.webhook_handler:app --reload --port 8000
 
 # Update Slack app webhook URL to ngrok tunnel
 ngrok http 8000
