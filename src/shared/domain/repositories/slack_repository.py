@@ -7,9 +7,9 @@ from typing import Any, Dict, Protocol, runtime_checkable
 class SlackModalRepository(Protocol):
     """Protocol for Slack modal operations following ISP principles."""
 
-    async def open_modal(self, trigger_id: str, view: Dict[str, Any]) -> None: 
+    async def open_modal(self, trigger_id: str, view: Dict[str, Any]) -> None:
         """Open a modal dialog in Slack.
-        
+
         Args:
             trigger_id: Slack trigger ID from user interaction
             view: Modal view definition following Slack Block Kit format
@@ -20,9 +20,9 @@ class SlackModalRepository(Protocol):
 class SlackEmojiRepository(Protocol):
     """Protocol for Slack emoji operations following ISP principles."""
 
-    async def upload_emoji(self, name: str, image_data: bytes) -> bool: 
+    async def upload_emoji(self, name: str, image_data: bytes) -> bool:
         """Upload custom emoji to Slack workspace.
-        
+
         Returns:
             True if upload successful, False otherwise
         """

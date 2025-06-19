@@ -27,12 +27,12 @@ def test_interface_composition() -> None:
 def test_runtime_checkable_protocols() -> None:
     """Verify protocols support runtime type checking."""
     from unittest.mock import Mock
-    
+
     # Mock implementations should satisfy protocol checks
     modal_mock = Mock()
     modal_mock.open_modal = Mock()
     assert isinstance(modal_mock, SlackModalRepository)
-    
+
     emoji_mock = Mock()
     emoji_mock.upload_emoji = Mock()
     emoji_mock.add_emoji_reaction = Mock()
