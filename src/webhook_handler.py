@@ -45,7 +45,9 @@ def create_webhook_handler() -> tuple[WebhookHandler, WebhookSecurityService]:
     job_queue = SQSJobQueue(queue_url=queue_url)
 
     # Create webhook security service
-    signature_validator = SlackSignatureValidator(signing_secret=slack_signing_secret.encode('utf-8'))
+    signature_validator = SlackSignatureValidator(
+        signing_secret=slack_signing_secret.encode("utf-8")
+    )
     security_service = WebhookSecurityService(signature_validator)
 
     # Create webhook handler
