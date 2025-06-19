@@ -104,7 +104,7 @@ asyncio_mode = "auto"
 [tool.coverage.run]
 source = ["src"]
 omit = [
-    "tests/*", 
+    "tests/*",
     "src/emojismith/dev_server.py",
     "src/emojismith/infrastructure/aws/webhook_handler.py",  # FastAPI wiring
     "src/emojismith/infrastructure/aws/lambda_handler.py",   # Lambda entrypoint

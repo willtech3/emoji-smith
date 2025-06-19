@@ -14,3 +14,34 @@ repos:
     hooks:
       - id: black
         language_version: python3.12
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: ['--config=.flake8']
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        args: ['--config-file=pyproject.toml']
+        files: '^src/'
+        additional_dependencies:
+          - types-requests
+          - types-boto3
+          - types-Pillow
+          - slack-sdk
+          - python-dotenv
+          - openai
+          - fastapi
+          - uvicorn
+          - mangum
+
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: ['-s', 'B101,B104']
+        files: '^src/.*\.py$'
+        exclude: '^tests/'
