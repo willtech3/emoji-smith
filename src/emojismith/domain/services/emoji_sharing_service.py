@@ -68,6 +68,15 @@ class EmojiSharingService:
         """
         self._workspace_type = workspace_type
 
+    @property
+    def workspace_type(self) -> WorkspaceType:
+        """Get the workspace type.
+
+        Returns:
+            The type of Slack workspace.
+        """
+        return self._workspace_type
+
     def determine_sharing_strategy(
         self, context: EmojiSharingContext
     ) -> SharingStrategy:

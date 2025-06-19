@@ -61,6 +61,15 @@ def create_worker_emoji_service() -> EmojiCreationService:
     # Determine workspace type from environment
     workspace_type = WorkspaceType.STANDARD
     force_enterprise = os.getenv("EMOJISMITH_FORCE_ENTERPRISE", "false")
+
+    # Validate environment variable value
+    if force_enterprise.lower() not in ("true", "false"):
+        logger.warning(
+            f"Invalid value for EMOJISMITH_FORCE_ENTERPRISE: '{force_enterprise}'. "
+            "Expected 'true' or 'false'. Defaulting to 'false'."
+        )
+        force_enterprise = "false"
+
     if force_enterprise.lower() == "true":
         workspace_type = WorkspaceType.ENTERPRISE_GRID
 

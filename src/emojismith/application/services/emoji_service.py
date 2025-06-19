@@ -55,7 +55,7 @@ class EmojiCreationService:
         emoji = await self._emoji_generator.generate(spec, name)
 
         # Get workspace type from sharing service
-        workspace_type = self._sharing_service._workspace_type
+        workspace_type = self._sharing_service.workspace_type
 
         # Create sharing context
         from shared.domain.entities.slack_message import SlackMessage
