@@ -21,4 +21,4 @@ RUN pip install --no-cache-dir \
 COPY src/ ${LAMBDA_TASK_ROOT}/
 
 # Default command
-CMD ["lambda_handler.handler"]
+CMD ["emojismith.infrastructure.aws.lambda_handler.handler"]

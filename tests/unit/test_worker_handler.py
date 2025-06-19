@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any
 
-from src.worker_handler import handler
+from emojismith.infrastructure.aws.worker_handler import handler
 
 
 @pytest.fixture
@@ -82,7 +82,9 @@ class TestWorkerHandler:
     )
     def test_lambda_handler_success(self, sqs_event, context):
         """Test successful processing of SQS message."""
-        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
+        with patch(
+            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
+        ) as mock_create:
             with patch("asyncio.run") as mock_run:
                 mock_create.return_value = Mock(process_emoji_generation_job=Mock())
                 mock_run.return_value = None
@@ -102,7 +104,9 @@ class TestWorkerHandler:
     )
     def test_worker_never_opens_modal(self, sqs_event, context):
         """Ensure worker emoji service does not open Slack modals."""
-        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
+        with patch(
+            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
+        ) as mock_create:
             service = Mock(process_emoji_generation_job=Mock())
             service._slack_repo = Mock(open_modal=Mock())
             mock_create.return_value = service
@@ -131,7 +135,9 @@ class TestWorkerHandler:
             ]
         }
 
-        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
+        with patch(
+            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
+        ) as mock_create:
             mock_create.return_value = (None, None)
 
             result = handler(invalid_event, context)
@@ -150,7 +156,9 @@ class TestWorkerHandler:
     )
     def test_lambda_handler_processing_error(self, sqs_event, context):
         """Test handling of processing errors."""
-        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
+        with patch(
+            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
+        ) as mock_create:
             with patch("asyncio.run") as mock_run:
                 mock_create.return_value = Mock(
                     process_emoji_generation_job=Mock(
@@ -190,7 +198,9 @@ class TestWorkerHandler:
             ]
         }
 
-        with patch("src.worker_handler.create_worker_emoji_service") as mock_create:
+        with patch(
+            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
+        ) as mock_create:
             mock_create.return_value = (None, None)
 
             result = handler(incomplete_event, context)
@@ -211,9 +221,11 @@ class TestWorkerHandler:
                     )
                 }
 
-                from src.worker_handler import _load_secrets_from_aws
+                from emojismith.infrastructure.aws.secrets_loader import (
+                    AWSSecretsLoader,
+                )
 
-                _load_secrets_from_aws()
+                AWSSecretsLoader().load_secrets()
 
                 assert os.environ["SLACK_BOT_TOKEN"] == "xoxb-test"
                 assert os.environ["OPENAI_API_KEY"] == "sk-test"
@@ -221,7 +233,9 @@ class TestWorkerHandler:
     def test_secrets_loading_no_secrets_name(self):
         """Test graceful handling when SECRETS_NAME is not set."""
         with patch.dict("os.environ", {}, clear=True):
-            from src.worker_handler import _load_secrets_from_aws
+            from emojismith.infrastructure.aws.secrets_loader import (
+                AWSSecretsLoader,
+            )
 
             # Should not raise an exception
-            _load_secrets_from_aws()
+            AWSSecretsLoader().load_secrets()

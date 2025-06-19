@@ -16,10 +16,14 @@ from webhook.infrastructure.sqs_job_queue import SQSJobQueue
 from webhook.domain.webhook_request import WebhookRequest
 from webhook.security.webhook_security_service import WebhookSecurityService
 from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
+from .secrets_loader import AWSSecretsLoader
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Global secrets loader
+_secrets_loader = AWSSecretsLoader()
 
 
 def create_webhook_handler() -> tuple[WebhookHandler, WebhookSecurityService]:
@@ -58,6 +62,9 @@ def create_webhook_handler() -> tuple[WebhookHandler, WebhookSecurityService]:
 
 def create_app() -> FastAPI:
     """Create FastAPI application for webhook processing."""
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        _secrets_loader.load_secrets()
+
     app = FastAPI(
         title="Emoji Smith Webhook",
         description="Webhook handler for Slack emoji creation",
