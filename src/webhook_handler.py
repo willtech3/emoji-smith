@@ -15,7 +15,7 @@ from webhook.infrastructure.slack_api import SlackAPIRepository
 from webhook.infrastructure.sqs_job_queue import SQSJobQueue
 from webhook.domain.webhook_request import WebhookRequest
 from webhook.security.webhook_security_service import WebhookSecurityService
-from webhook.security.slack_signature_validator import SlackSignatureValidator
+from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -45,7 +45,9 @@ def create_webhook_handler() -> tuple[WebhookHandler, WebhookSecurityService]:
     job_queue = SQSJobQueue(queue_url=queue_url)
 
     # Create webhook security service
-    signature_validator = SlackSignatureValidator(signing_secret=slack_signing_secret)
+    signature_validator = SlackSignatureValidator(
+        signing_secret=slack_signing_secret.encode("utf-8")
+    )
     security_service = WebhookSecurityService(signature_validator)
 
     # Create webhook handler

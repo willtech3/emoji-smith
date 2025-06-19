@@ -5,10 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from webhook.domain.webhook_request import WebhookRequest
-from webhook.infrastructure.slack_signature_validator import (
-    SlackSignatureValidator,
-    MissingSigningSecretError,
-)
+from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
 
 
 class TestSlackSignatureValidator:
@@ -205,12 +202,14 @@ class TestSlackSignatureValidator:
         assert signature1 != signature2
 
     @patch("webhook.infrastructure.slack_signature_validator.time.time")
-    def test_validate_at_replay_window_boundary_returns_true(self, mock_time, validator):
-        """Test validation at exactly replay window boundary is accepted."""
+    def test_validate_at_replay_window_boundary_returns_false(
+        self, mock_time, validator
+    ):
+        """Test validation at replay window boundary is rejected for security."""
         current_time = 1000000
         mock_time.return_value = current_time
 
-        # Test at boundary (exactly at window limit)
+        # Test at boundary (exactly at window limit) - should be rejected
         boundary_timestamp = str(
             current_time - SlackSignatureValidator.DEFAULT_REPLAY_WINDOW
         )
@@ -221,10 +220,12 @@ class TestSlackSignatureValidator:
         signature = validator._compute_expected_signature(sig_basestring)
 
         result = validator.validate(body, boundary_timestamp, signature)
-        assert result is True
+        assert result is False
 
     @patch("webhook.infrastructure.slack_signature_validator.time.time")
-    def test_validate_beyond_replay_window_boundary_returns_false(self, mock_time, validator):
+    def test_validate_beyond_replay_window_boundary_returns_false(
+        self, mock_time, validator
+    ):
         """Test validation beyond replay window boundary is rejected."""
         current_time = 1000000
         mock_time.return_value = current_time
@@ -283,7 +284,9 @@ class TestSlackSignatureValidator:
         validator.validate(body, invalid_timestamp, signature)
         assert "Invalid timestamp format" in caplog.text
 
-    def test_validate_logs_warning_for_signature_mismatch_with_safe_logging(self, validator, caplog):
+    def test_validate_logs_warning_for_signature_mismatch_with_safe_logging(
+        self, validator, caplog
+    ):
         """Test that signature validation failure is logged safely without PII."""
         body = b'{"test": "data"}'
         timestamp = str(int(time.time()))
@@ -291,9 +294,18 @@ class TestSlackSignatureValidator:
 
         validator.validate(body, timestamp, invalid_signature)
         assert "Webhook signature validation failed" in caplog.text
-        # Should log body hash, not raw body
-        assert "body_hash" in caplog.text
-        # Should not log raw body
+
+        # Check log records for structured logging
+        failure_records = [
+            r for r in caplog.records if "signature validation failed" in r.getMessage()
+        ]
+        assert len(failure_records) == 1
+
+        log_record = failure_records[0]
+        # Should log body hash in extra, not raw body
+        assert hasattr(log_record, "body_hash")
+        assert hasattr(log_record, "timestamp")
+        # Should not log raw body anywhere
         assert '{"test": "data"}' not in caplog.text
 
     def test_validate_logs_warning_for_missing_v0_prefix(self, validator, caplog):
@@ -376,50 +388,58 @@ class TestSlackSignatureValidator:
     @pytest.mark.parametrize("time_offset", [0, -299, 299])
     def test_replay_window_edge_cases(self, validator, time_offset):
         """Test replay window edge cases using parametrize."""
-        with patch("webhook.infrastructure.slack_signature_validator.time.time") as mock_time:
+        with patch(
+            "webhook.infrastructure.slack_signature_validator.time.time"
+        ) as mock_time:
             current_time = 1000000
             mock_time.return_value = current_time
-            
+
             timestamp = str(current_time + time_offset)
             body = b'{"test": "data"}'
-            
+
             # Create valid signature
             sig_basestring = f"v0:{timestamp}:".encode() + body
             signature = validator._compute_expected_signature(sig_basestring)
-            
+
             result = validator.validate(body, timestamp, signature)
             assert result is True  # All these should be within window
 
     @pytest.mark.parametrize("time_offset", [-300, 300])
     def test_replay_window_boundary_cases(self, validator, time_offset):
-        """Test replay window boundary cases using parametrize."""
-        with patch("webhook.infrastructure.slack_signature_validator.time.time") as mock_time:
+        """Test replay window boundary cases - boundary should be rejected."""
+        with patch(
+            "webhook.infrastructure.slack_signature_validator.time.time"
+        ) as mock_time:
             current_time = 1000000
             mock_time.return_value = current_time
-            
+
             timestamp = str(current_time + time_offset)
             body = b'{"test": "data"}'
-            
+
             # Create valid signature
             sig_basestring = f"v0:{timestamp}:".encode() + body
             signature = validator._compute_expected_signature(sig_basestring)
-            
+
             result = validator.validate(body, timestamp, signature)
-            assert result is True  # Exactly at boundary should be accepted
+            assert (
+                result is False
+            )  # Exactly at boundary should be rejected for security
 
     @pytest.mark.parametrize("time_offset", [-301, 301])
     def test_replay_window_outside_boundary_cases(self, validator, time_offset):
         """Test replay window outside boundary cases using parametrize."""
-        with patch("webhook.infrastructure.slack_signature_validator.time.time") as mock_time:
+        with patch(
+            "webhook.infrastructure.slack_signature_validator.time.time"
+        ) as mock_time:
             current_time = 1000000
             mock_time.return_value = current_time
-            
+
             timestamp = str(current_time + time_offset)
             body = b'{"test": "data"}'
-            
+
             # Create valid signature
             sig_basestring = f"v0:{timestamp}:".encode() + body
             signature = validator._compute_expected_signature(sig_basestring)
-            
+
             result = validator.validate(body, timestamp, signature)
             assert result is False  # Outside boundary should be rejected
