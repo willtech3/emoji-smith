@@ -6,7 +6,7 @@ import logging
 import os
 from typing import Any, Tuple
 
-from mangum import Mangum  # type: ignore[import]
+from mangum import Mangum
 from slack_sdk.web.async_client import AsyncWebClient
 
 from webhook.handler import WebhookHandler
