@@ -83,11 +83,3 @@ def create_worker_emoji_service() -> EmojiCreationService:
         file_sharing_repo=file_sharing_repo,
         sharing_service=sharing_service,
     )
-
-
-def create_app():  # type: ignore[no-untyped-def]
-    """Placeholder function - worker Lambda shouldn't need FastAPI app."""
-    # TODO: Remove this function when worker Lambda is converted to SQS event handler
-    from fastapi import FastAPI
-
-    return FastAPI(title="Worker Lambda - Should not receive HTTP requests")
