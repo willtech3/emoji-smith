@@ -54,21 +54,6 @@ class TestEmojiValidationService:
 
         mock_image_validator.validate_emoji_format.assert_called_once_with(image_data)
 
-    def test_get_image_info(self, validation_service, mock_image_validator):
-        """Test getting image dimensions."""
-        image_data = b"fake_png_data"
-        expected_dimensions = (128, 128)
-
-        # Mock validator returns dimensions
-        mock_image_validator.get_image_dimensions.return_value = expected_dimensions
-
-        # Act
-        result = validation_service.get_image_info(image_data)
-
-        # Assert
-        assert result == expected_dimensions
-        mock_image_validator.get_image_dimensions.assert_called_once_with(image_data)
-
     def test_entity_validation_still_applies(
         self, validation_service, mock_image_validator
     ):

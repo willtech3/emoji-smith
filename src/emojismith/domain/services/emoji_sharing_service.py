@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Protocol
 
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from shared.domain.entities.slack_message import SlackMessage
@@ -27,36 +26,6 @@ class EmojiSharingContext:
     workspace_type: WorkspaceType
 
 
-class SharingStrategy(Protocol):
-    """Protocol for emoji sharing strategies."""
-
-    async def share(self, context: EmojiSharingContext) -> None:
-        """Share the emoji according to the strategy."""
-        ...
-
-
-@dataclass
-class DirectEmojiUploadStrategy:
-    """Strategy for direct emoji upload (Enterprise Grid only)."""
-
-    async def share(self, context: EmojiSharingContext) -> None:
-        """Upload emoji directly to workspace."""
-        # Implementation delegated to infrastructure layer
-        pass
-
-
-@dataclass
-class FileSharingFallbackStrategy:
-    """Strategy for sharing emoji via file upload with instructions."""
-
-    preferences: EmojiSharingPreferences
-
-    async def share(self, context: EmojiSharingContext) -> None:
-        """Share emoji as file with upload instructions."""
-        # Implementation delegated to infrastructure layer
-        pass
-
-
 class EmojiSharingService:
     """Domain service that determines appropriate sharing strategy."""
 
@@ -77,12 +46,13 @@ class EmojiSharingService:
         """
         return self._workspace_type
 
-    def determine_sharing_strategy(
-        self, context: EmojiSharingContext
-    ) -> SharingStrategy:
-        """Determine the best sharing strategy based on workspace capabilities."""
-        if context.workspace_type == WorkspaceType.ENTERPRISE_GRID:
-            return DirectEmojiUploadStrategy()
-        else:
-            # Free and Standard workspaces use file sharing fallback
-            return FileSharingFallbackStrategy(preferences=context.preferences)
+    def determine_sharing_strategy(self, context: EmojiSharingContext) -> None:
+        """Determine the best sharing strategy based on workspace capabilities.
+
+        Note: This method is currently not used as the sharing logic is
+        implemented directly in the application layer. It's kept for potential
+        future use if we decide to reintroduce the strategy pattern.
+        """
+        # The actual sharing logic is implemented in EmojiCreationService
+        # based on the workspace type
+        pass
