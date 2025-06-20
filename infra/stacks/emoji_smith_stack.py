@@ -217,7 +217,7 @@ class EmojiSmithStack(Stack):
             self,
             "EmojiSmithWebhook",
             code=_lambda.Code.from_asset(webhook_package_path),
-            handler="emojismith.infrastructure.aws.webhook_handler.handler",
+            handler="webhook_handler.handler",
             runtime=_lambda.Runtime.PYTHON_3_12,
             timeout=Duration.seconds(30),  # Fast webhook processing
             memory_size=512,  # Reduced memory for minimal package
