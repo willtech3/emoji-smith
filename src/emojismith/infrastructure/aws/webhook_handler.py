@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Tuple
+from typing import Any, Tuple
 
-from mangum import Mangum
+from mangum import Mangum  # type: ignore[import]
 from slack_sdk.web.async_client import AsyncWebClient
 
 from webhook.handler import WebhookHandler
@@ -61,7 +61,7 @@ if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
         )
 
 
-def _create_app() -> object:
+def _create_app() -> Any:
     from emojismith.presentation.web.slack_webhook_api import create_webhook_api
     from emojismith.application.create_webhook_app import create_webhook_app
 
