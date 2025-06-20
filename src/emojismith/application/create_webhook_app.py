@@ -1,19 +1,14 @@
-"""Application layer factory for creating the webhook FastAPI app."""
+"""Application layer factory for the Slack webhook handler."""
 
-from fastapi import FastAPI
-
-from emojismith.infrastructure.aws.webhook_handler import (
-    create_app as create_infrastructure_app,
+from emojismith.application.handlers.slack_webhook_handler import (
+    SlackEventProcessor,
+    SlackWebhookHandler,
 )
+from emojismith.infrastructure.aws.webhook_handler import create_webhook_handler
 
 
-def create_webhook_app() -> FastAPI:
-    """
-    Create the webhook FastAPI application.
-
-    This is the application layer entry point that should be used by
-    presentation layer components (dev server, tests, etc).
-    """
-    # For now, delegate to the infrastructure implementation
-    # In the future, this could orchestrate multiple infrastructure components
-    return create_infrastructure_app()
+def create_webhook_app() -> SlackWebhookHandler:
+    """Construct the application-level Slack webhook handler."""
+    webhook_handler, security_service = create_webhook_handler()
+    event_processor = SlackEventProcessor(webhook_handler)
+    return SlackWebhookHandler(security_service, event_processor)

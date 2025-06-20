@@ -164,7 +164,7 @@ file_sharing_repo = SlackFileSharingRepository(slack_client)
 # pass `file_sharing_repo` into `EmojiCreationService`
 ```
 
-If you don’t provide one, `create_app()` auto-constructs a default instance for the dev server.
+If you don’t provide one, `create_webhook_app()` auto-constructs a default instance for the dev server.
 
 ### Quality Checks
 
