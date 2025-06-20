@@ -16,7 +16,7 @@ from webhook.infrastructure.sqs_job_queue import SQSJobQueue
 from webhook.domain.webhook_request import WebhookRequest
 from webhook.security.webhook_security_service import WebhookSecurityService
 from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
-from .secrets_loader import AWSSecretsLoader
+from secrets_loader import AWSSecretsLoader  # type: ignore[import-not-found]
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
