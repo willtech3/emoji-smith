@@ -38,14 +38,3 @@ class EmojiValidationService:
         # Create and return the domain entity
         # The entity itself handles basic validation (non-empty data, size limits)
         return GeneratedEmoji(image_data=image_data, name=name)
-
-    def get_image_info(self, image_data: bytes) -> tuple[int, int]:
-        """Get image dimensions for informational purposes.
-
-        Args:
-            image_data: Raw image bytes to analyze
-
-        Returns:
-            Tuple of (width, height) in pixels
-        """
-        return self._image_validator.get_image_dimensions(image_data)

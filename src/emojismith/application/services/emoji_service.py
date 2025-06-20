@@ -85,9 +85,6 @@ class EmojiCreationService:
             workspace_type=workspace_type,
         )
 
-        # Determine sharing strategy (for future use with strategy pattern)
-        _ = self._sharing_service.determine_sharing_strategy(context)
-
         if workspace_type == WorkspaceType.ENTERPRISE_GRID:
             # Try direct upload for Enterprise Grid
             uploaded = await self._slack_repo.upload_emoji(

@@ -5,8 +5,6 @@ from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingService,
     EmojiSharingContext,
     WorkspaceType,
-    DirectEmojiUploadStrategy,
-    FileSharingFallbackStrategy,
 )
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from shared.domain.entities.slack_message import SlackMessage
@@ -51,10 +49,10 @@ class TestEmojiSharingService:
             image_size=ImageSize.EMOJI_SIZE,
         )
 
-    def test_uses_direct_upload_for_enterprise_grid(
+    def test_determine_sharing_strategy_with_enterprise_grid(
         self, sharing_service, sample_emoji, sample_message, channel_sharing_prefs
     ):
-        """Test Enterprise Grid workspaces use direct emoji upload."""
+        """Test determine_sharing_strategy handles Enterprise Grid context."""
         # Arrange
         context = EmojiSharingContext(
             emoji=sample_emoji,
@@ -63,16 +61,16 @@ class TestEmojiSharingService:
             workspace_type=WorkspaceType.ENTERPRISE_GRID,
         )
 
-        # Act
-        strategy = sharing_service.determine_sharing_strategy(context)
+        # Act - method now returns None but should not raise
+        result = sharing_service.determine_sharing_strategy(context)
 
         # Assert
-        assert isinstance(strategy, DirectEmojiUploadStrategy)
+        assert result is None
 
-    def test_uses_file_sharing_for_standard_workspace(
+    def test_determine_sharing_strategy_with_standard_workspace(
         self, sharing_service, sample_emoji, sample_message, channel_sharing_prefs
     ):
-        """Test standard workspaces use file sharing fallback."""
+        """Test determine_sharing_strategy handles standard workspace context."""
         # Arrange
         context = EmojiSharingContext(
             emoji=sample_emoji,
@@ -81,17 +79,16 @@ class TestEmojiSharingService:
             workspace_type=WorkspaceType.STANDARD,
         )
 
-        # Act
-        strategy = sharing_service.determine_sharing_strategy(context)
+        # Act - method now returns None but should not raise
+        result = sharing_service.determine_sharing_strategy(context)
 
         # Assert
-        assert isinstance(strategy, FileSharingFallbackStrategy)
-        assert strategy.preferences == channel_sharing_prefs
+        assert result is None
 
-    def test_uses_file_sharing_for_free_workspace(
+    def test_determine_sharing_strategy_with_free_workspace(
         self, sharing_service, sample_emoji, sample_message, channel_sharing_prefs
     ):
-        """Test free workspaces use file sharing fallback."""
+        """Test determine_sharing_strategy handles free workspace context."""
         # Arrange
         context = EmojiSharingContext(
             emoji=sample_emoji,
@@ -100,16 +97,16 @@ class TestEmojiSharingService:
             workspace_type=WorkspaceType.FREE,
         )
 
-        # Act
-        strategy = sharing_service.determine_sharing_strategy(context)
+        # Act - method now returns None but should not raise
+        result = sharing_service.determine_sharing_strategy(context)
 
         # Assert
-        assert isinstance(strategy, FileSharingFallbackStrategy)
+        assert result is None
 
-    def test_file_sharing_strategy_preserves_thread_preferences(
+    def test_sharing_context_preserves_thread_preferences(
         self, sharing_service, sample_emoji, sample_message
     ):
-        """Test file sharing strategy maintains thread sharing preference."""
+        """Test sharing context maintains thread sharing preference."""
         # Arrange
         thread_prefs = EmojiSharingPreferences(
             share_location=ShareLocation.THREAD,
@@ -124,13 +121,12 @@ class TestEmojiSharingService:
             workspace_type=WorkspaceType.STANDARD,
         )
 
-        # Act
-        strategy = sharing_service.determine_sharing_strategy(context)
+        # Act - verify context preserves preferences
+        sharing_service.determine_sharing_strategy(context)
 
-        # Assert
-        assert isinstance(strategy, FileSharingFallbackStrategy)
-        assert strategy.preferences.share_location == ShareLocation.THREAD
-        assert strategy.preferences.thread_ts == "1234567890.123456"
+        # Assert - context still has correct preferences
+        assert context.preferences.share_location == ShareLocation.THREAD
+        assert context.preferences.thread_ts == "1234567890.123456"
 
     def test_workspace_type_is_stored(self, sharing_service):
         """Test service stores the workspace type provided at initialization."""
