@@ -133,9 +133,15 @@ src/
 
 ### Known Architecture Constraints
 
-#### Lambda Handler Location
-- Webhook handler MUST remain at `src/emojismith/infrastructure/aws/webhook_handler.py`
-- Worker handler MUST remain at `src/emojismith/infrastructure/aws/worker_handler.py`
+#### Lambda Handler Locations (Dual Architecture)
+- **Webhook handler**: `src/emojismith/infrastructure/aws/webhook_handler.py`
+  - Handles Slack events with < 3s response time
+  - Minimal dependencies for fast cold starts
+  - Queues jobs to SQS for async processing
+- **Worker handler**: `src/emojismith/infrastructure/aws/worker_handler.py`
+  - Processes emoji generation from SQS queue
+  - Contains full dependencies including image processing
+  - Can take 10-15s for complex generations
 - These locations are hardcoded in CDK deployment configuration
 
 #### Environment Variables
@@ -296,22 +302,32 @@ class TestEmojiGenerator:
 
 ## 📦 Deployment
 
-### Architecture Overview
+### Architecture Overview (Dual Lambda)
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Slack     │────▶│   Webhook    │────▶│    Worker    │
-│   Events    │     │   Lambda     │ SQS │   Lambda     │
-└─────────────┘     └──────────────┘     └──────────────┘
-                           │                      │
-                           └──────────────────────┘
-                                      │
-                              ┌───────▼────────┐
-                              │  AWS Services  │
-                              │  - Secrets Mgr │
-                              │  - CloudWatch  │
-                              └────────────────┘
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Slack     │────▶│   Webhook    │────▶│     SQS      │────▶│    Worker    │
+│   Events    │     │   Lambda     │     │    Queue     │     │   Lambda     │
+└─────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+                           │                                            │
+                           │                                            │
+                           └────────────────────────────────────────────┘
+                                                │
+                                        ┌───────▼────────┐
+                                        │  AWS Services  │
+                                        │ - Secrets Mgr  │
+                                        │ - CloudWatch   │
+                                        │ - OpenAI API   │
+                                        └────────────────┘
 ```
+
+**Benefits of Dual Lambda Architecture:**
+- Webhook Lambda responds within Slack's 3-second timeout
+- Worker Lambda handles time-consuming image generation
+- Better cold start performance with minimal webhook dependencies
+- Scalable and resilient with SQS message queuing
+
+See [Dual Lambda Architecture](./docs/architecture/dual-lambda.md) for details.
 
 ### Deployment Pipeline
 

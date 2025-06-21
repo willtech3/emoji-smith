@@ -1,6 +1,6 @@
 # Emoji Smith 🎨
 
-[![Coverage Status](https://codecov.io/gh/willtech3/emoji-smith/branch/main/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/willtech3/emoji-smith)
+[![Coverage Status](https://codecov.io/gh/willtech3/emoji-smith/branch/main/graph/badge.svg)](https://codecov.io/gh/willtech3/emoji-smith)
 
 > **AI-powered custom emoji generator for Slack workspaces**
 
@@ -20,12 +20,16 @@ Emoji Smith is a Slack bot that automatically generates custom emojis using Open
 graph LR
     A[Slack Message] --> B[Right-Click Action]
     B --> C[Modal Dialog]
-    C --> D[AWS Lambda]
-    D --> E[OpenAI DALL-E]
-    E --> F[Generated Emoji]
-    F --> G[Upload to Slack]
-    G --> H[Apply as Reaction]
+    C --> D[Webhook Lambda]
+    D --> E[SQS Queue]
+    E --> F[Worker Lambda]
+    F --> G[OpenAI DALL-E]
+    G --> H[Generated Emoji]
+    H --> I[Upload to Slack]
+    I --> J[Apply as Reaction]
 ```
+
+For detailed architecture documentation, see [Dual Lambda Architecture](./docs/architecture/dual-lambda.md).
 
 **Tech Stack:**
 - **Backend**: Python 3.12 + FastAPI + Slack Bolt
@@ -240,7 +244,10 @@ MIT License - see [LICENSE](./LICENSE) for details.
 ## 🆘 Support
 
 - **Setup Issues**: See [SETUP.md](./SETUP.md) for detailed instructions
+- **Troubleshooting**: See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues
 - **Development**: See [CLAUDE.md](./CLAUDE.md) for coding guidelines
+- **Architecture**: See [docs/architecture/](./docs/architecture/) for design documentation
+- **Testing**: See [docs/testing/testing-guidelines.md](./docs/testing/testing-guidelines.md) for test standards
 - **Bug Reports**: [Open an issue](https://github.com/willtech3/emoji-smith/issues)
 - **Feature Requests**: [Start a discussion](https://github.com/willtech3/emoji-smith/discussions)
 

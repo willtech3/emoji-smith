@@ -62,8 +62,8 @@ cd emoji-smith
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install dependencies
-uv pip install -e ".[dev]"
+# Install all dependencies including type stubs
+uv sync --all-extras
 ```
 
 ### 2. Verify Development Tools (1 minute)
@@ -107,15 +107,24 @@ LOG_LEVEL=DEBUG
 ENVIRONMENT=development
 ```
 
-## SQS Background Job Queue Setup
+## Dual Lambda Architecture Setup
 
-In production (AWS Lambda), Emoji Smith uses Amazon SQS for background job processing. Ensure you have:
+Emoji Smith uses a dual Lambda architecture for improved performance:
 
-- Created an SQS queue (FIFO recommended) with appropriate permissions.
-- Configured `SQS_QUEUE_URL` in your environment.
-- Deployed with `aioboto3` available to connect to SQS.
+1. **Webhook Lambda**: Handles Slack events quickly (< 3s response time)
+2. **Worker Lambda**: Processes emoji generation via SQS queue
 
-For local development without SQS, jobs are processed synchronously by the application.
+For local development:
+- The webhook handler responds immediately to Slack
+- Without SQS configured, jobs are processed synchronously
+- With SQS configured locally (optional), jobs are queued for async processing
+
+For production deployment:
+- Both Lambdas are deployed automatically via CDK
+- SQS queue connects the two Lambda functions
+- Webhook Lambda has minimal dependencies for fast cold starts
+
+See [Dual Lambda Architecture](./docs/architecture/dual-lambda.md) for details.
 
 ### 4. Slack App Configuration (4 minutes)
 
@@ -185,14 +194,18 @@ gh pr create --title "Your Feature" --body "Description"
 ### Development Commands
 
 ```bash
+# Sync all dependencies after branch switch or pull
+source .venv/bin/activate
+uv sync --all-extras
+
 # Install new dependency
-uv pip install package-name
-uv pip freeze > requirements.lock  # Update lock file
+uv add package-name
 
 # Install new dev dependency
-uv pip install package-name
-echo "package-name>=1.0.0" >> pyproject.toml  # Add to dev dependencies
-uv pip freeze > requirements-dev.lock
+uv add --dev package-name
+
+# Update lock files
+uv lock
 
 # Run specific test
 pytest tests/unit/test_specific_file.py -v
@@ -327,6 +340,8 @@ emoji-smith/
 
 ### Common Issues
 
+For comprehensive troubleshooting, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
+
 **1. Python version not found**
 ```bash
 # Solution: Install Python 3.12
@@ -364,11 +379,11 @@ ngrok http 8000
 # Check ngrok web interface: http://localhost:4040
 ```
 
-**6. AI service errors**
+**6. OpenAI service errors**
 ```bash
 # Verify API keys are set correctly
-echo $ANTHROPIC_API_KEY  # Should show your key
-# Check API quotas and billing
+echo $OPENAI_API_KEY  # Should show your key (masked)
+# Check API quotas and billing at platform.openai.com
 ```
 
 ### Getting Help
