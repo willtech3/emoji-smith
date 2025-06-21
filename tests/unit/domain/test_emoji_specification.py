@@ -2,6 +2,7 @@
 
 import pytest
 from emojismith.domain.value_objects import EmojiSpecification
+from emojismith.domain.exceptions import ValidationError
 from shared.domain.value_objects import EmojiStylePreferences, StyleType
 
 
@@ -24,7 +25,7 @@ class TestEmojiSpecification:
         assert "cartoon" in prompt
 
     def test_requires_fields(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError):
             EmojiSpecification(context="", description="desc")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError):
             EmojiSpecification(context="ctx", description="")

@@ -32,15 +32,18 @@ class TestConcurrentRequests:
     def emoji_service(self, mock_generation_service):
         """Create emoji service with mocked dependencies."""
         return EmojiCreationService(
-            generation_service=mock_generation_service,
-            slack_repository=AsyncMock(),
-            job_repository=AsyncMock(),
+            slack_repo=AsyncMock(),
+            emoji_generator=mock_generation_service,
+            job_queue=AsyncMock(),
         )
 
     @pytest.fixture
     def webhook_handler(self):
         """Create webhook handler for concurrent testing."""
-        return WebhookHandler(slack_repo=AsyncMock(), job_queue=AsyncMock())
+        mock_slack_repo = AsyncMock()
+        mock_job_queue = AsyncMock()
+        handler = WebhookHandler(slack_repo=mock_slack_repo, job_queue=mock_job_queue)
+        return handler, mock_slack_repo, mock_job_queue
 
     async def test_multiple_concurrent_emoji_generations(self, emoji_service):
         """Test that multiple emoji generations can run concurrently."""
@@ -75,6 +78,8 @@ class TestConcurrentRequests:
 
     async def test_concurrent_webhook_requests(self, webhook_handler):
         """Test that webhook handler can handle multiple concurrent requests."""
+        handler, mock_slack_repo, _ = webhook_handler
+
         # Create multiple message action payloads
         payloads = []
         for i in range(10):
@@ -95,7 +100,7 @@ class TestConcurrentRequests:
 
         # Process requests concurrently
         start_time = time.time()
-        tasks = [webhook_handler.handle_message_action(payload) for payload in payloads]
+        tasks = [handler.handle_message_action(payload) for payload in payloads]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         end_time = time.time()
 
@@ -103,14 +108,16 @@ class TestConcurrentRequests:
         for result in results:
             assert result == {"status": "ok"}
 
-        # Verify all modals were opened
-        assert webhook_handler.slack_repo.open_modal.call_count == 10
+        # Verify all modals were opened through the mock
+        assert mock_slack_repo.open_modal.call_count == 10
 
         # Should handle all requests quickly
         assert end_time - start_time < 1.0
 
     async def test_concurrent_modal_submissions(self, webhook_handler):
         """Test concurrent modal submission handling."""
+        handler, _, mock_job_queue = webhook_handler
+
         # Create multiple modal submission payloads
         submissions = []
         for i in range(5):
@@ -129,17 +136,15 @@ class TestConcurrentRequests:
             submissions.append(modal_payload)
 
         # Process submissions concurrently
-        tasks = [
-            webhook_handler.handle_modal_submission(payload) for payload in submissions
-        ]
+        tasks = [handler.handle_modal_submission(payload) for payload in submissions]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Assert all succeeded
         for result in results:
             assert result == {"response_action": "clear"}
 
-        # Verify all jobs were queued
-        assert webhook_handler.job_queue.enqueue_job.call_count == 5
+        # Verify all jobs were queued through the mock
+        assert mock_job_queue.enqueue_job.call_count == 5
 
     @pytest.mark.timeout(5)
     async def test_worker_handles_concurrent_sqs_messages(self):
