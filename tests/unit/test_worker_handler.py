@@ -2,7 +2,9 @@
 
 import json
 import os
+import boto3
 import pytest
+from moto import mock_aws
 from unittest.mock import Mock, patch
 from typing import Dict, Any
 
@@ -188,28 +190,31 @@ class TestWorkerHandler:
                 "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
             }
 
+    @mock_aws
     def test_secrets_loading_success(self):
         """Test successful loading of secrets from AWS."""
         from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
 
-        # Reset singleton state
         AWSSecretsLoader._instance = None
         AWSSecretsLoader._loaded = False
 
-        with patch("boto3.client") as mock_boto_client:
-            with patch.dict("os.environ", {"SECRETS_NAME": "test-secrets"}):
-                mock_secrets_client = Mock()
-                mock_boto_client.return_value = mock_secrets_client
-                mock_secrets_client.get_secret_value.return_value = {
-                    "SecretString": json.dumps(
-                        {"SLACK_BOT_TOKEN": "xoxb-test", "OPENAI_API_KEY": "sk-test"}
-                    )
-                }
+        secrets_client = boto3.client("secretsmanager", region_name="us-east-1")
+        secrets_client.create_secret(
+            Name="test-secrets",
+            SecretString=json.dumps(
+                {"SLACK_BOT_TOKEN": "xoxb-test", "OPENAI_API_KEY": "sk-test"}
+            ),
+        )
 
-                AWSSecretsLoader().load_secrets()
+        with patch.dict(
+            os.environ,
+            {"SECRETS_NAME": "test-secrets", "AWS_DEFAULT_REGION": "us-east-1"},
+            clear=True,
+        ):
+            AWSSecretsLoader().load_secrets()
 
-                assert os.environ["SLACK_BOT_TOKEN"] == "xoxb-test"
-                assert os.environ["OPENAI_API_KEY"] == "sk-test"
+            assert os.environ["SLACK_BOT_TOKEN"] == "xoxb-test"
+            assert os.environ["OPENAI_API_KEY"] == "sk-test"
 
     def test_secrets_loading_no_secrets_name(self):
         """Test graceful handling when SECRETS_NAME is not set."""
