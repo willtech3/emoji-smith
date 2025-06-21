@@ -1,5 +1,8 @@
 """Tests for OpenAIAPIRepository."""
 
+import httpx
+import openai
+from emojismith.domain.errors import RateLimitExceededError
 import pytest
 from unittest.mock import AsyncMock
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
@@ -105,3 +108,40 @@ async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
 
     # Should return the result
     assert isinstance(result, bytes)
+
+
+@pytest.mark.asyncio
+async def test_enhance_prompt_raises_rate_limit_error() -> None:
+    client = AsyncMock()
+    client.chat.completions.create.side_effect = openai.RateLimitError(
+        "rate limit",
+        response=httpx.Response(429, request=httpx.Request("GET", "https://api.test")),
+        body=None,
+    )
+    repo = OpenAIAPIRepository(client)
+    with pytest.raises(RateLimitExceededError):
+        await repo.enhance_prompt("ctx", "desc")
+
+
+@pytest.mark.asyncio
+async def test_generate_image_raises_rate_limit_error() -> None:
+    client = AsyncMock()
+    client.images.generate.side_effect = [
+        openai.RateLimitError(
+            "rl",
+            response=httpx.Response(
+                429, request=httpx.Request("GET", "https://api.test")
+            ),
+            body=None,
+        ),
+        openai.RateLimitError(
+            "rl",
+            response=httpx.Response(
+                429, request=httpx.Request("GET", "https://api.test")
+            ),
+            body=None,
+        ),
+    ]
+    repo = OpenAIAPIRepository(client)
+    with pytest.raises(RateLimitExceededError):
+        await repo.generate_image("prompt")
