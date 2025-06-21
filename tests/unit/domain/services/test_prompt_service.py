@@ -12,7 +12,7 @@ from emojismith.domain.repositories.image_processor import ImageProcessor
 
 
 class DummyProcessor(ImageProcessor):
-    def process(self, image_data: bytes) -> bytes:  # type: ignore[override]
+    def process(self, image_data: bytes) -> bytes:
         return image_data
 
 
@@ -82,6 +82,212 @@ async def test_prompt_service_handles_edge_cases() -> None:
     )
     prompt = await service.build_prompt(special_spec)
     assert "<script>" not in prompt  # Should sanitize
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_truncates_very_long_prompts() -> None:
+    """Service should truncate prompts that exceed 1000 characters."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    # Create a prompt that will exceed 1000 characters
+    very_long_description = "x" * 900
+    spec = EmojiSpecification(
+        context="This is a context that will push the total over 1000 chars",
+        description=very_long_description,
+    )
+
+    prompt = await service.build_prompt(spec)
+
+    # Should be truncated to exactly 1000 characters
+    assert len(prompt) == 1000
+    assert prompt.endswith("...")  # Should end with ellipsis
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_enriches_deployment_context_without_friday() -> None:
+    """Service should enrich deployment context even when not on Friday."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    # Test regular deployment context (not Friday)
+    spec = EmojiSpecification(
+        context="Just finished the deployment to production",
+        description="celebration emoji",
+    )
+
+    prompt = await service.build_prompt(spec)
+
+    # Should detect deployment context and add appropriate enrichment
+    assert "deployment" in prompt.lower() or "release" in prompt.lower()
+    assert "Include elements suggesting deployment or release activity" in prompt
+    # Should NOT include risk/careful language when not Friday
+    assert "risk" not in prompt.lower()
+    assert "careful" not in prompt.lower()
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_handles_unknown_style() -> None:
+    """Service should handle unknown style gracefully."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    spec = EmojiSpecification(context="testing unknown style", description="test emoji")
+
+    # Should not raise error with unknown style
+    prompt = await service.build_prompt(spec, style="unknown_style")
+    assert "test emoji" in prompt
+    assert "testing unknown style" in prompt
+    # Should fall back to basic prompt without style template
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_handles_minimal_and_retro_styles() -> None:
+    """Service should correctly apply minimal and retro style strategies."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    spec = EmojiSpecification(context="coding session", description="focused face")
+
+    # Test minimal style
+    minimal_prompt = await service.build_prompt(spec, style="minimal")
+    assert "simple" in minimal_prompt
+    assert "clean" in minimal_prompt
+    assert "minimalist" in minimal_prompt
+
+    # Test retro style
+    retro_prompt = await service.build_prompt(spec, style="retro")
+    assert "nostalgic" in retro_prompt
+    assert "retro-style" in retro_prompt
+    assert "vintage" in retro_prompt
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_sanitizes_various_html_entities() -> None:
+    """Service should sanitize various HTML entities and tags."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    # Test various HTML entities
+    spec = EmojiSpecification(
+        context='Context with <div>tags</div> and <img src="x">',
+        description="test < and > symbols",
+    )
+
+    prompt = await service.build_prompt(spec)
+
+    # Should escape HTML entities
+    assert "&lt;" in prompt
+    assert "&gt;" in prompt
+    assert "<div>" not in prompt
+    assert "<img" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_enriches_release_context() -> None:
+    """Service should enrich release context similarly to deployment."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    spec = EmojiSpecification(
+        context="Preparing for the major release next week",
+        description="rocket emoji",
+    )
+
+    prompt = await service.build_prompt(spec)
+
+    # Should detect release context
+    assert "release" in prompt.lower()
+    assert "Include elements suggesting deployment or release activity" in prompt
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_with_emoji_specification_style() -> None:
+    """Service should incorporate EmojiStylePreferences from specification."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    from shared.domain.value_objects import (
+        EmojiStylePreferences,
+        StyleType,
+        ColorScheme,
+        DetailLevel,
+        Tone,
+    )
+
+    style_prefs = EmojiStylePreferences(
+        style_type=StyleType.PIXEL_ART,
+        color_scheme=ColorScheme.BRIGHT,
+        detail_level=DetailLevel.DETAILED,
+        tone=Tone.EXPRESSIVE,
+    )
+
+    spec = EmojiSpecification(
+        context="game development", description="power-up", style=style_prefs
+    )
+
+    # Test with no explicit style parameter
+    prompt = await service.build_prompt(spec)
+
+    # Should include style preferences from the specification
+    assert "pixel_art" in prompt or "pixel" in prompt
+    # The base prompt should include the style fragment
+    assert spec.style.to_prompt_fragment() in prompt
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_handles_empty_style_strategies_dict() -> None:
+    """Service should handle if style_strategies dict is modified."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    # Simulate empty strategies dict
+    service._style_strategies = {}
+
+    spec = EmojiSpecification(context="test", description="emoji")
+
+    # Should not raise error with empty strategies
+    prompt = await service.build_prompt(spec, style="professional")
+    assert "test" in prompt
+    assert "emoji" in prompt
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_combines_style_and_context_enrichment() -> None:
+    """Service should apply both style strategy and context enrichment."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    spec = EmojiSpecification(
+        context="Deploying to production", description="nervous emoji"
+    )
+
+    # Apply professional style to deployment context
+    prompt = await service.build_prompt(spec, style="professional")
+
+    # Should have both style and context enrichment
+    assert "professional" in prompt
+    assert "business-appropriate" in prompt
+    assert "Include elements suggesting deployment or release activity" in prompt
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_handles_context_with_multiple_keywords() -> None:
+    """Service should handle context with multiple deployment-related keywords."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    spec = EmojiSpecification(
+        context="Release and deploy to production on Friday",
+        description="sweating emoji",
+    )
+
+    prompt = await service.build_prompt(spec)
+
+    # Should detect both Friday and deployment/release
+    assert "risk" in prompt.lower() or "careful" in prompt.lower()
+    # Ensure enrichment is applied only once
+    assert prompt.count("Include subtle elements") == 1
 
 
 @pytest.mark.asyncio
