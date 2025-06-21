@@ -6,7 +6,7 @@ from shared.domain.value_objects import EmojiStylePreferences, StyleType
 
 
 class TestEmojiSpecification:
-    def test_prompt_construction(self) -> None:
+    def test_emoji_specification_to_prompt_includes_style(self) -> None:
         style = EmojiStylePreferences(style_type=StyleType.PIXEL_ART)
         spec = EmojiSpecification(
             context="Deploy failed", description="facepalm", style=style
@@ -14,7 +14,7 @@ class TestEmojiSpecification:
         assert spec.to_prompt().startswith("Deploy failed facepalm")
         assert "pixel_art" in spec.to_prompt()
 
-    def test_prompt_construction_without_style(self) -> None:
+    def test_emoji_specification_to_prompt_with_default_style(self) -> None:
         """Test prompt construction with empty style."""
         style = EmojiStylePreferences(style_type=StyleType.CARTOON)
         spec = EmojiSpecification(
@@ -23,7 +23,7 @@ class TestEmojiSpecification:
         prompt = spec.to_prompt()
         assert "cartoon" in prompt
 
-    def test_requires_fields(self) -> None:
+    def test_emoji_specification_missing_fields_raise_error(self) -> None:
         with pytest.raises(ValueError):
             EmojiSpecification(context="", description="desc")
         with pytest.raises(ValueError):

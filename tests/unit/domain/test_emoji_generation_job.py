@@ -7,7 +7,7 @@ from shared.domain.value_objects import JobStatus, EmojiSharingPreferences
 class TestEmojiGenerationJob:
     """Test creation and state transitions for EmojiGenerationJob."""
 
-    def test_create_new_and_to_from_dict(self):
+    def test_emoji_generation_job_round_trip_persists_status(self):
         job = EmojiGenerationJob.create_new(
             message_text="hello",
             user_description="smile",
@@ -26,7 +26,7 @@ class TestEmojiGenerationJob:
         assert restored.job_id == job.job_id
         assert restored.status == JobStatus.PENDING
 
-    def test_status_transitions(self):
+    def test_emoji_generation_job_lifecycle_transitions_correctly(self):
         job = EmojiGenerationJob.create_new(
             message_text="x",
             user_description="y",
