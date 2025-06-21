@@ -1,9 +1,12 @@
 """Integration tests for dual Lambda architecture."""
 
 import json
+from typing import Any, Dict, Tuple
+
+import boto3
 import pytest
-from unittest.mock import AsyncMock, patch
-from typing import Dict, Any
+from moto import mock_aws
+from unittest.mock import AsyncMock
 
 from webhook.handler import WebhookHandler
 from webhook.infrastructure.sqs_job_queue import SQSJobQueue
@@ -19,19 +22,20 @@ class TestDualLambdaIntegration:
         return AsyncMock(spec=SlackAPIRepository)
 
     @pytest.fixture
-    def webhook_handler(self, mock_slack_repo):
-        """Create webhook handler with dependencies."""
-        # Patch boto3.client during job queue creation
-        with patch(
-            "webhook.infrastructure.sqs_job_queue.boto3.client"
-        ) as mock_boto_client:
-            mock_sqs_client = mock_boto_client.return_value
-            job_queue = SQSJobQueue(
-                queue_url="https://sqs.us-east-1.amazonaws.com/123456789012/test-queue"
-            )
-            # Store the mock client for later access
-            job_queue._mock_sqs_client = mock_sqs_client
-            return WebhookHandler(slack_repo=mock_slack_repo, job_queue=job_queue)
+    def sqs_setup(self) -> Tuple[boto3.client, str]:
+        """Create an SQS queue using moto."""
+        with mock_aws():
+            boto3.setup_default_session(region_name="us-east-1")
+            sqs = boto3.client("sqs")
+            queue_url = sqs.create_queue(QueueName="test-queue")["QueueUrl"]
+            yield sqs, queue_url
+
+    @pytest.fixture
+    def webhook_handler(self, mock_slack_repo, sqs_setup):
+        """Create webhook handler with moto-backed SQS."""
+        _, queue_url = sqs_setup
+        job_queue = SQSJobQueue(queue_url=queue_url)
+        return WebhookHandler(slack_repo=mock_slack_repo, job_queue=job_queue)
 
     @pytest.fixture
     def message_action_payload(self) -> Dict[str, Any]:
@@ -104,6 +108,7 @@ class TestDualLambdaIntegration:
         mock_slack_repo,
         message_action_payload,
         modal_submission_payload,
+        sqs_setup,
     ):
         """Test complete flow from webhook to worker processing."""
         # Step 1: Handle message action (webhook Lambda)
@@ -116,21 +121,15 @@ class TestDualLambdaIntegration:
         mock_slack_repo.open_modal.assert_called_once()
 
         # Step 2: Handle modal submission (webhook Lambda)
-        # Setup mock SQS client for modal submission
-        mock_sqs_client = webhook_handler._job_queue._mock_sqs_client
-        mock_sqs_client.send_message.return_value = {"MessageId": "test-message-id"}
-
+        _, queue_url = sqs_setup
         result = await webhook_handler.handle_modal_submission(modal_submission_payload)
 
         # Verify modal submission response
         assert result == {"response_action": "clear"}
 
-        # Verify SQS message was sent
-        mock_sqs_client.send_message.assert_called_once()
-        sqs_call_args = mock_sqs_client.send_message.call_args
-
-        # Verify message body contains job data
-        message_body = json.loads(sqs_call_args.kwargs["MessageBody"])
+        sqs_client, _ = sqs_setup
+        messages = sqs_client.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=1)
+        message_body = json.loads(messages["Messages"][0]["Body"])
         assert message_body["user_description"] == "facepalm"
         assert message_body["message_text"] == "Just deployed on Friday"
         assert message_body["user_id"] == "U12345"
@@ -181,21 +180,20 @@ class TestDualLambdaIntegration:
         assert result == {"status": "ok"}
 
     async def test_sqs_message_format_compatibility(
-        self, webhook_handler, modal_submission_payload
+        self,
+        webhook_handler,
+        modal_submission_payload,
+        sqs_setup,
     ):
         """Test SQS message format is compatible with worker Lambda."""
         from shared.domain.entities import EmojiGenerationJob
 
-        # Setup mock SQS client for modal submission
-        mock_sqs_client = webhook_handler._job_queue._mock_sqs_client
-        mock_sqs_client.send_message.return_value = {"MessageId": "test-message-id"}
-
         # Handle modal submission
+        sqs_client, queue_url = sqs_setup
         await webhook_handler.handle_modal_submission(modal_submission_payload)
 
-        # Extract the message body that would be sent to SQS
-        sqs_call_args = mock_sqs_client.send_message.call_args
-        message_body = json.loads(sqs_call_args.kwargs["MessageBody"])
+        messages = sqs_client.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=1)
+        message_body = json.loads(messages["Messages"][0]["Body"])
 
         # Verify worker Lambda can parse the message
         job = EmojiGenerationJob.from_dict(message_body)
