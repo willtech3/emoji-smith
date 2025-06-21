@@ -106,23 +106,36 @@ def _create_app() -> Any:
         # Parse payload
         try:
             payload = json.loads(body.decode("utf-8"))
+            logger.info("Received JSON payload: %s", payload.get("type", "unknown"))
         except Exception:
             # Handle URL-encoded form data
             form_data = urllib.parse.parse_qs(body.decode("utf-8"))
             payload_str = form_data.get("payload", ["{}"])[0]
             payload = json.loads(payload_str)
+            logger.info(
+                "Received form-encoded payload: %s", payload.get("type", "unknown")
+            )
+
+        # Log full payload structure for debugging
+        logger.info("Full payload keys: %s", list(payload.keys()))
 
         # Handle URL verification
         if payload.get("type") == "url_verification":
+            logger.info("Handling URL verification challenge")
             return {"challenge": payload.get("challenge")}
 
         # Route to appropriate handler
         event_type = payload.get("type")
+        logger.info("Processing event type: %s", event_type)
+
         if event_type == "message_action":
+            logger.info("Handling message action")
             return await webhook_handler.handle_message_action(payload)
         elif event_type == "view_submission":
+            logger.info("Handling view submission")
             return await webhook_handler.handle_modal_submission(payload)
 
+        logger.warning("Unhandled event type: %s", event_type)
         return {"status": "ignored"}
 
     @app.post("/slack/interactive")
