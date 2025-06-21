@@ -13,11 +13,11 @@ def create_webhook_api(webhook_handler: SlackWebhookHandler) -> FastAPI:
         version="0.1.0",
     )
 
-    @app.get("/health")
+    @app.get("/health")  # type: ignore[misc]
     async def health_check() -> dict:
         return webhook_handler.health_check()
 
-    @app.post("/slack/events")
+    @app.post("/slack/events")  # type: ignore[misc]
     async def slack_events(request: Request) -> dict:
         body = await request.body()
         headers = dict(request.headers)
