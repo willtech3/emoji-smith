@@ -60,10 +60,14 @@ def sample_emoji() -> GeneratedEmoji:
 
 @pytest.mark.asyncio
 async def test_share_emoji_new_thread(
-    slack_repo, slack_client, slack_test_channel, slack_test_user_id, sample_emoji
+    slack_repo,
+    slack_client,
+    slack_slack_test_channel,
+    slack_slack_test_user_id,
+    sample_emoji,
 ):
     message = await slack_client.chat_postMessage(
-        channel=slack_test_channel, text="Integration test start"
+        channel=slack_slack_test_channel, text="Integration test start"
     )
     original_ts = message["ts"]
 
@@ -75,9 +79,9 @@ async def test_share_emoji_new_thread(
 
     result = await slack_repo.share_emoji_file(
         emoji=sample_emoji,
-        channel_id=slack_test_channel,
+        channel_id=slack_slack_test_channel,
         preferences=prefs,
-        requester_user_id=slack_test_user_id,
+        requester_user_id=slack_slack_test_user_id,
         original_message_ts=original_ts,
     )
 
@@ -88,10 +92,14 @@ async def test_share_emoji_new_thread(
 
 @pytest.mark.asyncio
 async def test_share_emoji_existing_thread(
-    slack_repo, slack_client, slack_test_channel, slack_test_user_id, sample_emoji
+    slack_repo,
+    slack_client,
+    slack_slack_test_channel,
+    slack_slack_test_user_id,
+    sample_emoji,
 ):
     thread_msg = await slack_client.chat_postMessage(
-        channel=slack_test_channel, text="Existing thread starter"
+        channel=slack_slack_test_channel, text="Existing thread starter"
     )
     thread_ts = thread_msg["ts"]
 
@@ -104,9 +112,9 @@ async def test_share_emoji_existing_thread(
 
     result = await slack_repo.share_emoji_file(
         emoji=sample_emoji,
-        channel_id=slack_test_channel,
+        channel_id=slack_slack_test_channel,
         preferences=prefs,
-        requester_user_id=slack_test_user_id,
+        requester_user_id=slack_slack_test_user_id,
     )
 
     assert result.success
@@ -115,7 +123,7 @@ async def test_share_emoji_existing_thread(
 
 
 @pytest.mark.asyncio
-async def test_share_fails_with_invalid_token(slack_test_channel, sample_emoji):
+async def test_share_fails_with_invalid_token(slack_slack_test_channel, sample_emoji):
     invalid_client = AsyncWebClient(token="xoxb-invalid-token")
     repo = SlackFileSharingRepository(invalid_client)
     prefs = EmojiSharingPreferences(
@@ -126,7 +134,7 @@ async def test_share_fails_with_invalid_token(slack_test_channel, sample_emoji):
 
     result = await repo.share_emoji_file(
         emoji=sample_emoji,
-        channel_id=slack_test_channel,
+        channel_id=slack_slack_test_channel,
         preferences=prefs,
         requester_user_id="U000000",
     )
