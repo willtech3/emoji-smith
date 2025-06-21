@@ -2,6 +2,7 @@
 
 import json
 import os
+import asyncio
 import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any
@@ -222,3 +223,27 @@ class TestWorkerHandler:
         with patch.dict("os.environ", {}, clear=True):
             # Should not raise an exception
             AWSSecretsLoader().load_secrets()
+
+    @patch.dict(
+        "os.environ",
+        {
+            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "OPENAI_API_KEY": "sk-test",
+        },
+    )
+    def test_lambda_handler_timeout(self, sqs_event, context):
+        """Test Lambda handler when processing exceeds timeout."""
+        with patch(
+            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
+        ) as mock_create:
+            with patch("asyncio.run") as mock_run:
+                mock_create.return_value = Mock(process_emoji_generation_job=Mock())
+                mock_run.side_effect = asyncio.TimeoutError("timeout")
+
+                result = handler(sqs_event, context)
+
+                assert result == {
+                    "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
+                }
+                mock_run.assert_called_once()
