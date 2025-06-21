@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Dict, Any, ClassVar
 
 from shared.domain.entities import EmojiGenerationJob
+from emojismith.domain.exceptions import RetryExceededError
 
 
 class MessageType(Enum):
@@ -29,6 +30,18 @@ class QueueMessage:
     def with_retry(self) -> "QueueMessage":
         """Create new message with incremented retry."""
         return replace(self, retry_count=self.retry_count + 1)
+
+    def raise_if_exhausted(self) -> None:
+        """Raise exception if retry attempts have been exhausted.
+
+        Raises:
+            RetryExceededError: If retry count has reached or exceeded MAX_RETRIES.
+        """
+        if not self.should_retry():
+            raise RetryExceededError(
+                f"Maximum retry attempts ({self.MAX_RETRIES}) exceeded "
+                f"for message type {self.message_type.value}"
+            )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for SQS serialization."""

@@ -60,9 +60,15 @@ class TestGeneratedEmoji:
         """Valid image formats should be accepted."""
         for format in ["png", "gif", "jpg"]:
             emoji = GeneratedEmoji(image_data=b"data", name="test", format=format)
-            assert emoji.validate_format() is True
+            # Should not raise an exception
+            emoji.validate_format()
 
     def test_validate_format_rejects_invalid_formats(self) -> None:
-        """Invalid image formats should be rejected."""
-        emoji = GeneratedEmoji(image_data=b"data", name="test", format="webp")
-        assert emoji.validate_format() is False
+        """Invalid image formats should be rejected at construction time."""
+        with pytest.raises(ValueError, match="Unsupported format: webp"):
+            GeneratedEmoji(image_data=b"data", name="test", format="webp")
+
+    def test_default_format_is_png(self) -> None:
+        """Default format should be png."""
+        emoji = GeneratedEmoji(image_data=b"data", name="test")
+        assert emoji.format == "png"

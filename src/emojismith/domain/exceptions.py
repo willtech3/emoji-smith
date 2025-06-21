@@ -29,3 +29,9 @@ class PromptEnhancementError(DomainException):
     """Raised when prompt enhancement fails."""
 
     pass
+
+
+class RetryExceededError(DomainException):
+    """Raised when maximum retry attempts have been exceeded."""
+
+    pass
