@@ -7,7 +7,7 @@ from __future__ import annotations
 import base64
 import logging
 from typing import Iterable, List
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, RateLimitError
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
 
 
@@ -76,6 +76,9 @@ class OpenAIAPIRepository(OpenAIRepository):
                 response_format="b64_json",
                 quality="standard",
             )
+        except RateLimitError as exc:
+            self._logger.error("OpenAI rate limited: %s", exc)
+            raise
         except Exception as exc:
             self._logger.warning("DALL-E 3 failed, falling back to DALL-E 2: %s", exc)
             # Fallback to DALL-E 2
@@ -87,6 +90,11 @@ class OpenAIAPIRepository(OpenAIRepository):
                     size="512x512",  # DALL-E 2 max size
                     response_format="b64_json",
                 )
+            except RateLimitError as fallback_rate_exc:
+                self._logger.error(
+                    "OpenAI rate limited during fallback: %s", fallback_rate_exc
+                )
+                raise
             except Exception as fallback_exc:
                 self._logger.error(
                     "Both DALL-E 3 and DALL-E 2 failed: %s", fallback_exc

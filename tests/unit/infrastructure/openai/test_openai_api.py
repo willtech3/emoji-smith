@@ -105,3 +105,22 @@ async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
 
     # Should return the result
     assert isinstance(result, bytes)
+
+
+@pytest.mark.asyncio
+async def test_propagates_rate_limit_error() -> None:
+    """Rate limit errors from OpenAI should be raised."""
+    from openai import RateLimitError
+    import httpx
+
+    client = AsyncMock()
+    response = httpx.Response(
+        429, request=httpx.Request("POST", "https://api.openai.com")
+    )
+    client.images.generate.side_effect = RateLimitError(
+        "Too many requests", response=response, body=None
+    )
+    repo = OpenAIAPIRepository(client)
+
+    with pytest.raises(RateLimitError):
+        await repo.generate_image("rate limited")
