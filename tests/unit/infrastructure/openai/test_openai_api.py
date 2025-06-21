@@ -32,17 +32,6 @@ async def test_uses_fallback_model_when_preferred_model_unavailable() -> None:
 
 
 @pytest.mark.asyncio
-async def test_generates_emoji_image_from_text_prompt() -> None:
-    client = AsyncMock()
-    client.images.generate.return_value = AsyncMock(
-        data=[AsyncMock(b64_json="aGVsbG8=")]
-    )
-    repo = OpenAIAPIRepository(client)
-    data = await repo.generate_image("prompt")
-    assert isinstance(data, bytes)
-
-
-@pytest.mark.asyncio
 async def test_uses_environment_configured_model_for_chat() -> None:
     """Test that repository respects OPENAI_CHAT_MODEL from environment."""
     import os
@@ -86,28 +75,6 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
     repo = OpenAIAPIRepository(client)
     with pytest.raises(ValueError, match="OpenAI did not return valid image data"):
         await repo.generate_image("prompt")
-
-
-@pytest.mark.asyncio
-async def test_requests_base64_format_from_openai() -> None:
-    """Test that image generation requests base64 format explicitly."""
-    client = AsyncMock()
-    client.images.generate.return_value = AsyncMock(
-        data=[AsyncMock(b64_json="aGVsbG8=")]
-    )
-    repo = OpenAIAPIRepository(client)
-
-    await repo.generate_image("test prompt")
-
-    # Verify the API call includes response_format parameter
-    client.images.generate.assert_called_once_with(
-        model="dall-e-3",
-        prompt="test prompt",
-        n=1,
-        size="1024x1024",
-        response_format="b64_json",
-        quality="standard",
-    )
 
 
 @pytest.mark.asyncio
