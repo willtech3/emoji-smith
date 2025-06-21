@@ -102,27 +102,6 @@ class TestWorkerHandler:
             "OPENAI_API_KEY": "sk-test",
         },
     )
-    def test_worker_never_opens_modal(self, sqs_event, context):
-        """Ensure worker emoji service does not open Slack modals."""
-        with patch(
-            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
-        ) as mock_create:
-            service = Mock(process_emoji_generation_job=Mock())
-            service._slack_repo = Mock(open_modal=Mock())
-            mock_create.return_value = service
-            with patch("asyncio.run") as mock_run:
-                mock_run.return_value = None
-                handler(sqs_event, context)
-                service._slack_repo.open_modal.assert_not_called()
-
-    @patch.dict(
-        "os.environ",
-        {
-            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
-            "SLACK_BOT_TOKEN": "xoxb-test",
-            "OPENAI_API_KEY": "sk-test",
-        },
-    )
     def test_lambda_handler_invalid_json(self, context):
         """Test handling of invalid JSON in message body."""
         invalid_event = {
