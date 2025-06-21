@@ -50,7 +50,7 @@ def slack_slack_test_user_id() -> str:
     return user
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_emoji() -> GeneratedEmoji:
     img = Image.new("RGBA", (128, 128), "green")
     buf = BytesIO()
