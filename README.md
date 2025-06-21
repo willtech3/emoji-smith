@@ -232,6 +232,15 @@ emoji-smith/
 └── docs/                  # 📚 Documentation
 ```
 
+## 📚 Documentation Structure
+
+- `CLAUDE.md` - Core development rules (always read first)
+- `docs/CLAUDE-*.md` - Task-specific detailed guides
+- `.claude/context.md` - Current task tracking (git-ignored)
+- `scripts/claude-refresh.sh` - Quick context refresh
+
+For AI agents: Always start by reading CLAUDE.md, then load the appropriate task-specific guide.
+
 ## 🤝 Contributing
 
 1. **Read the guidelines**: See [CLAUDE.md](./CLAUDE.md) for development standards

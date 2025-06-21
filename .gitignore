@@ -214,3 +214,4 @@ ngrok
 # Old documentation files
 CLAUDE.old.md
 AGENTS.old.md
+.claude/
