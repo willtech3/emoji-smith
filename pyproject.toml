@@ -127,9 +127,6 @@ skips = ["B101", "B104"]  # Skip assert_used test (pytest uses asserts), skip bi
 severity = "medium"
 
 [dependency-groups]
-dev = [
-    "flake8-pytest-style>=2.1.0",
-]
 webhook = [
     "boto3>=1.37.3",
     "fastapi>=0.115.12",
