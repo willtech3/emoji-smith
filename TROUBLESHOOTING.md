@@ -178,6 +178,61 @@ pre-commit run mypy --all-files -v
 
 ---
 
+### 🔴 Dual Lambda Architecture Issues
+
+**Issue: Webhook Lambda times out waiting for Worker Lambda**
+
+**Symptoms:**
+- Slack shows timeout error after 3 seconds
+- CloudWatch shows webhook completed but no worker execution
+
+**Solution:**
+1. Verify SQS queue configuration:
+   ```bash
+   aws sqs get-queue-attributes --queue-url $SQS_QUEUE_URL \
+     --attribute-names VisibilityTimeout,MessageRetentionPeriod
+   ```
+
+2. Check Lambda permissions for SQS:
+   ```bash
+   aws lambda get-policy --function-name emoji-smith-worker | jq
+   ```
+
+3. Monitor queue depth:
+   ```bash
+   aws sqs get-queue-attributes --queue-url $SQS_QUEUE_URL \
+     --attribute-names ApproximateNumberOfMessages
+   ```
+
+**Issue: Messages stuck in SQS queue**
+
+**Symptoms:**
+- Queue depth increasing
+- Worker Lambda not processing messages
+
+**Debug Steps:**
+1. Check Worker Lambda triggers:
+   ```bash
+   aws lambda list-event-source-mappings \
+     --function-name emoji-smith-worker
+   ```
+
+2. Verify message format matches expectations
+3. Check Worker Lambda CloudWatch logs for errors
+
+**Issue: Inconsistent behavior between local and production**
+
+**Local Development Tips:**
+- Without SQS: Jobs process synchronously (good for debugging)
+- With local SQS: Use LocalStack or ElasticMQ
+  ```bash
+  # LocalStack example
+  docker run -d -p 4566:4566 localstack/localstack
+  export SQS_QUEUE_URL=http://localhost:4566/000000000000/emoji-queue
+  ```
+
+---
+
 ## Performance Issues
 
 ### 🟡 Slow Cold Starts
@@ -253,6 +308,28 @@ aws logs filter-log-events \
 aws logs filter-log-events \
   --log-group-name /aws/lambda/emoji-smith-webhook \
   --filter-pattern "{$.correlation_id = \"abc-123\"}"
+
+# Query across webhook and worker logs
+aws logs insights query \
+  --log-group-names /aws/lambda/emoji-smith-webhook /aws/lambda/emoji-smith-worker \
+  --start-time $(date -u -d '1 hour ago' +%s) \
+  --end-time $(date +%s) \
+  --query 'fields @timestamp, @message | filter correlation_id = "abc-123" | sort @timestamp'
+
+# Find slow emoji generations
+aws logs insights query \
+  --log-group-names /aws/lambda/emoji-smith-worker \
+  --query 'fields @timestamp, duration | filter duration > 5000 | stats avg(duration), max(duration), count()'
+
+# Monitor SQS dead letter queue
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/SQS \
+  --metric-name ApproximateNumberOfMessagesVisible \
+  --dimensions Name=QueueName,Value=emoji-smith-dlq \
+  --statistics Average \
+  --start-time $(date -u -d '1 hour ago' --iso-8601) \
+  --end-time $(date -u --iso-8601) \
+  --period 300
 ```
 
 ### Local Lambda Testing
