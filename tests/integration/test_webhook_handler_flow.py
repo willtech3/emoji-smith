@@ -27,7 +27,7 @@ def _sign(body: bytes, secret: bytes, timestamp: str) -> str:
     return "v0=" + digest
 
 
-@pytest.fixture()
+@pytest.fixture
 def app_with_mocks() -> Tuple[TestClient, AsyncMock, MagicMock, bytes]:
     secret = b"test_secret"
     slack_repo = AsyncMock(spec=SlackModalRepository)
