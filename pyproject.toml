@@ -36,6 +36,7 @@ dev = [
     "types-requests>=2.31.0",
     "types-boto3>=1.0.0",
     "respx>=0.20.2",
+    "flake8-pytest-style>=2.1.0",
 ]
 
 [build-system]

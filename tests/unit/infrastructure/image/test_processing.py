@@ -25,7 +25,7 @@ def test_processor_resizes_and_compresses() -> None:
     assert len(out) < 64 * 1024
 
 
-def test_iterative_compression(monkeypatch) -> None:
+def test_image_processor_reduces_colors_iteratively(monkeypatch) -> None:
     processor = PillowImageProcessor()
 
     calls: list[int] = []
@@ -50,7 +50,7 @@ def test_iterative_compression(monkeypatch) -> None:
     assert calls == [256, 128]
 
 
-def test_logs_metrics(caplog) -> None:
+def test_image_processor_logs_processing_metrics(caplog) -> None:
     processor = PillowImageProcessor()
     with caplog.at_level(logging.INFO):
         processor.process(_create_image())

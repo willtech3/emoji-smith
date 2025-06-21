@@ -27,6 +27,12 @@ flake8 src/ tests/
 echo "✓ Flake8 linting passed"
 echo ""
 
+# Test naming conventions
+echo "🔍 Checking test naming conventions..."
+scripts/check-test-names.py
+echo "✓ Test naming conventions passed"
+echo ""
+
 # MyPy type checking
 echo "🔍 Running MyPy type checker..."
 mypy src/
