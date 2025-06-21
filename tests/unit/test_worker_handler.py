@@ -1,4 +1,8 @@
-"""Unit tests for SQS worker handler."""
+"""Unit tests for SQS worker handler.
+
+Note: moto adds ~100ms overhead per test. Consider using class-level fixtures
+for test suites to improve performance when testing with many AWS service mocks.
+"""
 
 import json
 import os
@@ -79,6 +83,13 @@ def context():
 class TestWorkerHandler:
     """Test cases for the SQS worker Lambda handler."""
 
+    def teardown_method(self):
+        """Reset AWSSecretsLoader singleton after each test."""
+        from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
+
+        AWSSecretsLoader._instance = None
+        AWSSecretsLoader._loaded = False
+
     @patch.dict(
         "os.environ",
         {
@@ -87,8 +98,10 @@ class TestWorkerHandler:
             "AWS_DEFAULT_REGION": "us-east-1",
         },
     )
-    def test_lambda_handler_success(self, sqs_event, context):
-        """Test successful processing of SQS message."""
+    def test_lambda_handler_processes_emoji_generation_job_successfully(
+        self, sqs_event, context
+    ):
+        """Test successful processing of emoji generation job from SQS message."""
         with mock_aws():
             client = boto3.client("secretsmanager", region_name="us-east-1")
             client.create_secret(
@@ -119,8 +132,8 @@ class TestWorkerHandler:
             "AWS_DEFAULT_REGION": "us-east-1",
         },
     )
-    def test_lambda_handler_invalid_json(self, context):
-        """Test handling of invalid JSON in message body."""
+    def test_lambda_handler_returns_failure_for_invalid_json_message(self, context):
+        """Test handler returns message to DLQ when JSON parsing fails."""
         invalid_event = {
             "Records": [
                 {
@@ -232,8 +245,8 @@ class TestWorkerHandler:
                     "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
                 }
 
-    def test_secrets_loading_success(self):
-        """Test successful loading of secrets from AWS."""
+    def test_secrets_loading_populates_environment_variables_correctly(self):
+        """Test that secrets are loaded into environment variables."""
         from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
 
         AWSSecretsLoader._instance = None

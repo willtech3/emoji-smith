@@ -1,4 +1,8 @@
-"""Tests for AWSSecretsLoader."""
+"""Tests for AWSSecretsLoader.
+
+Note: moto adds ~100ms overhead per test. Consider using class-level fixtures
+for test suites to improve performance when testing with many AWS service mocks.
+"""
 
 import json
 import os
@@ -21,6 +25,11 @@ class TestAWSSecretsLoader:
         AWSSecretsLoader._instance = None
         AWSSecretsLoader._loaded = False
 
+    def teardown_method(self):
+        """Reset AWSSecretsLoader singleton after each test."""
+        AWSSecretsLoader._instance = None
+        AWSSecretsLoader._loaded = False
+
     def test_skips_when_secrets_name_not_set(self, caplog):
         """Should skip loading when SECRETS_NAME is not set."""
         loader = AWSSecretsLoader()
@@ -30,8 +39,8 @@ class TestAWSSecretsLoader:
 
         assert "SECRETS_NAME not set, skipping secrets loading" in caplog.text
 
-    def test_loads_secrets_successfully(self, caplog):
-        """Should load secrets into environment variables."""
+    def test_loads_secrets_successfully_filters_out_generated_passwords(self, caplog):
+        """Should load secrets and filter out generated passwords."""
         with mock_aws():
             client = boto3.client("secretsmanager", region_name="us-east-1")
             client.create_secret(
@@ -60,8 +69,8 @@ class TestAWSSecretsLoader:
 
         assert "Successfully loaded 3 secrets from AWS" in caplog.text
 
-    def test_raises_client_error_on_aws_failure(self):
-        """Should raise ClientError when AWS call fails."""
+    def test_raises_client_error_when_secret_does_not_exist(self):
+        """Should raise ClientError when attempting to load non-existent secret."""
         with mock_aws():
             with patch.dict(
                 os.environ,
@@ -71,8 +80,8 @@ class TestAWSSecretsLoader:
                 with pytest.raises(ClientError):
                     loader.load_secrets()
 
-    def test_raises_json_decode_error_on_invalid_json(self):
-        """Should raise JSONDecodeError when secret is not valid JSON."""
+    def test_raises_json_decode_error_when_secret_contains_invalid_json(self):
+        """Should raise JSONDecodeError when secret string cannot be parsed as JSON."""
         with mock_aws():
             client = boto3.client("secretsmanager", region_name="us-east-1")
             client.create_secret(Name="test-secret", SecretString="invalid-json")
