@@ -30,6 +30,7 @@ dev = [
     "pytest-cov>=4.1.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
+    "flake8-pytest-style>=2.1.0",
     "mypy>=1.7.0",
     "bandit>=1.7.0",
     "pre-commit>=3.5.0",
