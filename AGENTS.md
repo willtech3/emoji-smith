@@ -1,137 +1,167 @@
-# AGENTS Development Guidelines for Emoji Smith
+# Claude Development Guidelines for Emoji Smith - Core Document
 
-This document provides **concise rules** for **AI-powered coding agents** (ChatGPT, Claude, Copilot, etc.) contributing to *Emoji Smith*.
+## 🧠 Context Management
+**For long conversations, review this document:**
+- Before starting any new task
+- When switching between layers (domain/infra/app)
+- If you feel context drifting (~3000 tokens)
+- Before any git operations or deployments
 
-> **If conflicting with `CLAUDE.md`, defer to `CLAUDE.md`.**
+## 🚨 CRITICAL RULES - NEVER VIOLATE
 
----
+1. **🔐 NEVER commit secrets** - No API keys, tokens, or `.env` files
+2. **📁 NEVER use `git add .`** - Always specify files explicitly
+3. **🐍 ALWAYS activate venv first** - `source .venv/bin/activate`
+4. **🧪 ALWAYS write tests first** - TDD is mandatory
+5. **💉 ALWAYS use dependency injection** - No hardcoded dependencies
+6. **📝 ALWAYS explain changes** - Before making (auto-accept off) or after (auto-accept on)
+7. **🚀 ALWAYS use CI for deployment** - Never deploy manually if CI exists
+8. **🌿 ALWAYS use feature branches** - Never commit directly to main
+9. **🔄 ALWAYS create pull requests** - All changes go through PR review
 
-## 1. Critical Environment Setup
+## 🏗️ Architecture Constraints (IMMUTABLE)
 
-**⚠️ BEFORE ANY COMMAND, activate the virtual environment:**
+### Fixed Lambda Handler Locations
+```
+src/emojismith/infrastructure/aws/webhook_handler.py  # < 3s response
+src/emojismith/infrastructure/aws/worker_handler.py   # async processing
+```
+**These paths are hardcoded in CDK - DO NOT MOVE**
 
-```bash
-source .venv/bin/activate  # Linux/Mac (REQUIRED!)
-# or
-.venv\Scripts\activate     # Windows (REQUIRED!)
-
-# After branch switches or pulls:
-uv sync --all-extras
+### Layer Dependencies (One Direction Only)
+```
+Domain ← Application ← Infrastructure ← Presentation
+(Pure)   (Use Cases)   (External)      (UI/API)
 ```
 
-**Without activation, you WILL encounter type errors and missing dependencies!**
-
-## 2. Environment & Tooling
-
-1. **Python 3.12** is mandatory
-2. Use **uv** for dependency management
-3. Virtual environment **must** be activated before any operation
-4. All quality checks must pass:
-   ```bash
-   black --check src/ tests/
-   flake8 src/ tests/
-   mypy src/
-   bandit -r src/
-   pytest --cov=src --cov-fail-under=80 tests/
-   ```
-
-## 3. Architecture Rules
-
-1. Follow **Domain-Driven Design (DDD)**:
-   - Domain layer: Zero external dependencies
-   - Repository interfaces in domain, implementations in infrastructure
-   - Dependency injection everywhere
-2. **Lambda handlers** stay in `infrastructure/aws/` (deployment constraint)
-3. **No `os.environ`** access outside infrastructure layer
-4. All external calls through **repository interfaces**
-
-## 4. Coding Standards
-
-1. **PEP-8** via black formatter
-2. **Type hints** on all functions and class attributes
-3. **Dataclasses** for data structures
-4. **Protocols** for interfaces/abstract contracts
-5. Test **behavior**, not implementation
-
-## 5. Test-Driven Development
-
-1. **Red → Green → Refactor** for every feature
-2. Test pyramid: Many unit tests, few integration, minimal E2E
-3. Mock only external services (AWS, Slack, OpenAI)
-4. Never mock domain logic or value objects
-5. Coverage: 80% overall, 90% domain, 85% application
-
-## 6. Security Rules (Non-Negotiable)
-
-1. **NEVER** use `git add .` - specify files explicitly
-2. **NEVER** commit secrets, tokens, or `.env` files
-3. Run **bandit** and fix all medium/high findings
-4. Secrets: `.env` locally, AWS Secrets Manager in production
-
-## 7. Git Workflow
-
-1. Feature branches: `feature/description`
-2. Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`
-3. Squash-merge to main after review
-4. Main auto-deploys via CDK
-
-## 8. Quick Commands
-
+### Quick Validation
 ```bash
-# Setup (once)
-uv venv && source .venv/bin/activate
-uv sync --all-extras
-pre-commit install
+pwd                    # Should be in project root
+which python           # Should show .venv/bin/python
+echo $VIRTUAL_ENV      # Should show .venv path
+git branch             # Should NOT be on main
+```
 
-# Before every commit
-source .venv/bin/activate  # CRITICAL!
-black src/ tests/
-flake8 src/ tests/
-mypy src/
-bandit -r src/
+## 📋 Task Router
+
+**What are you working on?**
+
+| Task Type | Required Reading | Command |
+|-----------|------------------|---------|
+| Writing Tests | `CLAUDE-TESTING.md` | `cat docs/CLAUDE-TESTING.md` |
+| AWS/Infrastructure | `CLAUDE-INFRASTRUCTURE.md` | `cat docs/CLAUDE-INFRASTRUCTURE.md` |
+| Domain Logic | `CLAUDE-DOMAIN.md` | `cat docs/CLAUDE-DOMAIN.md` |
+| Deployment | `CLAUDE-DEPLOYMENT.md` | `cat docs/CLAUDE-DEPLOYMENT.md` |
+| Security Review | `CLAUDE-SECURITY.md` | `cat docs/CLAUDE-SECURITY.md` |
+| Debugging Issues | `TROUBLESHOOTING.md` | `cat TROUBLESHOOTING.md` |
+
+## 🔄 Common Workflows
+
+### Starting ANY Work
+```bash
+cd emoji-smith
+source .venv/bin/activate
+uv sync --all-extras
+git pull origin main
+git checkout -b feature/your-feature  # NEVER work on main
+```
+
+### Before ANY Commit
+```bash
+# Explain what you're about to commit
+echo "Changes: [describe what you're committing]"
+
+# Run quality checks
+./scripts/check-quality.sh  # Must pass
+
+# Add specific files only
+git add src/specific/file.py tests/specific/test_file.py
+
+# Commit with conventional message
+git commit -m "type(scope): description"
+```
+
+### Creating a Pull Request
+```bash
+# Push feature branch
+git push origin feature/your-feature
+
+# Create PR (never merge locally)
+gh pr create --title "type: description" --body "Details of changes"
+
+# Let CI handle deployment - NEVER deploy manually
+```
+
+### Quick Quality Check
+```bash
+black src/ tests/ && \
+flake8 src/ tests/ && \
+mypy src/ && \
+bandit -r src/ && \
 pytest --cov=src tests/
-
-# Commit (explicit files only)
-git add src/specific_file.py tests/test_specific.py
-git commit -m "feat: add specific feature"
 ```
 
-## 9. PR Checklist
+## 🎯 Current Focus Tracking
 
-- [ ] Virtual environment was activated
-- [ ] All tests pass with coverage ≥ 80%
-- [ ] No security warnings from bandit
-- [ ] Type checking passes (mypy)
-- [ ] Code formatted (black)
-- [ ] No linting errors (flake8)
-- [ ] Only intended files staged (no `git add .`)
-- [ ] No secrets in code
+When working on a feature, maintain context:
+```python
+# CURRENT TASK: Implementing emoji template feature
+# STATUS: Writing tests for domain entity
+# NEXT: Implement repository interface
+# BLOCKERS: None
+```
 
-## 10. Lambda & Deployment Notes
+## 🚦 Go/No-Go Checklist
 
-- Entry point: `src/emojismith/infrastructure/aws/webhook_handler.py`
-- Uses **Mangum** to adapt FastAPI → Lambda
-- Two lambdas: webhook (fast response) and worker (image generation)
-- CI/CD: code quality → security → tests → Docker → CDK deploy
+Before implementing ANYTHING:
+- [ ] Is virtual environment active?
+- [ ] Am I on a feature branch (not main)?
+- [ ] Have I pulled latest changes?
+- [ ] Do I have a failing test?
+- [ ] Am I in the correct layer?
+- [ ] Have I read the relevant CLAUDE-*.md file?
+- [ ] Have I explained what I'm about to do?
 
-## 11. Common Gotchas
+## 🔍 Architecture Quick Reference
 
-1. **Mypy errors** → Activate venv and run `uv sync --all-extras`
-2. **Import errors** → Check if dependency is in correct group
-3. **Test failures** → Don't over-mock; test real behavior
-4. **CDK deploy fails** → Lambda handlers must stay in `infrastructure/aws/`
+```
+src/
+├── domain/           # Zero dependencies, pure Python
+├── application/      # Orchestrates domain objects
+├── infrastructure/   # External world (AWS, Slack, OpenAI)
+└── presentation/     # HTTP/API endpoints
+```
+
+**Red Flags:**
+- Importing `boto3` in domain/
+- Direct `os.environ` access outside config
+- Concrete classes in domain/repositories/
+- Missing `__init__.py` files
+- Tests that only test mocks
+- Working directly on main branch
+- Manual deployments when CI exists
+
+## 🆘 When Stuck
+
+1. Check: Am I on a feature branch?
+2. Check: Is venv active?
+3. Check: Did I read the task-specific guide?
+4. Check: Am I following the architecture layers?
+5. Check: Do my tests actually test behavior?
+6. Check: Have I explained my approach?
+
+If still stuck: Review `TROUBLESHOOTING.md`
+
+## 📝 Memory Aid
+
+**E.M.O.J.I.S.**
+- **E**nvironment activated
+- **M**ock external services only
+- **O**rchestrate in application layer
+- **J**ust domain logic in domain/
+- **I**nject all dependencies
+- **S**peak about changes (explain them)
 
 ---
 
-### Single-Line Rules for Prompts
-
-* "Always activate .venv before any command"
-* "Use Python 3.12, format with black, type everything"
-* "Write tests first, coverage ≥ 80%"
-* "Never use `git add .` or commit secrets"
-* "Mock only external services, inject all dependencies"
-* "Domain layer has zero framework dependencies"
-
----
-
-**Maintained in sync with CLAUDE.md**
+**Remember:** This document contains ONLY the essential rules. For detailed guidance on specific tasks, always consult the appropriate CLAUDE-*.md file from the Task Router above.
