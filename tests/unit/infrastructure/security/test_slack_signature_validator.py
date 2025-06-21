@@ -161,3 +161,51 @@ class TestSlackSignatureValidator:
                 timestamp="invalid_timestamp",
                 signature="v0=some_signature",
             )
+
+    @pytest.fixture
+    def known_signature_data(self, signing_secret):
+        """Provide body, timestamp, and signature for deterministic testing."""
+        body = b'{"event":"test"}'
+        timestamp = "1234567890"
+        sig_basestring = b"v0:" + timestamp.encode() + b":" + body
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret.encode(), sig_basestring, hashlib.sha256
+            ).hexdigest()
+        )
+        request = WebhookRequest(body=body, timestamp=timestamp, signature=signature)
+        return body, timestamp, signature, request
+
+    def test_known_signature_validates(self, validator, known_signature_data):
+        """Validator accepts a request with a known valid signature."""
+        _, timestamp, _, request = known_signature_data
+        with patch(
+            "emojismith.infrastructure.security.slack_signature_validator.time.time",
+            return_value=int(timestamp),
+        ):
+            assert validator.validate_signature(request) is True
+
+    def test_tampered_body_rejected(self, validator, known_signature_data):
+        """Validator rejects request when body is tampered with."""
+        body, timestamp, signature, _ = known_signature_data
+        tampered_request = WebhookRequest(
+            body=b'{"event":"tampered"}', timestamp=timestamp, signature=signature
+        )
+        with patch(
+            "emojismith.infrastructure.security.slack_signature_validator.time.time",
+            return_value=int(timestamp),
+        ):
+            assert validator.validate_signature(tampered_request) is False
+
+    def test_wrong_timestamp_rejected(self, validator, known_signature_data):
+        """Validator rejects request when timestamp does not match signature."""
+        body, timestamp, signature, _ = known_signature_data
+        wrong_request = WebhookRequest(
+            body=body, timestamp="9999999999", signature=signature
+        )
+        with patch(
+            "emojismith.infrastructure.security.slack_signature_validator.time.time",
+            return_value=int(timestamp),
+        ):
+            assert validator.validate_signature(wrong_request) is False
