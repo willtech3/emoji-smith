@@ -14,7 +14,7 @@ def _create_image(size=(1024, 1024)) -> bytes:
     return bio.getvalue()
 
 
-def test_processor_resizes_and_compresses() -> None:
+def test_pillow_processor_resizes_and_compresses() -> None:
     processor = PillowImageProcessor()
     data = _create_image()
     out = processor.process(data)
@@ -25,7 +25,7 @@ def test_processor_resizes_and_compresses() -> None:
     assert len(out) < 64 * 1024
 
 
-def test_iterative_compression(monkeypatch) -> None:
+def test_pillow_processor_iteratively_compresses(monkeypatch) -> None:
     processor = PillowImageProcessor()
 
     calls: list[int] = []
@@ -50,7 +50,7 @@ def test_iterative_compression(monkeypatch) -> None:
     assert calls == [256, 128]
 
 
-def test_logs_metrics(caplog) -> None:
+def test_pillow_processor_logs_metrics(caplog) -> None:
     processor = PillowImageProcessor()
     with caplog.at_level(logging.INFO):
         processor.process(_create_image())
@@ -69,7 +69,7 @@ def test_logs_metrics(caplog) -> None:
     assert "colors_used" in processed_record.__dict__
 
 
-def test_raises_when_image_too_large(monkeypatch) -> None:
+def test_pillow_processor_raises_when_image_too_large(monkeypatch) -> None:
     processor = PillowImageProcessor()
 
     class AlwaysBig:

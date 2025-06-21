@@ -6,7 +6,7 @@ from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 
 
 @pytest.mark.asyncio
-async def test_enhances_prompt_with_ai_assistance() -> None:
+async def test_openai_repo_when_enhancing_prompt_returns_string() -> None:
     client = AsyncMock()
     client.chat.completions.create.return_value = AsyncMock(
         choices=[AsyncMock(message=AsyncMock(content="ok"))]
@@ -18,7 +18,7 @@ async def test_enhances_prompt_with_ai_assistance() -> None:
 
 
 @pytest.mark.asyncio
-async def test_uses_fallback_model_when_preferred_model_unavailable() -> None:
+async def test_openai_repo_when_primary_model_unavailable_uses_fallback() -> None:
     client = AsyncMock()
     client.models.retrieve = AsyncMock(side_effect=[Exception(), None])
     client.chat.completions.create.return_value = AsyncMock(
@@ -32,7 +32,7 @@ async def test_uses_fallback_model_when_preferred_model_unavailable() -> None:
 
 
 @pytest.mark.asyncio
-async def test_uses_environment_configured_model_for_chat() -> None:
+async def test_openai_repo_when_env_model_set_uses_configured_model() -> None:
     """Test that repository respects OPENAI_CHAT_MODEL from environment."""
     import os
 
@@ -59,7 +59,7 @@ async def test_uses_environment_configured_model_for_chat() -> None:
 
 
 @pytest.mark.asyncio
-async def test_rejects_image_generation_when_no_data_returned() -> None:
+async def test_openai_repo_when_image_data_missing_raises_error() -> None:
     client = AsyncMock()
     client.images.generate.return_value = AsyncMock(data=[])
     repo = OpenAIAPIRepository(client)
@@ -68,7 +68,7 @@ async def test_rejects_image_generation_when_no_data_returned() -> None:
 
 
 @pytest.mark.asyncio
-async def test_rejects_image_generation_when_b64_json_is_none() -> None:
+async def test_openai_repo_when_b64_json_none_raises_error() -> None:
     """Test that None b64_json is handled gracefully."""
     client = AsyncMock()
     client.images.generate.return_value = AsyncMock(data=[AsyncMock(b64_json=None)])
@@ -78,7 +78,7 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
 
 
 @pytest.mark.asyncio
-async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
+async def test_openai_repo_when_dalle3_fails_uses_dalle2() -> None:
     """Test that image generation falls back to DALL-E 2 when DALL-E 3 fails."""
     client = AsyncMock()
 

@@ -138,7 +138,7 @@ tests/
 ### Naming Conventions
 - Test files: `test_<module_name>.py`
 - Test classes: `Test<ClassName>`
-- Test methods: `test_<scenario>_<expected_outcome>`
+- Test methods: `test_<unit_under_test>_<scenario>_<expected_outcome>`
 
 ## Common Anti-Patterns
 

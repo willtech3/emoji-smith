@@ -80,7 +80,7 @@ class TestEmojiSharingPreferences:
         # Assert
         assert prefs.include_upload_instructions is False
 
-    def test_is_immutable(self):
+    def test_emoji_sharing_preferences_are_immutable(self) -> None:
         """Test preferences cannot be modified after creation."""
         # Arrange
         prefs = EmojiSharingPreferences(

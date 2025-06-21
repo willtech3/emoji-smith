@@ -47,3 +47,11 @@ repos:
         files: '^src/.*\.py$'
         exclude: '^tests/'
         args: ['-s', 'B101,B104']
+
+  - repo: local
+    hooks:
+      - id: check-test-names
+        name: check test names
+        entry: python scripts/check_test_names.py
+        language: system
+        pass_filenames: false

@@ -233,7 +233,7 @@ emoji-smith/
 
 1. **Read the guidelines**: See [CLAUDE.md](./CLAUDE.md) for development standards
 2. **Follow security rules**: Never commit secrets, always use explicit file adds
-3. **Write tests**: Test-driven development with 90%+ coverage
+3. **Write tests**: Use TDD with 90%+ coverage and name tests `test_<unit>_<scenario>_<expected>`
 4. **Use feature branches**: All changes via pull request
 5. **Run quality checks**: Ensure all tools pass before committing
 

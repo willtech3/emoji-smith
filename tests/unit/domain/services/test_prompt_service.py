@@ -17,7 +17,7 @@ class DummyProcessor(ImageProcessor):
 
 
 @pytest.mark.asyncio
-async def test_prompt_service_enhances() -> None:
+async def test_prompt_service_when_spec_valid_returns_enhanced_prompt() -> None:
     repo = AsyncMock()
     repo.enhance_prompt.return_value = "enhanced"
     spec = EmojiSpecification(context="ctx", description="desc")
@@ -28,7 +28,7 @@ async def test_prompt_service_enhances() -> None:
 
 
 @pytest.mark.asyncio
-async def test_generation_service_flow() -> None:
+async def test_emoji_generation_service_when_spec_valid_returns_entity() -> None:
     repo = AsyncMock()
     repo.enhance_prompt.return_value = "good"
     img = Image.new("RGBA", (128, 128), "red")

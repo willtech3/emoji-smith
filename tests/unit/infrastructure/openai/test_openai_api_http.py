@@ -8,7 +8,7 @@ from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 
 
 @pytest.mark.asyncio
-async def test_enhance_prompt_recorded() -> None:
+async def test_openai_api_http_records_context_prompt() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.startswith("/v1/models"):
             return httpx.Response(200, json={})
@@ -30,7 +30,7 @@ async def test_enhance_prompt_recorded() -> None:
 
 
 @pytest.mark.asyncio
-async def test_generate_image_fallback() -> None:
+async def test_openai_api_http_falls_back_to_dalle2_on_failure() -> None:
     calls = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -58,7 +58,7 @@ async def test_generate_image_fallback() -> None:
 
 
 @pytest.mark.asyncio
-async def test_generate_image_handles_invalid_response() -> None:
+async def test_openai_api_http_when_response_invalid_raises_error() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.startswith("/v1/models"):
             return httpx.Response(200, json={})
