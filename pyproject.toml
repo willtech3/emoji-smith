@@ -36,6 +36,8 @@ dev = [
     "types-requests>=2.31.0",
     "types-boto3>=1.0.0",
     "respx>=0.20.2",
+    "pytest-timeout>=2.3.1",
+    "pytest-benchmark>=4.0.0",
 ]
 
 [build-system]

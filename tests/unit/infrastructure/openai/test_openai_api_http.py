@@ -3,6 +3,7 @@ import json
 import httpx
 import openai
 import pytest
+import asyncio
 
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 
@@ -74,3 +75,42 @@ async def test_generate_image_handles_invalid_response() -> None:
     repo = OpenAIAPIRepository(client)
     with pytest.raises(ValueError):
         await repo.generate_image("prompt")
+
+
+@pytest.mark.asyncio
+async def test_enhance_prompt_rate_limit_error() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.startswith("/v1/models"):
+            return httpx.Response(200, json={})
+        return httpx.Response(429)
+
+    transport = httpx.MockTransport(handler)
+    client = openai.AsyncOpenAI(
+        api_key="sk-test",
+        http_client=httpx.AsyncClient(
+            transport=transport, base_url="https://api.openai.com/v1"
+        ),
+    )
+    repo = OpenAIAPIRepository(client)
+    with pytest.raises(openai.RateLimitError):
+        await repo.enhance_prompt("context", "description")
+
+
+@pytest.mark.asyncio
+async def test_generate_image_timeout() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(1)
+        return httpx.Response(
+            200, json={"data": [{"b64_json": base64.b64encode(b"img").decode()}]}
+        )
+
+    transport = httpx.MockTransport(handler)
+    client = openai.AsyncOpenAI(
+        api_key="sk-test",
+        http_client=httpx.AsyncClient(
+            transport=transport, base_url="https://api.openai.com/v1"
+        ),
+    )
+    repo = OpenAIAPIRepository(client)
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(repo.generate_image("prompt"), timeout=0.1)
