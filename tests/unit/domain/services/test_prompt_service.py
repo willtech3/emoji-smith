@@ -28,6 +28,63 @@ async def test_prompt_service_enhances() -> None:
 
 
 @pytest.mark.asyncio
+async def test_prompt_service_build_with_style_strategy() -> None:
+    """Service should apply style-specific prompt building strategy."""
+    repo = AsyncMock()
+    repo.enhance_prompt.return_value = "enhanced prompt"
+
+    spec = EmojiSpecification(context="discussing code", description="facepalm")
+    service = AIPromptService(repo)
+
+    # Build prompt with professional style
+    professional_prompt = await service.build_prompt(spec, style="professional")
+    assert "professional" in professional_prompt
+    assert "business-appropriate" in professional_prompt
+
+    # Build prompt with playful style
+    playful_prompt = await service.build_prompt(spec, style="playful")
+    assert "fun" in playful_prompt
+    assert "vibrant" in playful_prompt
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_build_with_context_enrichment() -> None:
+    """Service should enrich prompts based on message context."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    spec = EmojiSpecification(
+        context="Just deployed to production on Friday afternoon",
+        description="nervous laugh",
+    )
+
+    prompt = await service.build_prompt(spec)
+
+    # Should detect risky deployment context
+    assert "deploy" in prompt.lower()  # Can match "deployed" or "deployment"
+    assert "risk" in prompt.lower() or "careful" in prompt.lower()
+
+
+@pytest.mark.asyncio
+async def test_prompt_service_handles_edge_cases() -> None:
+    """Service should handle edge cases gracefully."""
+    repo = AsyncMock()
+    service = AIPromptService(repo)
+
+    # Very long context
+    long_spec = EmojiSpecification(context="a" * 500, description="test")
+    prompt = await service.build_prompt(long_spec)
+    assert len(prompt) <= 1000  # Should truncate/summarize
+
+    # Special characters
+    special_spec = EmojiSpecification(
+        context="Using <script>alert('test')</script>", description="hacker emoji"
+    )
+    prompt = await service.build_prompt(special_spec)
+    assert "<script>" not in prompt  # Should sanitize
+
+
+@pytest.mark.asyncio
 async def test_generation_service_flow() -> None:
     repo = AsyncMock()
     repo.enhance_prompt.return_value = "good"
