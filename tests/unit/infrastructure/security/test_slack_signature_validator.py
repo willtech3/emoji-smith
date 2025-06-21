@@ -25,6 +25,22 @@ class TestSlackSignatureValidator:
         """Slack signature validator with test signing secret."""
         return SlackSignatureValidator(signing_secret=signing_secret)
 
+    @pytest.fixture
+    def known_signature_data(self, signing_secret):
+        """Provide known data with precomputed signature."""
+        body = b'{"emoji": ":wave:"}'
+        timestamp = str(int(time.time()))
+        sig_basestring = b"v0:" + timestamp.encode() + b":" + body
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret.encode("utf-8"),
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
+        return body, timestamp, sig_basestring, signature
+
     def test_validates_authentic_slack_signature(self, validator, signing_secret):
         """Test that valid Slack signatures pass validation."""
         # Arrange
@@ -161,3 +177,33 @@ class TestSlackSignatureValidator:
                 timestamp="invalid_timestamp",
                 signature="v0=some_signature",
             )
+
+    def test_expected_signature_matches_fixture(self, validator, known_signature_data):
+        """Validator produces expected signature for known base string."""
+        _, _, sig_basestring, expected_signature = known_signature_data
+        assert (
+            validator._compute_expected_signature(sig_basestring) == expected_signature
+        )
+
+    def test_valid_signature_from_fixture(self, validator, known_signature_data):
+        """Validator accepts known authentic request."""
+        body, timestamp, _, signature = known_signature_data
+        request = WebhookRequest(body=body, timestamp=timestamp, signature=signature)
+        assert validator.validate_signature(request) is True
+
+    def test_tampered_body_fails(self, validator, known_signature_data):
+        """Validator rejects when body is modified."""
+        body, timestamp, _, signature = known_signature_data
+        request = WebhookRequest(
+            body=b"tampered", timestamp=timestamp, signature=signature
+        )
+        assert validator.validate_signature(request) is False
+
+    def test_wrong_timestamp_fails(self, validator, known_signature_data):
+        """Validator rejects when timestamp does not match signature."""
+        body, timestamp, _, signature = known_signature_data
+        wrong_timestamp = str(int(timestamp) + 1)
+        request = WebhookRequest(
+            body=body, timestamp=wrong_timestamp, signature=signature
+        )
+        assert validator.validate_signature(request) is False
