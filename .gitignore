@@ -210,3 +210,7 @@ ngrok
 
 # macOS
 .DS_Store
+
+# Old documentation files
+CLAUDE.old.md
+AGENTS.old.md

@@ -1,104 +1,137 @@
 # AGENTS Development Guidelines for Emoji Smith
 
-This document summarizes the **canonical rules** that **any automated or AI-powered coding agent** (ChatGPT, Claude, Copilot, etc.) **MUST** follow when contributing to the *Emoji Smith* repository.  The content mirrors the human-readable standards in `CLAUDE.md` and is kept intentionally concise so it can be embedded easily in prompt templates.
+This document provides **concise rules** for **AI-powered coding agents** (ChatGPT, Claude, Copilot, etc.) contributing to *Emoji Smith*.
 
-> **If a guideline here ever appears to conflict with `CLAUDE.md`, the instructions in `CLAUDE.md` win.**  Under normal circumstances the two files are consistent.
+> **If conflicting with `CLAUDE.md`, defer to `CLAUDE.md`.**
 
 ---
 
-## 1. Environment & Tooling
+## 1. Critical Environment Setup
 
-1. Python 3.12 is **mandatory**.
-2. Use `uv` for dependency management.
-3. A virtual-environment **must** be activated (`.venv`) before running *any* command.
-4. Formatting, linting, type-checking, security scans and tests **must** pass before a PR is considered complete:
+**⚠️ BEFORE ANY COMMAND, activate the virtual environment:**
 
+```bash
+source .venv/bin/activate  # Linux/Mac (REQUIRED!)
+# or
+.venv\Scripts\activate     # Windows (REQUIRED!)
+
+# After branch switches or pulls:
+uv sync --all-extras
+```
+
+**Without activation, you WILL encounter type errors and missing dependencies!**
+
+## 2. Environment & Tooling
+
+1. **Python 3.12** is mandatory
+2. Use **uv** for dependency management
+3. Virtual environment **must** be activated before any operation
+4. All quality checks must pass:
    ```bash
    black --check src/ tests/
    flake8 src/ tests/
    mypy src/
    bandit -r src/
-   pytest --cov=src tests/
+   pytest --cov=src --cov-fail-under=80 tests/
    ```
 
-## 2. Coding Style & Architecture
+## 3. Architecture Rules
 
-1. Follow PEP-8 as auto-formatted by **black**.
-2. Add **type hints** everywhere.
-3. Prefer **dataclasses** for simple data structures.
-4. Adopt **Domain-Driven Design (DDD)** and the **Repository Pattern**:
-   * Domain entities / value objects first.
-   * Repository interfaces in the domain layer; concrete implementations in `infrastructure/`.
-   * Inject dependencies – never instantiate SDK clients inside domain code.
-5. Public interfaces are stable; implementation details may change – **test behaviour, not implementation**.
+1. Follow **Domain-Driven Design (DDD)**:
+   - Domain layer: Zero external dependencies
+   - Repository interfaces in domain, implementations in infrastructure
+   - Dependency injection everywhere
+2. **Lambda handlers** stay in `infrastructure/aws/` (deployment constraint)
+3. **No `os.environ`** access outside infrastructure layer
+4. All external calls through **repository interfaces**
 
-## 3. Test-Driven Development Workflow
+## 4. Coding Standards
 
-1. Follow the *Red → Green → Refactor* cycle for every feature.
-2. Maintain a healthy test pyramid: many unit tests, fewer integration tests, almost no E2E.
-3. Unit tests must run in < 1 second – mock external services.
-4. Minimum coverage: **80 %** (enforced in CI).
+1. **PEP-8** via black formatter
+2. **Type hints** on all functions and class attributes
+3. **Dataclasses** for data structures
+4. **Protocols** for interfaces/abstract contracts
+5. Test **behavior**, not implementation
 
-## 4. Security Rules (hard requirements)
+## 5. Test-Driven Development
 
-1. **NEVER** run `git add .`; always stage files explicitly.
-2. **NEVER** commit secrets, tokens, credentials or `.env` files.
-3. Run **bandit** and fix all medium/high severity findings.
-4. Production secrets live exclusively in **AWS Secrets Manager**; local secrets in untracked `.env` files.
+1. **Red → Green → Refactor** for every feature
+2. Test pyramid: Many unit tests, few integration, minimal E2E
+3. Mock only external services (AWS, Slack, OpenAI)
+4. Never mock domain logic or value objects
+5. Coverage: 80% overall, 90% domain, 85% application
 
-## 5. Commit & PR Hygiene
+## 6. Security Rules (Non-Negotiable)
 
-1. Use the *feature-branch* workflow (`feature/short-description`).
-2. Squash-merge to `main` after review; `main` auto-deploys to Lambda via CDK.
-3. Commit messages follow the Conventional Commits style, e.g. `feat: add emoji resize service`.
+1. **NEVER** use `git add .` - specify files explicitly
+2. **NEVER** commit secrets, tokens, or `.env` files
+3. Run **bandit** and fix all medium/high findings
+4. Secrets: `.env` locally, AWS Secrets Manager in production
 
-## 6. Lambda & Deployment-specific Notes
+## 7. Git Workflow
 
-1. The project is deployed as a **containerised AWS Lambda** behind an HTTP API Gateway.
-2. The entry-point is `src/emojismith/lambda_handler.py` using **Mangum** to bridge FastAPI ⇢ Lambda.
-3. CI/CD pipeline stages:
-   * Code quality
-   * Security scan
-   * Tests & coverage
-   * Docker build & push
-   * `cdk deploy`
+1. Feature branches: `feature/description`
+2. Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`
+3. Squash-merge to main after review
+4. Main auto-deploys via CDK
 
-## 7. Quick-Start Commands (for agents that run code)
+## 8. Quick Commands
 
 ```bash
-# create venv & install dev deps
+# Setup (once)
 uv venv && source .venv/bin/activate
-uv pip install -r requirements-dev.lock
+uv sync --all-extras
+pre-commit install
 
-# run all quality gates
-black --check src/ tests/
+# Before every commit
+source .venv/bin/activate  # CRITICAL!
+black src/ tests/
 flake8 src/ tests/
 mypy src/
 bandit -r src/
-pytest --cov=src --cov-fail-under=80 tests/
+pytest --cov=src tests/
+
+# Commit (explicit files only)
+git add src/specific_file.py tests/test_specific.py
+git commit -m "feat: add specific feature"
 ```
 
-## 8. Checklist Before Opening a Pull Request
+## 9. PR Checklist
 
-☑️ All new/updated code has **unit tests**
-☑️ All quality gates pass locally (formatter, linter, mypy, bandit, tests)
-☑️ Only the intended files are staged (no `git add .`)
-☑️ No secrets or credentials are present
-☑️ Documentation is updated when behaviour changes
+- [ ] Virtual environment was activated
+- [ ] All tests pass with coverage ≥ 80%
+- [ ] No security warnings from bandit
+- [ ] Type checking passes (mypy)
+- [ ] Code formatted (black)
+- [ ] No linting errors (flake8)
+- [ ] Only intended files staged (no `git add .`)
+- [ ] No secrets in code
+
+## 10. Lambda & Deployment Notes
+
+- Entry point: `src/emojismith/infrastructure/aws/webhook_handler.py`
+- Uses **Mangum** to adapt FastAPI → Lambda
+- Two lambdas: webhook (fast response) and worker (image generation)
+- CI/CD: code quality → security → tests → Docker → CDK deploy
+
+## 11. Common Gotchas
+
+1. **Mypy errors** → Activate venv and run `uv sync --all-extras`
+2. **Import errors** → Check if dependency is in correct group
+3. **Test failures** → Don't over-mock; test real behavior
+4. **CDK deploy fails** → Lambda handlers must stay in `infrastructure/aws/`
 
 ---
 
-### Short Rules for Prompt Inclusion
+### Single-Line Rules for Prompts
 
-The following single-sentence reminders are safe to embed directly in an LLM prompt:
-
-* “Use Python 3.12 and format with **black**.”
-* “Write tests first and keep coverage ≥ 80 %.”
-* “Never commit secrets or use `git add .`.”
-* “Apply the Repository Pattern and inject dependencies.”
+* "Always activate .venv before any command"
+* "Use Python 3.12, format with black, type everything"
+* "Write tests first, coverage ≥ 80%"
+* "Never use `git add .` or commit secrets"
+* "Mock only external services, inject all dependencies"
+* "Domain layer has zero framework dependencies"
 
 ---
 
-## 9. Attribution & Maintenance
-
-This file is autogenerated from `CLAUDE.md`. Keep them in sync; when `CLAUDE.md` changes, regenerate `AGENTS.md` in the same PR.
+**Maintained in sync with CLAUDE.md**
