@@ -24,7 +24,6 @@ class TestEmojiSpecification:
         prompt = spec.to_prompt()
         assert "cartoon" in prompt
 
-     
     def test_emoji_specification_missing_fields_raise_error(self) -> None:
         with pytest.raises(ValidationError):
             EmojiSpecification(context="", description="desc")
