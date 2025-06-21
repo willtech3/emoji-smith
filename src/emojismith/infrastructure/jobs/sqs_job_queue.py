@@ -10,9 +10,12 @@ from emojismith.domain.repositories.job_queue_repository import JobQueueReposito
 class SQSJobQueue(JobQueueRepository):
     """SQS-based implementation of job queue."""
 
-    def __init__(self, session: Any, queue_url: str) -> None:
+    def __init__(
+        self, session: Any, queue_url: str, endpoint_url: str | None = None
+    ) -> None:
         self._session = session
         self._queue_url = queue_url
+        self._endpoint_url = endpoint_url
         self._logger = logging.getLogger(__name__)
 
     @property
@@ -25,7 +28,9 @@ class SQSJobQueue(JobQueueRepository):
         # Send job directly to SQS
         message_body = json.dumps(job.to_dict())
 
-        async with self._session.client("sqs") as sqs_client:
+        async with self._session.client(
+            "sqs", endpoint_url=self._endpoint_url
+        ) as sqs_client:
             response = await sqs_client.send_message(
                 QueueUrl=self._queue_url,
                 MessageBody=message_body,
@@ -48,7 +53,9 @@ class SQSJobQueue(JobQueueRepository):
         Returns a tuple containing the job and the SQS receipt handle used
         to acknowledge completion.
         """
-        async with self._session.client("sqs") as sqs_client:
+        async with self._session.client(
+            "sqs", endpoint_url=self._endpoint_url
+        ) as sqs_client:
             response = await sqs_client.receive_message(
                 QueueUrl=self._queue_url,
                 MaxNumberOfMessages=1,
@@ -95,7 +102,9 @@ class SQSJobQueue(JobQueueRepository):
         """Delete message from SQS queue if a receipt handle is present."""
         if not receipt_handle:
             return
-        async with self._session.client("sqs") as sqs_client:
+        async with self._session.client(
+            "sqs", endpoint_url=self._endpoint_url
+        ) as sqs_client:
             await sqs_client.delete_message(
                 QueueUrl=self._queue_url, ReceiptHandle=receipt_handle
             )
