@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import base64
+import openai
+from emojismith.domain.errors import RateLimitExceededError
 import logging
 from typing import Iterable, List
 from openai import AsyncOpenAI
@@ -52,16 +54,21 @@ class OpenAIAPIRepository(OpenAIRepository):
 
     async def enhance_prompt(self, context: str, description: str) -> str:
         await self._ensure_model()
-        response = await self._client.chat.completions.create(
-            model=self._model,
-            messages=[
-                {"role": "system", "content": "Enhance emoji prompt"},
-                {
-                    "role": "user",
-                    "content": f"Context: {context}\nDescription: {description}",
-                },
-            ],
-        )
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": "Enhance emoji prompt"},
+                    {
+                        "role": "user",
+                        "content": f"Context: {context}\nDescription: {description}",
+                    },
+                ],
+            )
+        except (
+            openai.RateLimitError
+        ) as exc:  # pragma: no cover - network error simulated
+            raise RateLimitExceededError(str(exc)) from exc
         return response.choices[0].message.content
 
     async def generate_image(self, prompt: str) -> bytes:
@@ -76,6 +83,10 @@ class OpenAIAPIRepository(OpenAIRepository):
                 response_format="b64_json",
                 quality="standard",
             )
+        except (
+            openai.RateLimitError
+        ) as exc:  # pragma: no cover - network error simulated
+            raise RateLimitExceededError(str(exc)) from exc
         except Exception as exc:
             self._logger.warning("DALL-E 3 failed, falling back to DALL-E 2: %s", exc)
             # Fallback to DALL-E 2
@@ -87,6 +98,10 @@ class OpenAIAPIRepository(OpenAIRepository):
                     size="512x512",  # DALL-E 2 max size
                     response_format="b64_json",
                 )
+            except (
+                openai.RateLimitError
+            ) as rate_exc:  # pragma: no cover - network error simulated
+                raise RateLimitExceededError(str(rate_exc)) from rate_exc
             except Exception as fallback_exc:
                 self._logger.error(
                     "Both DALL-E 3 and DALL-E 2 failed: %s", fallback_exc

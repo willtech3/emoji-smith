@@ -135,6 +135,9 @@ aws secretsmanager create-secret --name "emoji-smith/production" --secret-string
 | `EMOJISMITH_FORCE_ENTERPRISE` | Force Enterprise Grid mode | `false` | `true`, `false` |
 | `SQS_QUEUE_URL` | AWS SQS queue URL (production) | None | AWS SQS URL |
 | `AWS_SECRETS_NAME` | AWS Secrets Manager name | None | `emoji-smith/production` |
+| `SLACK_TEST_BOT_TOKEN` | Bot token for Slack integration tests | None | `xoxb-...` |
+| `SLACK_TEST_CHANNEL_ID` | Channel ID for Slack integration tests | None | `CXXXXXX` |
+| `SLACK_TEST_USER_ID` | User ID for Slack integration tests | None | `UXXXXXX` |
 
 **Note on `EMOJISMITH_FORCE_ENTERPRISE`**: This environment variable allows you to simulate Enterprise Grid workspace behavior in development/testing. When set to `true`, the bot will attempt direct emoji uploads. Invalid values (anything other than `true` or `false`) will log a warning and default to `false`.
 

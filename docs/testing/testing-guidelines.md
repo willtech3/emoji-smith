@@ -218,6 +218,9 @@ def test_user_creation_activates_by_default():
 - Use test doubles for external services when needed
 - Verify end-to-end workflows
 - Keep these minimal and focused
+- Slack integration tests require a dedicated workspace. Set `SLACK_TEST_BOT_TOKEN`,
+  `SLACK_TEST_CHANNEL_ID` and `SLACK_TEST_USER_ID` environment variables or the
+  tests will be skipped.
 
 ## Testing Async Code
 
