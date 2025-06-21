@@ -1,12 +1,23 @@
-"""Unit tests for SQS worker handler."""
+"""Unit tests for SQS worker handler.
+
+Note: moto adds ~100ms overhead per test. Consider using class-level fixtures
+for test suites to improve performance when testing with many AWS service mocks.
+"""
 
 import json
 import os
-import pytest
-from unittest.mock import Mock, patch
 from typing import Dict, Any
+from unittest.mock import Mock, patch
+
+import boto3
+import pytest
+from moto import mock_aws
 
 from emojismith.infrastructure.aws.worker_handler import handler
+
+SERVICE_PATH = (
+    "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
+)
 
 
 @pytest.fixture
@@ -72,38 +83,57 @@ def context():
 class TestWorkerHandler:
     """Test cases for the SQS worker Lambda handler."""
 
-    @patch.dict(
-        "os.environ",
-        {
-            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
-            "SLACK_BOT_TOKEN": "xoxb-test",
-            "OPENAI_API_KEY": "sk-test",
-        },
-    )
-    def test_lambda_handler_success(self, sqs_event, context):
-        """Test successful processing of SQS message."""
-        with patch(
-            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
-        ) as mock_create:
-            with patch("asyncio.run") as mock_run:
-                mock_create.return_value = Mock(process_emoji_generation_job=Mock())
-                mock_run.return_value = None
+    def teardown_method(self):
+        """Reset AWSSecretsLoader singleton after each test."""
+        from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
 
-                result = handler(sqs_event, context)
-
-                assert result == {"batchItemFailures": []}
-                mock_run.assert_called_once()
+        AWSSecretsLoader._instance = None
+        AWSSecretsLoader._loaded = False
 
     @patch.dict(
         "os.environ",
         {
             "AWS_LAMBDA_FUNCTION_NAME": "test-function",
-            "SLACK_BOT_TOKEN": "xoxb-test",
-            "OPENAI_API_KEY": "sk-test",
+            "SECRETS_NAME": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
         },
     )
-    def test_lambda_handler_invalid_json(self, context):
-        """Test handling of invalid JSON in message body."""
+    def test_lambda_handler_processes_emoji_generation_job_successfully(
+        self, sqs_event, context
+    ):
+        """Test successful processing of emoji generation job from SQS message."""
+        with mock_aws():
+            client = boto3.client("secretsmanager", region_name="us-east-1")
+            client.create_secret(
+                Name="test-secret",
+                SecretString=json.dumps(
+                    {
+                        "SLACK_BOT_TOKEN": "xoxb-test",
+                        "OPENAI_API_KEY": "sk-test",
+                    }
+                ),
+            )
+
+            with patch(SERVICE_PATH) as mock_create:
+                with patch("asyncio.run") as mock_run:
+                    mock_create.return_value = Mock(process_emoji_generation_job=Mock())
+                    mock_run.return_value = None
+
+                    result = handler(sqs_event, context)
+
+                    assert result == {"batchItemFailures": []}
+                    mock_run.assert_called_once()
+
+    @patch.dict(
+        "os.environ",
+        {
+            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
+            "SECRETS_NAME": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
+        },
+    )
+    def test_lambda_handler_returns_failure_for_invalid_json_message(self, context):
+        """Test handler returns message to DLQ when JSON parsing fails."""
         invalid_event = {
             "Records": [
                 {
@@ -114,39 +144,21 @@ class TestWorkerHandler:
             ]
         }
 
-        with patch(
-            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
-        ) as mock_create:
-            mock_create.return_value = (None, None)
+        with mock_aws():
+            boto3.client("secretsmanager", region_name="us-east-1").create_secret(
+                Name="test-secret",
+                SecretString=json.dumps(
+                    {
+                        "SLACK_BOT_TOKEN": "xoxb-test",
+                        "OPENAI_API_KEY": "sk-test",
+                    }
+                ),
+            )
 
-            result = handler(invalid_event, context)
+            with patch(SERVICE_PATH) as mock_create:
+                mock_create.return_value = (None, None)
 
-            assert result == {
-                "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
-            }
-
-    @patch.dict(
-        "os.environ",
-        {
-            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
-            "SLACK_BOT_TOKEN": "xoxb-test",
-            "OPENAI_API_KEY": "sk-test",
-        },
-    )
-    def test_lambda_handler_processing_error(self, sqs_event, context):
-        """Test handling of processing errors."""
-        with patch(
-            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
-        ) as mock_create:
-            with patch("asyncio.run") as mock_run:
-                mock_create.return_value = Mock(
-                    process_emoji_generation_job=Mock(
-                        side_effect=Exception("Processing failed")
-                    )
-                )
-                mock_run.side_effect = Exception("Processing failed")
-
-                result = handler(sqs_event, context)
+                result = handler(invalid_event, context)
 
                 assert result == {
                     "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
@@ -156,8 +168,44 @@ class TestWorkerHandler:
         "os.environ",
         {
             "AWS_LAMBDA_FUNCTION_NAME": "test-function",
-            "SLACK_BOT_TOKEN": "xoxb-test",
-            "OPENAI_API_KEY": "sk-test",
+            "SECRETS_NAME": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
+        },
+    )
+    def test_lambda_handler_processing_error(self, sqs_event, context):
+        """Test handling of processing errors."""
+        with mock_aws():
+            boto3.client("secretsmanager", region_name="us-east-1").create_secret(
+                Name="test-secret",
+                SecretString=json.dumps(
+                    {
+                        "SLACK_BOT_TOKEN": "xoxb-test",
+                        "OPENAI_API_KEY": "sk-test",
+                    }
+                ),
+            )
+
+            with patch(SERVICE_PATH) as mock_create:
+                with patch("asyncio.run") as mock_run:
+                    mock_create.return_value = Mock(
+                        process_emoji_generation_job=Mock(
+                            side_effect=Exception("Processing failed")
+                        )
+                    )
+                    mock_run.side_effect = Exception("Processing failed")
+
+                    result = handler(sqs_event, context)
+
+                    assert result == {
+                        "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
+                    }
+
+    @patch.dict(
+        "os.environ",
+        {
+            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
+            "SECRETS_NAME": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
         },
     )
     def test_lambda_handler_missing_required_fields(self, context):
@@ -177,35 +225,46 @@ class TestWorkerHandler:
             ]
         }
 
-        with patch(
-            "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
-        ) as mock_create:
-            mock_create.return_value = (None, None)
+        with mock_aws():
+            boto3.client("secretsmanager", region_name="us-east-1").create_secret(
+                Name="test-secret",
+                SecretString=json.dumps(
+                    {
+                        "SLACK_BOT_TOKEN": "xoxb-test",
+                        "OPENAI_API_KEY": "sk-test",
+                    }
+                ),
+            )
 
-            result = handler(incomplete_event, context)
+            with patch(SERVICE_PATH) as mock_create:
+                mock_create.return_value = (None, None)
 
-            assert result == {
-                "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
-            }
+                result = handler(incomplete_event, context)
 
-    def test_secrets_loading_success(self):
-        """Test successful loading of secrets from AWS."""
+                assert result == {
+                    "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
+                }
+
+    def test_secrets_loading_populates_environment_variables_correctly(self):
+        """Test that secrets are loaded into environment variables."""
         from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
 
-        # Reset singleton state
         AWSSecretsLoader._instance = None
         AWSSecretsLoader._loaded = False
 
-        with patch("boto3.client") as mock_boto_client:
-            with patch.dict("os.environ", {"SECRETS_NAME": "test-secrets"}):
-                mock_secrets_client = Mock()
-                mock_boto_client.return_value = mock_secrets_client
-                mock_secrets_client.get_secret_value.return_value = {
-                    "SecretString": json.dumps(
-                        {"SLACK_BOT_TOKEN": "xoxb-test", "OPENAI_API_KEY": "sk-test"}
-                    )
-                }
+        with mock_aws():
+            client = boto3.client("secretsmanager", region_name="us-east-1")
+            client.create_secret(
+                Name="test-secrets",
+                SecretString=json.dumps(
+                    {"SLACK_BOT_TOKEN": "xoxb-test", "OPENAI_API_KEY": "sk-test"}
+                ),
+            )
 
+            with patch.dict(
+                os.environ,
+                {"SECRETS_NAME": "test-secrets", "AWS_DEFAULT_REGION": "us-east-1"},
+            ):
                 AWSSecretsLoader().load_secrets()
 
                 assert os.environ["SLACK_BOT_TOKEN"] == "xoxb-test"
