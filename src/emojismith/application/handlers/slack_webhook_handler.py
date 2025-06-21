@@ -67,11 +67,12 @@ class SlackWebhookHandler:
         self, body: bytes, headers: Dict[str, str]
     ) -> Dict[str, Any]:
         """Validate and process an incoming Slack webhook event."""
-        request = WebhookRequest(
-            body=body,
-            timestamp=headers.get("X-Slack-Request-Timestamp"),
-            signature=headers.get("X-Slack-Signature"),
+        timestamp = headers.get("X-Slack-Request-Timestamp") or headers.get(
+            "x-slack-request-timestamp"
         )
+        signature = headers.get("X-Slack-Signature") or headers.get("x-slack-signature")
+
+        request = WebhookRequest(body=body, timestamp=timestamp, signature=signature)
 
         if not body.startswith(b'{"type":"url_verification"'):
             if not self._security_service.is_authentic_webhook(request):
