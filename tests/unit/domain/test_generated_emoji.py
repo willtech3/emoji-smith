@@ -6,6 +6,7 @@ EmojiValidationService, so these tests focus on basic entity validation.
 
 import pytest
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+from emojismith.domain.exceptions import ValidationError
 
 
 class TestGeneratedEmoji:
@@ -65,7 +66,7 @@ class TestGeneratedEmoji:
 
     def test_validate_format_rejects_invalid_formats(self) -> None:
         """Invalid image formats should be rejected at construction time."""
-        with pytest.raises(ValueError, match="Unsupported format: webp"):
+        with pytest.raises(ValidationError, match="Unsupported format: webp"):
             GeneratedEmoji(image_data=b"data", name="test", format="webp")
 
     def test_default_format_is_png(self) -> None:

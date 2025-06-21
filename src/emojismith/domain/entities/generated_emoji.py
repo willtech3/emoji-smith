@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
+from emojismith.domain.exceptions import ValidationError
+
 
 @dataclass(frozen=True)
 class GeneratedEmoji:
@@ -42,9 +44,9 @@ class GeneratedEmoji:
         """Validate emoji format is acceptable.
 
         Raises:
-            ValueError: If format is not one of the supported formats.
+            ValidationError: If format is not one of the supported formats.
         """
         if self.format not in ["png", "gif", "jpg"]:
-            raise ValueError(
+            raise ValidationError(
                 f"Unsupported format: {self.format}. Must be one of: png, gif, jpg"
             )
