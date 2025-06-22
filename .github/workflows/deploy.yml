@@ -119,7 +119,7 @@ jobs:
 
     - name: Run integration tests
       run: |
-        uv run pytest -m integration --cov=src --cov-append --cov-report=xml tests/
+        uv run pytest -m integration --cov=src --cov-report=xml tests/
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
