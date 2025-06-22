@@ -11,6 +11,7 @@ from webhook.infrastructure.sqs_job_queue import SQSJobQueue
 from shared.domain.entities import EmojiGenerationJob
 
 
+@pytest.mark.integration
 class TestDualLambdaE2EIntegration:
     """End-to-end integration tests for webhook to worker flow."""
 

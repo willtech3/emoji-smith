@@ -7,6 +7,7 @@ from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
 
 
+@pytest.mark.unit
 class TestEmojiValidationService:
     @pytest.fixture
     def fixtures_dir(self):

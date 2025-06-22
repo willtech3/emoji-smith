@@ -123,6 +123,7 @@ async def test_share_emoji_existing_thread(
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_share_fails_with_invalid_token(slack_slack_test_channel, sample_emoji):
     invalid_client = AsyncWebClient(token="xoxb-invalid-token")
     repo = SlackFileSharingRepository(invalid_client)

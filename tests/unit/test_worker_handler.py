@@ -80,6 +80,7 @@ def context():
     return context
 
 
+@pytest.mark.unit
 class TestWorkerHandler:
     """Test cases for the SQS worker Lambda handler."""
 

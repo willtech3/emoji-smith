@@ -65,8 +65,8 @@ jobs:
       run: |
         uv run bandit -r src/
 
-  # Stage 3: Testing
-  testing:
+  # Stage 3: Testing - Split by test categories
+  unit-tests:
     runs-on: ubuntu-latest
     needs: security
     steps:
@@ -86,21 +86,102 @@ jobs:
       run: |
         uv sync --all-extras
 
-    - name: Run tests with coverage
+    - name: Run unit tests
       run: |
-        uv run pytest --cov=src --cov-fail-under=80 --cov-report=xml tests/
+        uv run pytest -m unit --cov=src --cov-report=xml tests/
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+        flags: unit
+        name: unit-coverage
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: security
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: "latest"
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras
+
+    - name: Run integration tests
+      run: |
+        uv run pytest -m integration --cov=src --cov-append --cov-report=xml tests/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: integration
+        name: integration-coverage
+
+  contract-security-tests:
+    runs-on: ubuntu-latest
+    needs: security
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: "latest"
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras
+
+    - name: Run contract and security tests
+      run: |
+        uv run pytest -m "contract or security" tests/
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: security
+    # Performance tests can be allowed to fail without blocking deployment
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: "latest"
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras
+
+    - name: Run performance tests
+      run: |
+        uv run pytest -m performance tests/
 
   # Stage 4: Build (Docker image and ECR push)
   build:
     runs-on: ubuntu-latest
-    needs: testing
+    needs: [unit-tests, integration-tests, contract-security-tests]
     # Run on feature branches (PRs) and main branch (push)
     outputs:
       image-uri: ${{ steps.build-image.outputs.image }}

@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 
 
+@pytest.mark.unit
 class TestSlackAPIRepository:
     """Test Slack API repository implementation."""
 

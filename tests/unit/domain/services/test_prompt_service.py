@@ -17,6 +17,7 @@ class DummyProcessor(ImageProcessor):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_enhances() -> None:
     repo = AsyncMock()
     repo.enhance_prompt.return_value = "enhanced"
@@ -28,6 +29,7 @@ async def test_prompt_service_enhances() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_build_with_style_strategy() -> None:
     """Service should apply style-specific prompt building strategy."""
     repo = AsyncMock()
@@ -48,6 +50,7 @@ async def test_prompt_service_build_with_style_strategy() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_build_with_context_enrichment() -> None:
     """Service should enrich prompts based on message context."""
     repo = AsyncMock()
@@ -66,6 +69,7 @@ async def test_prompt_service_build_with_context_enrichment() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_handles_edge_cases() -> None:
     """Service should handle edge cases gracefully."""
     repo = AsyncMock()
@@ -85,6 +89,7 @@ async def test_prompt_service_handles_edge_cases() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_truncates_very_long_prompts() -> None:
     """Service should truncate prompts that exceed 1000 characters."""
     repo = AsyncMock()
@@ -105,6 +110,7 @@ async def test_prompt_service_truncates_very_long_prompts() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_enriches_deployment_context_without_friday() -> None:
     """Service should enrich deployment context even when not on Friday."""
     repo = AsyncMock()
@@ -127,6 +133,7 @@ async def test_prompt_service_enriches_deployment_context_without_friday() -> No
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_handles_unknown_style() -> None:
     """Service should handle unknown style gracefully."""
     repo = AsyncMock()
@@ -142,6 +149,7 @@ async def test_prompt_service_handles_unknown_style() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_handles_minimal_and_retro_styles() -> None:
     """Service should correctly apply minimal and retro style strategies."""
     repo = AsyncMock()
@@ -163,6 +171,7 @@ async def test_prompt_service_handles_minimal_and_retro_styles() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_sanitizes_various_html_entities() -> None:
     """Service should sanitize various HTML entities and tags."""
     repo = AsyncMock()
@@ -184,6 +193,7 @@ async def test_prompt_service_sanitizes_various_html_entities() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_enriches_release_context() -> None:
     """Service should enrich release context similarly to deployment."""
     repo = AsyncMock()
@@ -202,6 +212,7 @@ async def test_prompt_service_enriches_release_context() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_with_emoji_specification_style() -> None:
     """Service should incorporate EmojiStylePreferences from specification."""
     repo = AsyncMock()
@@ -236,6 +247,7 @@ async def test_prompt_service_with_emoji_specification_style() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_handles_empty_style_strategies_dict() -> None:
     """Service should handle if style_strategies dict is modified."""
     repo = AsyncMock()
@@ -253,6 +265,7 @@ async def test_prompt_service_handles_empty_style_strategies_dict() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_combines_style_and_context_enrichment() -> None:
     """Service should apply both style strategy and context enrichment."""
     repo = AsyncMock()
@@ -272,6 +285,7 @@ async def test_prompt_service_combines_style_and_context_enrichment() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_prompt_service_handles_context_with_multiple_keywords() -> None:
     """Service should handle context with multiple deployment-related keywords."""
     repo = AsyncMock()
@@ -291,6 +305,7 @@ async def test_prompt_service_handles_context_with_multiple_keywords() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_generation_service_flow() -> None:
     repo = AsyncMock()
     repo.enhance_prompt.return_value = "good"

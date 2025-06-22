@@ -4,6 +4,7 @@ import pytest
 from shared.domain.entities.slack_message import SlackMessage
 
 
+@pytest.mark.unit
 class TestSlackMessage:
     """Test SlackMessage domain entity."""
 

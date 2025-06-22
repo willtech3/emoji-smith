@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock
 from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 
 
+@pytest.mark.unit
 class TestSQSJobQueue:
     """Test SQS job queue implementation."""
 

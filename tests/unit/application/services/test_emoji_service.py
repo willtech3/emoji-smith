@@ -9,6 +9,7 @@ from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.services.generation_service import EmojiGenerationService
 
 
+@pytest.mark.unit
 class TestEmojiCreationService:
     """Test emoji creation service orchestration."""
 

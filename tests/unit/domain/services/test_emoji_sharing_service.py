@@ -16,6 +16,7 @@ from shared.domain.value_objects import (
 )
 
 
+@pytest.mark.unit
 class TestEmojiSharingService:
     """Test emoji sharing service determines correct strategy."""
 
@@ -140,6 +141,7 @@ class TestEmojiSharingService:
         assert enterprise_service.workspace_type == WorkspaceType.ENTERPRISE_GRID
 
 
+@pytest.mark.unit
 class TestEmojiSharingContext:
     """Test emoji sharing context entity."""
 

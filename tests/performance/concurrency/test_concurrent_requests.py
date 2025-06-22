@@ -10,6 +10,7 @@ from shared.domain.value_objects import EmojiSharingPreferences
 from emojismith.application.services.emoji_service import EmojiCreationService
 
 
+@pytest.mark.performance
 class TestConcurrentRequests:
     """Test concurrent request handling capabilities."""
 

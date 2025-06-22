@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock
 
+import pytest
 from fastapi.testclient import TestClient
 
 from emojismith.presentation.web.slack_webhook_api import create_webhook_api
@@ -13,6 +14,7 @@ class DummyHandler:
         return {"status": "healthy"}
 
 
+@pytest.mark.unit
 def test_routes_delegate_to_handler() -> None:
     handler = DummyHandler()
     app = create_webhook_api(handler)

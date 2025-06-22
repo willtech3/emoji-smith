@@ -5,6 +5,7 @@ from shared.domain.entities import EmojiGenerationJob
 from shared.domain.value_objects import EmojiSharingPreferences
 
 
+@pytest.mark.unit
 class TestQueueMessage:
     def test_round_trip_serialization(self) -> None:
         job = EmojiGenerationJob.create_new(

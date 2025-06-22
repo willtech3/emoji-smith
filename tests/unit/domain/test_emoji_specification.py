@@ -6,6 +6,7 @@ from emojismith.domain.exceptions import ValidationError
 from shared.domain.value_objects import EmojiStylePreferences, StyleType
 
 
+@pytest.mark.unit
 class TestEmojiSpecification:
     def test_emoji_specification_to_prompt_includes_style(self) -> None:
         style = EmojiStylePreferences(style_type=StyleType.PIXEL_ART)

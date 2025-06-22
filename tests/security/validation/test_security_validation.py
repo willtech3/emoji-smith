@@ -6,6 +6,7 @@ from emojismith.domain.value_objects.emoji_specification import EmojiSpecificati
 from emojismith.domain.exceptions import ValidationError
 
 
+@pytest.mark.security
 class TestSecurityValidation:
     """Test security aspects including input validation and injection prevention."""
 
