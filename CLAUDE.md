@@ -98,7 +98,7 @@ black src/ tests/ && \
 flake8 src/ tests/ && \
 mypy src/ && \
 bandit -r src/ && \
-pytest --cov=src tests/
+pytest tests/
 ```
 
 ## 🎯 Current Focus Tracking

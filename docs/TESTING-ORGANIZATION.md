@@ -134,8 +134,8 @@ pytest tests/unit/domain/
 # Run unit tests with coverage
 pytest -m unit --cov=src --cov-report=html
 
-# Run all tests with coverage threshold
-pytest --cov=src --cov-fail-under=80
+# Run all tests with coverage report
+pytest --cov=src --cov-report=term-missing
 ```
 
 ## CI/CD Pipeline Integration

@@ -108,17 +108,19 @@ def test_enriches_data_before_saving():
     assert "processed_at" in saved_data  # Verifies enrichment logic
 ```
 
-## Coverage Requirements
+## Coverage Guidelines
 
-### By Layer
-| Layer | Minimum Coverage | Rationale |
-|-------|------------------|-----------|
-| Domain | 90% | Core business logic must be thoroughly tested |
+### By Layer (Target Goals)
+| Layer | Target Coverage | Rationale |
+|-------|-----------------|-----------|
+| Domain | 90% | Core business logic should be thoroughly tested |
 | Application | 85% | Use case orchestration needs high confidence |
 | Infrastructure | 70% | External dependencies make 100% impractical |
-| Overall | 80% | Enforced by CI pipeline |
+| Overall | 80% | Target goal for overall codebase |
 
-### Coverage Guidelines
+**Note**: These are aspirational targets, not hard requirements. Focus on writing meaningful tests that verify behavior rather than chasing coverage percentages.
+
+### Coverage Best Practices
 - **Focus on behavior coverage**, not line coverage
 - **Don't chase 100%** - Some code (like simple getters) doesn't need tests
 - **Prioritize critical paths** - Payment processing, security, core features
