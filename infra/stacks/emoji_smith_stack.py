@@ -328,7 +328,6 @@ class EmojiSmithStack(Stack):
         # Create Lambda integration
         webhook_integration = apigateway.LambdaIntegration(
             self.webhook_lambda,
-            request_templates={"application/json": '{"statusCode": "200"}'},
         )
 
         # Add health endpoint
