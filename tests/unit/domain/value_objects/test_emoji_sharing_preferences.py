@@ -9,6 +9,7 @@ from shared.domain.value_objects import (
 )
 
 
+@pytest.mark.unit
 class TestEmojiSharingPreferences:
     """Test emoji sharing preferences value object."""
 

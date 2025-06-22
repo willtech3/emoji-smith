@@ -17,6 +17,7 @@ from shared.domain.value_objects import (
 )
 
 
+@pytest.mark.integration
 class TestSlackFileSharingRepository:
     """Test Slack file sharing repository."""
 

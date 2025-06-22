@@ -1,9 +1,12 @@
 """Tests for EmojiGenerationJob domain entity."""
 
+import pytest
+
 from shared.domain.entities import EmojiGenerationJob
 from shared.domain.value_objects import JobStatus, EmojiSharingPreferences
 
 
+@pytest.mark.unit
 class TestEmojiGenerationJob:
     """Test creation and state transitions for EmojiGenerationJob."""
 

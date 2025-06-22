@@ -67,6 +67,7 @@ class InMemoryJobQueue:
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_background_worker_processes_job_end_to_end():
     """Test worker processes jobs using real services with minimal mocking."""
     start_time = time.time()
@@ -190,6 +191,7 @@ async def test_background_worker_processes_job_end_to_end():
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_worker_handles_multiple_jobs_concurrently():
     """Test worker can process multiple jobs concurrently."""
     start_time = time.time()

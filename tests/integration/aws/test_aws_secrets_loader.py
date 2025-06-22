@@ -17,6 +17,7 @@ from moto import mock_aws
 from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
 
 
+@pytest.mark.integration
 class TestAWSSecretsLoader:
     """Test the AWSSecretsLoader class."""
 

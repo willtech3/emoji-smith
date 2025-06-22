@@ -8,6 +8,7 @@ from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_enhance_prompt_recorded() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.startswith("/v1/models"):
@@ -30,6 +31,7 @@ async def test_enhance_prompt_recorded() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_generate_image_fallback() -> None:
     calls = []
 
@@ -58,6 +60,7 @@ async def test_generate_image_fallback() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_generate_image_handles_invalid_response() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.startswith("/v1/models"):

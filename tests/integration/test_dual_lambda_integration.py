@@ -10,6 +10,7 @@ from webhook.infrastructure.sqs_job_queue import SQSJobQueue
 from webhook.infrastructure.slack_api import SlackAPIRepository
 
 
+@pytest.mark.integration
 class TestDualLambdaIntegration:
     """Test integration between webhook and worker Lambdas."""
 

@@ -1,5 +1,7 @@
 """Tests for EmojiGenerationJob with sharing preferences."""
 
+import pytest
+
 from shared.domain.entities import EmojiGenerationJob
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
@@ -9,6 +11,7 @@ from shared.domain.value_objects import (
 )
 
 
+@pytest.mark.unit
 class TestEmojiGenerationJobSharing:
     """Test emoji generation job with sharing preferences."""
 

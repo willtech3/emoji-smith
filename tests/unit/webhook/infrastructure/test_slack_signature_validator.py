@@ -8,6 +8,7 @@ from webhook.domain.webhook_request import WebhookRequest
 from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
 
 
+@pytest.mark.unit
 class TestSlackSignatureValidator:
     """Test cases for SlackSignatureValidator."""
 

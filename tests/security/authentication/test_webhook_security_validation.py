@@ -12,6 +12,7 @@ from webhook.infrastructure.slack_signature_validator import (
 )
 
 
+@pytest.mark.security
 class TestWebhookSecurityService:
     """Test cases for WebhookSecurityService."""
 

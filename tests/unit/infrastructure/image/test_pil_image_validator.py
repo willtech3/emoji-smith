@@ -24,6 +24,7 @@ def _create_jpeg_bytes(
     return bio.getvalue()
 
 
+@pytest.mark.unit
 class TestPILImageValidator:
     @pytest.fixture
     def validator(self):

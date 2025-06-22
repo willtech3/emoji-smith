@@ -6,6 +6,7 @@ from emojismith.domain.services.webhook_security_service import WebhookSecurityS
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
 
 
+@pytest.mark.unit
 class TestWebhookSecurityService:
     """Test webhook security domain service."""
 

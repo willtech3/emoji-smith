@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 from webhook.handler import WebhookHandler
 
 
+@pytest.mark.unit
 class TestWebhookHandler:
     """Test webhook handler for package Lambda."""
 

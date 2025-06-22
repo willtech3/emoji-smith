@@ -9,6 +9,7 @@ from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_enhances_prompt_with_ai_assistance() -> None:
     client = AsyncMock()
     client.chat.completions.create.return_value = AsyncMock(
@@ -21,6 +22,7 @@ async def test_enhances_prompt_with_ai_assistance() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_uses_fallback_model_when_preferred_model_unavailable() -> None:
     client = AsyncMock()
     client.models.retrieve = AsyncMock(side_effect=[Exception(), None])
@@ -35,6 +37,7 @@ async def test_uses_fallback_model_when_preferred_model_unavailable() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_uses_environment_configured_model_for_chat() -> None:
     """Test that repository respects OPENAI_CHAT_MODEL from environment."""
     import os
@@ -62,6 +65,7 @@ async def test_uses_environment_configured_model_for_chat() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_rejects_image_generation_when_no_data_returned() -> None:
     client = AsyncMock()
     client.images.generate.return_value = AsyncMock(data=[])
@@ -71,6 +75,7 @@ async def test_rejects_image_generation_when_no_data_returned() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_rejects_image_generation_when_b64_json_is_none() -> None:
     """Test that None b64_json is handled gracefully."""
     client = AsyncMock()
@@ -81,6 +86,7 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
     """Test that image generation falls back to DALL-E 2 when DALL-E 3 fails."""
     client = AsyncMock()
@@ -111,6 +117,7 @@ async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_enhance_prompt_raises_rate_limit_error() -> None:
     client = AsyncMock()
     client.chat.completions.create.side_effect = openai.RateLimitError(
@@ -124,6 +131,7 @@ async def test_enhance_prompt_raises_rate_limit_error() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_generate_image_raises_rate_limit_error() -> None:
     client = AsyncMock()
     client.images.generate.side_effect = [

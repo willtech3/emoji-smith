@@ -12,6 +12,7 @@ from emojismith.infrastructure.security.slack_signature_validator import (
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
 
 
+@pytest.mark.security
 class TestSlackSignatureValidator:
     """Test Slack signature validator implementation."""
 
