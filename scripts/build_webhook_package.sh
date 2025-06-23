@@ -28,13 +28,21 @@ echo "Using temporary directory: $TEMP_DIR"
 echo -e "${YELLOW}Installing webhook dependencies...${NC}"
 uv pip install -r requirements-webhook.lock --target "$TEMP_DIR" --no-deps
 
-# Copy webhook source code
+# Copy webhook source code maintaining directory structure
 echo -e "${YELLOW}Copying webhook source code...${NC}"
-cp -r src/webhook "$TEMP_DIR/"
-cp -r src/shared "$TEMP_DIR/"
+mkdir -p "$TEMP_DIR/src"
+cp -r src/webhook "$TEMP_DIR/src/"
+cp -r src/shared "$TEMP_DIR/src/"
+# Copy emojismith module (needed for imports)
+mkdir -p "$TEMP_DIR/src/emojismith/infrastructure/aws"
+cp -r src/emojismith/domain "$TEMP_DIR/src/emojismith/"
+cp -r src/emojismith/application "$TEMP_DIR/src/emojismith/"
+cp -r src/emojismith/infrastructure "$TEMP_DIR/src/emojismith/"
+cp src/emojismith/__init__.py "$TEMP_DIR/src/emojismith/"
+cp src/__init__.py "$TEMP_DIR/src/"
+# Copy handler files to root for Lambda to find
 cp src/emojismith/infrastructure/aws/webhook_handler.py "$TEMP_DIR/"
 cp src/emojismith/infrastructure/aws/secrets_loader.py "$TEMP_DIR/"
-cp src/__init__.py "$TEMP_DIR/"
 
 # Create package zip
 echo -e "${YELLOW}Creating webhook package zip...${NC}"
