@@ -9,7 +9,7 @@ class SlackUser:
     """Slack user information."""
 
     id: str
-    name: str
+    name: str = ""  # Make name optional with default
     username: Optional[str] = None
     team_id: Optional[str] = None
 
