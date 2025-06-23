@@ -38,6 +38,8 @@ dev = [
     "respx>=0.20.2",
     "flake8-pytest-style>=2.1.0",
     "moto[sqs,secretsmanager]>=5.0.0",  # v5.0+ required for proper SQS message attributes
+    "aws-cdk-lib>=2.0.0",  # Required for CDK stack tests
+    "constructs>=10.0.0",  # Required for CDK stack tests
 ]
 
 [build-system]
@@ -132,6 +134,8 @@ severity = "medium"
 [dependency-groups]
 dev = [
     "moto[sqs]>=5.1.6",
+    "aws-cdk-lib>=2.0.0",
+    "constructs>=10.0.0",
 ]
 webhook = [
     "boto3>=1.37.3",
