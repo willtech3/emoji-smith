@@ -1,11 +1,13 @@
 """Test CDK stack configuration to prevent Lambda handler regressions."""
 
+import pytest
 from unittest.mock import patch
 from aws_cdk import App
 from aws_cdk.assertions import Template, Match
 from infra.stacks.emoji_smith_stack import EmojiSmithStack
 
 
+@pytest.mark.unit
 class TestEmojiSmithStack:
     """Test suite for CDK stack configuration."""
 
