@@ -30,18 +30,23 @@ uv pip install -r requirements-webhook.lock --target "$TEMP_DIR" --no-deps
 
 # Copy webhook source code maintaining directory structure
 echo -e "${YELLOW}Copying webhook source code...${NC}"
+# Copy webhook and shared modules (these stay under src/)
 mkdir -p "$TEMP_DIR/src"
 cp -r src/webhook "$TEMP_DIR/src/"
 cp -r src/shared "$TEMP_DIR/src/"
-# Copy emojismith module (needed for imports)
-mkdir -p "$TEMP_DIR/src/emojismith/infrastructure/aws"
-cp -r src/emojismith/domain "$TEMP_DIR/src/emojismith/"
-cp -r src/emojismith/application "$TEMP_DIR/src/emojismith/"
-cp -r src/emojismith/infrastructure "$TEMP_DIR/src/emojismith/"
-cp src/emojismith/__init__.py "$TEMP_DIR/src/emojismith/"
 cp src/__init__.py "$TEMP_DIR/src/"
-# Copy handler files to root for Lambda to find
-cp src/emojismith/infrastructure/aws/webhook_handler.py "$TEMP_DIR/"
+
+# Copy emojismith module to root so Lambda can import it directly
+mkdir -p "$TEMP_DIR/emojismith/infrastructure/aws"
+cp -r src/emojismith/domain "$TEMP_DIR/emojismith/"
+cp -r src/emojismith/application "$TEMP_DIR/emojismith/"
+cp -r src/emojismith/infrastructure "$TEMP_DIR/emojismith/"
+cp src/emojismith/__init__.py "$TEMP_DIR/emojismith/"
+# Ensure all __init__.py files exist
+touch "$TEMP_DIR/emojismith/infrastructure/__init__.py"
+touch "$TEMP_DIR/emojismith/infrastructure/aws/__init__.py"
+
+# Copy secrets_loader to root for Lambda package imports
 cp src/emojismith/infrastructure/aws/secrets_loader.py "$TEMP_DIR/"
 
 # Create package zip
