@@ -134,6 +134,8 @@ severity = "medium"
 [dependency-groups]
 dev = [
     "moto[sqs]>=5.1.6",
+    "aws-cdk-lib>=2.0.0",
+    "constructs>=10.0.0",
 ]
 webhook = [
     "boto3>=1.37.3",

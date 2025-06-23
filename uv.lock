@@ -567,6 +567,8 @@ dev = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "aws-cdk-lib" },
+    { name = "constructs" },
     { name = "moto" },
 ]
 webhook = [
@@ -609,7 +611,11 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "moto", extras = ["sqs"], specifier = ">=5.1.6" }]
+dev = [
+    { name = "aws-cdk-lib", specifier = ">=2.0.0" },
+    { name = "constructs", specifier = ">=10.0.0" },
+    { name = "moto", extras = ["sqs"], specifier = ">=5.1.6" },
+]
 webhook = [
     { name = "boto3", specifier = ">=1.37.3" },
     { name = "fastapi", specifier = ">=0.115.12" },
