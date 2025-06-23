@@ -1,6 +1,8 @@
 """Unit tests for SlackSignatureValidator."""
 
 import time
+import hmac
+import hashlib
 from unittest.mock import patch
 import pytest
 
@@ -47,15 +49,22 @@ class TestSlackSignatureValidator:
         assert validator._replay_window == custom_window
 
     def test_validate_with_valid_signature_returns_true(
-        self, validator, valid_request_data
+        self, validator, valid_request_data, signing_secret_bytes
     ):
         """Test that valid signature returns True."""
         body = valid_request_data["body"]
         timestamp = valid_request_data["timestamp"]
 
-        # Create valid signature
+        # Create valid signature using the same algorithm as the validator
         sig_basestring = f"v0:{timestamp}:".encode() + body
-        expected_signature = validator._compute_expected_signature(sig_basestring)
+        expected_signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         result = validator.validate(body, timestamp, expected_signature)
         assert result is True
@@ -142,15 +151,22 @@ class TestSlackSignatureValidator:
         assert result is False
 
     def test_validate_request_with_valid_request_returns_true(
-        self, validator, valid_request_data
+        self, validator, valid_request_data, signing_secret_bytes
     ):
         """Test validate_request with valid WebhookRequest returns True."""
         body = valid_request_data["body"]
         timestamp = valid_request_data["timestamp"]
 
-        # Create valid signature
+        # Create valid signature using the same algorithm as the validator
         sig_basestring = f"v0:{timestamp}:".encode() + body
-        signature = validator._compute_expected_signature(sig_basestring)
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         request = WebhookRequest(body=body, timestamp=timestamp, signature=signature)
         result = validator.validate_request(request)
@@ -174,37 +190,104 @@ class TestSlackSignatureValidator:
         result = validator.validate_request(request)
         assert result is False
 
-    def test_compute_expected_signature_produces_correct_format(self, validator):
-        """Test that _compute_expected_signature produces correct format."""
-        sig_basestring = b"v0:1234567890:test_body"
-        signature = validator._compute_expected_signature(sig_basestring)
-
-        assert signature.startswith("v0=")
-        assert len(signature) == 67  # "v0=" + 64 hex chars
-
-    def test_compute_expected_signature_consistent_results(self, validator):
-        """Test that _compute_expected_signature produces consistent results."""
-        sig_basestring = b"v0:1234567890:test_body"
-        signature1 = validator._compute_expected_signature(sig_basestring)
-        signature2 = validator._compute_expected_signature(sig_basestring)
-
-        assert signature1 == signature2
-
-    def test_compute_expected_signature_different_inputs_different_outputs(
-        self, validator
+    def test_validate_signature_format_validation(
+        self, validator, signing_secret_bytes
     ):
-        """Test that different inputs produce different signatures."""
-        sig_basestring1 = b"v0:1234567890:test_body_1"
-        sig_basestring2 = b"v0:1234567890:test_body_2"
+        """Test that validate correctly validates signature format."""
+        body = b"test_body"
+        timestamp = str(int(time.time()))
 
-        signature1 = validator._compute_expected_signature(sig_basestring1)
-        signature2 = validator._compute_expected_signature(sig_basestring2)
+        # Test with invalid signature format (missing v0= prefix)
+        invalid_signature = "invalid_signature_without_prefix"
+        result = validator.validate(body, timestamp, invalid_signature)
+        assert result is False
 
+        # Test with valid format signature
+        sig_basestring = f"v0:{timestamp}:".encode() + body
+        valid_signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
+        assert valid_signature.startswith("v0=")
+        assert len(valid_signature) == 67  # "v0=" + 64 hex chars
+
+        result = validator.validate(body, timestamp, valid_signature)
+        assert result is True
+
+    def test_validate_consistent_results_for_same_input(
+        self, validator, signing_secret_bytes
+    ):
+        """Test that validate produces consistent results for same input."""
+        body = b"test_body"
+        timestamp = str(int(time.time()))
+
+        # Create valid signature
+        sig_basestring = f"v0:{timestamp}:".encode() + body
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
+
+        # Multiple validations should produce same result
+        result1 = validator.validate(body, timestamp, signature)
+        result2 = validator.validate(body, timestamp, signature)
+
+        assert result1 is True
+        assert result2 is True
+        assert result1 == result2
+
+    def test_validate_different_bodies_require_different_signatures(
+        self, validator, signing_secret_bytes
+    ):
+        """Test that different request bodies require different signatures."""
+        timestamp = str(int(time.time()))
+        body1 = b"test_body_1"
+        body2 = b"test_body_2"
+
+        # Create signature for body1
+        sig_basestring1 = f"v0:{timestamp}:".encode() + body1
+        signature1 = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring1,
+                hashlib.sha256,
+            ).hexdigest()
+        )
+
+        # Verify signature1 works with body1 but not body2
+        assert validator.validate(body1, timestamp, signature1) is True
+        assert validator.validate(body2, timestamp, signature1) is False
+
+        # Create signature for body2
+        sig_basestring2 = f"v0:{timestamp}:".encode() + body2
+        signature2 = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring2,
+                hashlib.sha256,
+            ).hexdigest()
+        )
+
+        # Verify signature2 works with body2 but not body1
+        assert validator.validate(body2, timestamp, signature2) is True
+        assert validator.validate(body1, timestamp, signature2) is False
+
+        # Signatures should be different
         assert signature1 != signature2
 
     @patch("webhook.infrastructure.slack_signature_validator.time.time")
     def test_validate_at_replay_window_boundary_returns_false(
-        self, mock_time, validator
+        self, mock_time, validator, signing_secret_bytes
     ):
         """Test validation at replay window boundary is rejected for security."""
         current_time = 1000000
@@ -218,14 +301,21 @@ class TestSlackSignatureValidator:
 
         # Create valid signature for boundary timestamp
         sig_basestring = f"v0:{boundary_timestamp}:".encode() + body
-        signature = validator._compute_expected_signature(sig_basestring)
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         result = validator.validate(body, boundary_timestamp, signature)
         assert result is False
 
     @patch("webhook.infrastructure.slack_signature_validator.time.time")
     def test_validate_beyond_replay_window_boundary_returns_false(
-        self, mock_time, validator
+        self, mock_time, validator, signing_secret_bytes
     ):
         """Test validation beyond replay window boundary is rejected."""
         current_time = 1000000
@@ -239,7 +329,14 @@ class TestSlackSignatureValidator:
 
         # Create valid signature for beyond boundary timestamp
         sig_basestring = f"v0:{beyond_boundary_timestamp}:".encode() + body
-        signature = validator._compute_expected_signature(sig_basestring)
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         result = validator.validate(body, beyond_boundary_timestamp, signature)
         assert result is False
@@ -332,50 +429,78 @@ class TestSlackSignatureValidator:
             result = validator.validate(body, timestamp, signature)
             assert result is False
 
-    def test_edge_case_empty_body(self, validator):
+    def test_edge_case_empty_body(self, validator, signing_secret_bytes):
         """Test validation with empty request body."""
         body = b""
         timestamp = str(int(time.time()))
 
         # Create valid signature for empty body
         sig_basestring = f"v0:{timestamp}:".encode() + body
-        signature = validator._compute_expected_signature(sig_basestring)
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         result = validator.validate(body, timestamp, signature)
         assert result is True
 
-    def test_edge_case_large_body(self, validator):
+    def test_edge_case_large_body(self, validator, signing_secret_bytes):
         """Test validation with large request body."""
         body = b'{"data": "' + b"x" * 10000 + b'"}'
         timestamp = str(int(time.time()))
 
         # Create valid signature for large body
         sig_basestring = f"v0:{timestamp}:".encode() + body
-        signature = validator._compute_expected_signature(sig_basestring)
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         result = validator.validate(body, timestamp, signature)
         assert result is True
 
-    def test_unicode_handling_in_body(self, validator):
+    def test_unicode_handling_in_body(self, validator, signing_secret_bytes):
         """Test that unicode characters in body are handled correctly."""
         body = '{"message": "Hello 🌟 World"}'.encode("utf-8")
         timestamp = str(int(time.time()))
 
         # Create valid signature for unicode body
         sig_basestring = f"v0:{timestamp}:".encode() + body
-        signature = validator._compute_expected_signature(sig_basestring)
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         result = validator.validate(body, timestamp, signature)
         assert result is True
 
-    def test_prefix_stripping_in_comparison(self, validator):
+    def test_prefix_stripping_in_comparison(self, validator, signing_secret_bytes):
         """Test that v0= prefix is properly stripped before comparison."""
         body = b'{"test": "data"}'
         timestamp = str(int(time.time()))
 
         # Create valid signature
         sig_basestring = f"v0:{timestamp}:".encode() + body
-        expected_signature = validator._compute_expected_signature(sig_basestring)
+        expected_signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         # Test with properly formatted signature
         result = validator.validate(body, timestamp, expected_signature)
@@ -387,7 +512,9 @@ class TestSlackSignatureValidator:
         assert result is False
 
     @pytest.mark.parametrize("time_offset", [0, -299, 299])
-    def test_replay_window_edge_cases(self, validator, time_offset):
+    def test_replay_window_edge_cases(
+        self, validator, signing_secret_bytes, time_offset
+    ):
         """Test replay window edge cases using parametrize."""
         with patch(
             "webhook.infrastructure.slack_signature_validator.time.time"
@@ -400,13 +527,22 @@ class TestSlackSignatureValidator:
 
             # Create valid signature
             sig_basestring = f"v0:{timestamp}:".encode() + body
-            signature = validator._compute_expected_signature(sig_basestring)
+            signature = (
+                "v0="
+                + hmac.new(
+                    signing_secret_bytes,
+                    sig_basestring,
+                    hashlib.sha256,
+                ).hexdigest()
+            )
 
             result = validator.validate(body, timestamp, signature)
             assert result is True  # All these should be within window
 
     @pytest.mark.parametrize("time_offset", [-300, 300])
-    def test_replay_window_boundary_cases(self, validator, time_offset):
+    def test_replay_window_boundary_cases(
+        self, validator, signing_secret_bytes, time_offset
+    ):
         """Test replay window boundary cases - boundary should be rejected."""
         with patch(
             "webhook.infrastructure.slack_signature_validator.time.time"
@@ -419,7 +555,14 @@ class TestSlackSignatureValidator:
 
             # Create valid signature
             sig_basestring = f"v0:{timestamp}:".encode() + body
-            signature = validator._compute_expected_signature(sig_basestring)
+            signature = (
+                "v0="
+                + hmac.new(
+                    signing_secret_bytes,
+                    sig_basestring,
+                    hashlib.sha256,
+                ).hexdigest()
+            )
 
             result = validator.validate(body, timestamp, signature)
             assert (
@@ -427,7 +570,9 @@ class TestSlackSignatureValidator:
             )  # Exactly at boundary should be rejected for security
 
     @pytest.mark.parametrize("time_offset", [-301, 301])
-    def test_replay_window_outside_boundary_cases(self, validator, time_offset):
+    def test_replay_window_outside_boundary_cases(
+        self, validator, signing_secret_bytes, time_offset
+    ):
         """Test replay window outside boundary cases using parametrize."""
         with patch(
             "webhook.infrastructure.slack_signature_validator.time.time"
@@ -440,7 +585,14 @@ class TestSlackSignatureValidator:
 
             # Create valid signature
             sig_basestring = f"v0:{timestamp}:".encode() + body
-            signature = validator._compute_expected_signature(sig_basestring)
+            signature = (
+                "v0="
+                + hmac.new(
+                    signing_secret_bytes,
+                    sig_basestring,
+                    hashlib.sha256,
+                ).hexdigest()
+            )
 
             result = validator.validate(body, timestamp, signature)
             assert result is False  # Outside boundary should be rejected

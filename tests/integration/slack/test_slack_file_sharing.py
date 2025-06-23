@@ -375,18 +375,64 @@ class TestSlackFileSharingRepository:
         # Verify no additional ephemeral messages for EVERYONE visibility
         mock_slack_client.chat_postEphemeral.assert_not_called()
 
-    def test_upload_instruction_steps_consistent(self, file_sharing_repo):
-        """Ensure both methods use the same upload instructions."""
-        steps = file_sharing_repo._build_emoji_upload_steps("demo")
-        prefs = EmojiSharingPreferences(
-            share_location=ShareLocation.NEW_THREAD,
+    async def test_upload_instructions_consistent_across_visibility_settings(
+        self, file_sharing_repo, mock_slack_client, sample_emoji
+    ):
+        """Ensure upload instructions are consistent across visibility settings."""
+        # Test with EVERYONE visibility (instructions in file comment)
+        prefs_everyone = EmojiSharingPreferences(
+            share_location=ShareLocation.ORIGINAL_CHANNEL,
             instruction_visibility=InstructionVisibility.EVERYONE,
             image_size=ImageSize.EMOJI_SIZE,
             include_upload_instructions=True,
         )
 
-        comment = file_sharing_repo._build_initial_comment("demo", prefs)
-        instructions = file_sharing_repo._build_upload_instructions("demo")
+        mock_slack_client.files_upload_v2.return_value = {
+            "ok": True,
+            "file": {"url_private": "https://files.slack.com/test.png"},
+        }
 
-        assert steps in comment
-        assert steps in instructions
+        await file_sharing_repo.share_emoji_file(
+            emoji=sample_emoji,
+            channel_id="C123456",
+            preferences=prefs_everyone,
+            requester_user_id="U789",
+        )
+
+        # Capture the initial comment from the file upload
+        upload_call = mock_slack_client.files_upload_v2.call_args
+        initial_comment = upload_call.kwargs.get("initial_comment", "")
+
+        # Test with SUBMITTER_ONLY visibility (instructions in ephemeral message)
+        prefs_submitter = EmojiSharingPreferences(
+            share_location=ShareLocation.ORIGINAL_CHANNEL,
+            instruction_visibility=InstructionVisibility.SUBMITTER_ONLY,
+            image_size=ImageSize.EMOJI_SIZE,
+            include_upload_instructions=True,
+        )
+
+        mock_slack_client.reset_mock()
+        mock_slack_client.files_upload_v2.return_value = {
+            "ok": True,
+            "file": {"url_private": "https://files.slack.com/test.png"},
+        }
+
+        await file_sharing_repo.share_emoji_file(
+            emoji=sample_emoji,
+            channel_id="C123456",
+            preferences=prefs_submitter,
+            requester_user_id="U789",
+        )
+
+        # Capture the ephemeral message text
+        ephemeral_call = mock_slack_client.chat_postEphemeral.call_args
+        ephemeral_text = ephemeral_call.kwargs.get("text", "")
+
+        # Both should contain the same upload steps
+        # Check for key instruction elements that should be consistent
+        assert "Right-click" in initial_comment
+        assert "Right-click" in ephemeral_text
+        assert "Add emoji" in initial_comment
+        assert "Add emoji" in ephemeral_text
+        assert sample_emoji.name in initial_comment
+        assert sample_emoji.name in ephemeral_text

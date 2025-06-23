@@ -184,11 +184,20 @@ class TestSlackSignatureValidator:
             "signature": signature,
         }
 
-    def test_compute_expected_signature_known_example(self, known_signature):
-        """Validator produces expected signature for known example."""
+    def test_validate_with_known_signature_example(self, known_signature):
+        """Validator validates correctly with known signature example."""
         validator = SlackSignatureValidator(signing_secret=known_signature["secret"])
-        result = validator._compute_expected_signature(known_signature["basestring"])
-        assert result == known_signature["signature"]
+        # Test that the validator correctly validates the known signature
+        request = WebhookRequest(
+            body=known_signature["body"],
+            timestamp=known_signature["timestamp"],
+            signature=known_signature["signature"],
+        )
+        with patch(
+            "emojismith.infrastructure.security.slack_signature_validator.time.time",
+            return_value=int(known_signature["timestamp"]) + 1,
+        ):
+            assert validator.validate_signature(request) is True
 
     def test_known_signature_validates(self, known_signature):
         """Validator accepts a genuine Slack signature."""
