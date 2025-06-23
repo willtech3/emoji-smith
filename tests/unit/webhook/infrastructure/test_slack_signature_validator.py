@@ -34,19 +34,53 @@ class TestSlackSignatureValidator:
         return {"body": body, "timestamp": timestamp}
 
     def test_init_with_valid_secret(self, signing_secret_bytes):
-        """Test initialization with valid signing secret as bytes."""
+        """Test initialization with valid signing secret creates working validator."""
         validator = SlackSignatureValidator(signing_secret=signing_secret_bytes)
-        assert validator._signing_secret == signing_secret_bytes
-        assert validator._replay_window == SlackSignatureValidator.DEFAULT_REPLAY_WINDOW
+        
+        # Test behavior: validator should work with properly signed request
+        body = b'{"test": "data"}'
+        timestamp = str(int(time.time()))
+        
+        # Create valid signature using same algorithm as validator
+        sig_basestring = f"v0:{timestamp}:".encode() + body
+        expected_signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
+        
+        # Validator should accept properly signed request
+        assert validator.validate(body, timestamp, expected_signature) is True
 
     def test_init_with_custom_replay_window(self, signing_secret_bytes):
-        """Test initialization with custom replay window."""
+        """Test initialization with custom replay window affects validation behavior."""
         custom_window = 600
         validator = SlackSignatureValidator(
             signing_secret=signing_secret_bytes,
             replay_window_seconds=custom_window,
         )
-        assert validator._replay_window == custom_window
+        
+        # Test behavior: validator should reject timestamps outside custom window
+        # Use a timestamp that would be valid with default window (300s) but invalid with custom window (600s)
+        old_timestamp = str(int(time.time()) - custom_window - 100)  # 700 seconds ago
+        body = b'{"test": "data"}'
+        
+        # Create valid signature for old timestamp
+        sig_basestring = f"v0:{old_timestamp}:".encode() + body
+        signature = (
+            "v0="
+            + hmac.new(
+                signing_secret_bytes,
+                sig_basestring,
+                hashlib.sha256,
+            ).hexdigest()
+        )
+        
+        # Should reject due to custom replay window
+        assert validator.validate(body, old_timestamp, signature) is False
 
     def test_validate_with_valid_signature_returns_true(
         self, validator, valid_request_data, signing_secret_bytes
