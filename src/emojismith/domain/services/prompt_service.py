@@ -3,6 +3,7 @@
 from typing import Optional, Dict
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
+from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
 
 class AIPromptService:
@@ -10,6 +11,7 @@ class AIPromptService:
 
     def __init__(self, openai_repo: OpenAIRepository) -> None:
         self._repo = openai_repo
+        self._style_template_manager = StyleTemplateManager()
         self._style_strategies: Dict[str, str] = {
             "professional": (
                 "Create a professional, business-appropriate emoji that "
@@ -30,7 +32,22 @@ class AIPromptService:
         }
 
     async def enhance(self, spec: EmojiSpecification) -> str:
-        return await self._repo.enhance_prompt(spec.context, spec.description)
+        """Enhance prompt using style templates and AI enhancement."""
+        # Apply style template if available
+        if spec.style and hasattr(spec.style, "style_type"):
+            enhanced_prompt = self._style_template_manager.apply_style_template(
+                base_prompt=spec.description, style_type=spec.style.style_type
+            )
+            # Add context to the enhanced prompt
+            if spec.context:
+                enhanced_prompt += f" Context: {spec.context}"
+        else:
+            # Fallback to AI enhancement
+            enhanced_prompt = await self._repo.enhance_prompt(
+                spec.context, spec.description
+            )
+
+        return enhanced_prompt
 
     async def build_prompt(
         self, spec: EmojiSpecification, style: Optional[str] = None
