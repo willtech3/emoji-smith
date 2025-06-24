@@ -147,16 +147,18 @@ class TestSlackSignatureValidator:
 
         # Assert - should be rejected due to custom replay window
         assert result is False
-        
-        # Test that timestamp within custom window would be accepted (if signature was valid)
-        # This demonstrates that the custom window is actually being used
+
+        # Test that timestamp within custom window would be accepted
+        # (if signature was valid). This demonstrates that the custom
+        # window is actually being used
         recent_timestamp = str(int(time.time()) - custom_window + 100)  # Within window
         recent_request = WebhookRequest(
             body=b'{"type": "test"}',
             timestamp=recent_timestamp,
-            signature="v0=some_signature",  # Still invalid signature, but timestamp check passes
+            # Still invalid signature, but timestamp check passes
+            signature="v0=some_signature",
         )
-        
+
         # This should fail on signature validation, not timestamp validation
         # (We can't easily test a valid signature here without complex setup)
         result = validator.validate_signature(recent_request)
