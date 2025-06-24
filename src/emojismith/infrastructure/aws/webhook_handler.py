@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import urllib.parse
 from typing import Any, Tuple
 
+from fastapi import FastAPI, Request, HTTPException
 from mangum import Mangum
 from slack_sdk.web.async_client import AsyncWebClient
 
+from webhook.domain.webhook_request import WebhookRequest
 from webhook.handler import WebhookHandler
 from webhook.infrastructure.slack_api import SlackAPIRepository
 from webhook.infrastructure.sqs_job_queue import SQSJobQueue
@@ -72,10 +76,6 @@ if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
 
 def _create_app() -> Any:
     """Create minimal FastAPI app for webhook handling."""
-    from fastapi import FastAPI, Request, HTTPException
-    import json
-    import urllib.parse
-
     app = FastAPI(
         title="Emoji Smith Webhook",
         description="Minimal webhook handler for Slack events",
@@ -98,8 +98,6 @@ def _create_app() -> Any:
         logger.info(f"Request body length: {len(body)}")
 
         # Verify Slack signature
-        from webhook.domain.webhook_request import WebhookRequest
-
         timestamp = headers.get("x-slack-request-timestamp", "")
         signature = headers.get("x-slack-signature", "")
 
@@ -157,13 +155,14 @@ def _create_app() -> Any:
         # Forward to events endpoint
         return await slack_events(request)
 
-    # Add catch-all route for debugging
-    @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-    async def catch_all(request: Request, path: str) -> dict:
-        logger.warning(f"Unhandled request to: /{path}")
-        logger.warning(f"Method: {request.method}")
-        logger.warning(f"Headers: {dict(request.headers)}")
-        return {"error": f"Unhandled path: /{path}", "method": request.method}
+    # Temporarily remove catch-all route - it's causing 422 errors
+    # The catch-all route with path parameter is interfering with other routes
+    # @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+    # async def catch_all(request: Request, path: str) -> dict:
+    #     logger.warning(f"Unhandled request to: /{path}")
+    #     logger.warning(f"Method: {request.method}")
+    #     logger.warning(f"Headers: {dict(request.headers)}")
+    #     return {"error": f"Unhandled path: /{path}", "method": request.method}
 
     return app
 
