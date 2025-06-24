@@ -30,11 +30,9 @@ uv pip install -r requirements-webhook.lock --target "$TEMP_DIR" --no-deps
 
 # Copy webhook source code maintaining directory structure
 echo -e "${YELLOW}Copying webhook source code...${NC}"
-# Copy webhook and shared modules (these stay under src/)
-mkdir -p "$TEMP_DIR/src"
-cp -r src/webhook "$TEMP_DIR/src/"
-cp -r src/shared "$TEMP_DIR/src/"
-cp src/__init__.py "$TEMP_DIR/src/"
+# Copy webhook and shared modules to root for correct import paths
+cp -r src/webhook "$TEMP_DIR/"
+cp -r src/shared "$TEMP_DIR/"
 
 # Copy emojismith module to root so Lambda can import it directly
 mkdir -p "$TEMP_DIR/emojismith/infrastructure/aws"
