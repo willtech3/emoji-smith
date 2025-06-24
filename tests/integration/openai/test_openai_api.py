@@ -23,6 +23,41 @@ async def test_enhances_prompt_with_ai_assistance() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.integration
+async def test_enhance_prompt_uses_comprehensive_system_prompt() -> None:
+    """Test that enhance_prompt uses a comprehensive system prompt for DALL-E."""
+    client = AsyncMock()
+    client.chat.completions.create.return_value = AsyncMock(
+        choices=[AsyncMock(message=AsyncMock(content="enhanced prompt"))]
+    )
+    repo = OpenAIAPIRepository(client)
+
+    context = "Team celebration"
+    description = "party popper emoji"
+
+    result = await repo.enhance_prompt(context, description)
+
+    # Verify the API was called
+    assert result == "enhanced prompt"
+    client.chat.completions.create.assert_called_once()
+
+    # Extract the system prompt used
+    call_args = client.chat.completions.create.call_args
+    messages = call_args.kwargs["messages"]
+    system_prompt = messages[0]["content"]
+
+    # Verify the system prompt contains key requirements for DALL-E emoji generation
+    assert "transparent background" in system_prompt.lower()
+    assert "128x128" in system_prompt
+    assert "slack" in system_prompt.lower()
+    assert "emoji" in system_prompt.lower()
+    assert "dall-e" in system_prompt.lower() or "dalle" in system_prompt.lower()
+    assert (
+        len(system_prompt) > 100
+    )  # Should be comprehensive, not just "Enhance emoji prompt"
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
 async def test_uses_fallback_model_when_preferred_model_unavailable() -> None:
     client = AsyncMock()
     client.models.retrieve = AsyncMock(side_effect=[Exception(), None])
