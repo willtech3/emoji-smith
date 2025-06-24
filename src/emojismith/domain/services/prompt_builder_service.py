@@ -50,6 +50,9 @@ class PromptBuilderService:
         Returns:
             An optimized prompt string ready for DALL-E
         """
+        if not spec or not spec.description:
+            raise ValueError("Specification must have a description")
+
         # Extract themes from context
         themes = self.extract_themes(spec.context)
 

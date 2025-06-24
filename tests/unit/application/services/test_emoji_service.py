@@ -33,13 +33,25 @@ class TestEmojiCreationService:
         return AsyncMock()
 
     @pytest.fixture
+    def mock_build_prompt_use_case(self):
+        """Mock build prompt use case."""
+        mock = AsyncMock()
+        mock.build_prompt.return_value = "a happy face emoji in cartoon style"
+        return mock
+
+    @pytest.fixture
     def emoji_service(
-        self, mock_slack_repo, mock_emoji_generator, mock_file_sharing_repo
+        self,
+        mock_slack_repo,
+        mock_emoji_generator,
+        mock_build_prompt_use_case,
+        mock_file_sharing_repo,
     ):
         """Emoji creation service with mocked dependencies."""
         return EmojiCreationService(
             slack_repo=mock_slack_repo,
             emoji_generator=mock_emoji_generator,
+            build_prompt_use_case=mock_build_prompt_use_case,
             file_sharing_repo=mock_file_sharing_repo,
         )
 
@@ -48,6 +60,7 @@ class TestEmojiCreationService:
         self,
         mock_slack_repo,
         mock_emoji_generator,
+        mock_build_prompt_use_case,
         mock_job_queue,
         mock_file_sharing_repo,
     ):
@@ -55,6 +68,7 @@ class TestEmojiCreationService:
         return EmojiCreationService(
             slack_repo=mock_slack_repo,
             emoji_generator=mock_emoji_generator,
+            build_prompt_use_case=mock_build_prompt_use_case,
             job_queue=mock_job_queue,
             file_sharing_repo=mock_file_sharing_repo,
         )
@@ -89,13 +103,13 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_emoji_generator.generate.return_value = GeneratedEmoji(
+        mock_emoji_generator.generate_from_prompt.return_value = GeneratedEmoji(
             image_data=buf.getvalue(), name="facepalm"
         )
 
         await emoji_service.process_emoji_generation_job_dict(job_data)
 
-        mock_emoji_generator.generate.assert_called_once()
+        mock_emoji_generator.generate_from_prompt.assert_called_once()
         # For standard workspace, should use file sharing instead of direct upload
         mock_file_sharing_repo.share_emoji_file.assert_called_once()
         mock_slack_repo.upload_emoji.assert_not_called()
@@ -137,7 +151,7 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_emoji_generator.generate.return_value = GeneratedEmoji(
+        mock_emoji_generator.generate_from_prompt.return_value = GeneratedEmoji(
             image_data=buf.getvalue(), name="facepalm_reaction"
         )
 
@@ -145,15 +159,17 @@ class TestEmojiCreationService:
         await emoji_service.process_emoji_generation_job(job)
 
         # Assert
-        mock_emoji_generator.generate.assert_called_once()
+        mock_emoji_generator.generate_from_prompt.assert_called_once()
         # For standard workspace, should use file sharing instead of direct upload
         mock_file_sharing_repo.share_emoji_file.assert_called_once()
         mock_slack_repo.upload_emoji.assert_not_called()
 
         # Verify the call arguments
-        generate_call = mock_emoji_generator.generate.call_args
-        assert generate_call[0][0].description == "facepalm reaction"
-        assert generate_call[0][0].context == "The deployment failed again 😭"
+        generate_call = mock_emoji_generator.generate_from_prompt.call_args
+        # First argument should be the enhanced prompt
+        assert generate_call[0][0] == "a happy face emoji in cartoon style"
+        # Second argument should be the emoji name
+        assert generate_call[0][1] == "facepalm_reaction"
 
     async def test_process_emoji_generation_job_upload_failure(
         self,
@@ -191,7 +207,7 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_emoji_generator.generate.return_value = GeneratedEmoji(
+        mock_emoji_generator.generate_from_prompt.return_value = GeneratedEmoji(
             image_data=buf.getvalue(), name="test_emoji"
         )
 
@@ -237,7 +253,7 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_emoji_generator.generate.return_value = GeneratedEmoji(
+        mock_emoji_generator.generate_from_prompt.return_value = GeneratedEmoji(
             image_data=buf.getvalue(), name="test_emoji"
         )
 
