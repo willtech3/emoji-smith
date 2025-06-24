@@ -6,12 +6,20 @@ from emojismith.domain.value_objects.emoji_specification import EmojiSpecificati
 from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
 
+# Configuration constants
+MAX_PROMPT_LENGTH = 1000
+
+
 class AIPromptService:
     """Enhance prompts using OpenAI's chat models with fallback."""
 
-    def __init__(self, openai_repo: OpenAIRepository) -> None:
+    def __init__(
+        self,
+        openai_repo: OpenAIRepository,
+        style_template_manager: StyleTemplateManager,
+    ) -> None:
         self._repo = openai_repo
-        self._style_template_manager = StyleTemplateManager()
+        self._style_template_manager = style_template_manager
         self._style_strategies: Dict[str, str] = {
             "professional": (
                 "Create a professional, business-appropriate emoji that "
@@ -85,13 +93,9 @@ class AIPromptService:
         return prompt
 
     def _handle_edge_cases(self, prompt: str) -> str:
-        """Handle edge cases like length limits and sanitization."""
+        """Handle edge cases like length limits."""
         # Truncate if too long
-        if len(prompt) > 1000:
-            prompt = prompt[:997] + "..."
-
-        # Basic sanitization
-        prompt = prompt.replace("<script>", "").replace("</script>", "")
-        prompt = prompt.replace("<", "&lt;").replace(">", "&gt;")
+        if len(prompt) > MAX_PROMPT_LENGTH:
+            prompt = prompt[: MAX_PROMPT_LENGTH - 3] + "..."
 
         return prompt

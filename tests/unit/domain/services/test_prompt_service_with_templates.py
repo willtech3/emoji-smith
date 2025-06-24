@@ -18,9 +18,27 @@ class TestAIPromptServiceWithTemplates:
         return repo
 
     @pytest.fixture
-    def prompt_service(self, mock_openai_repo):
+    def mock_style_template_repository(self):
+        """Create mock style template repository."""
+        from emojismith.infrastructure.repositories.style_template_config_repository import (  # noqa: E501
+            StyleTemplateConfigRepository,
+        )
+
+        return StyleTemplateConfigRepository()
+
+    @pytest.fixture
+    def style_template_manager(self, mock_style_template_repository):
+        """Create StyleTemplateManager instance."""
+        from emojismith.domain.services.style_template_manager import (
+            StyleTemplateManager,
+        )
+
+        return StyleTemplateManager(mock_style_template_repository)
+
+    @pytest.fixture
+    def prompt_service(self, mock_openai_repo, style_template_manager):
         """Create AIPromptService instance."""
-        return AIPromptService(mock_openai_repo)
+        return AIPromptService(mock_openai_repo, style_template_manager)
 
     @pytest.mark.asyncio
     async def test_enhance_uses_style_template_for_cartoon(

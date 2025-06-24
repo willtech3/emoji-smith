@@ -3,15 +3,27 @@
 import pytest
 from emojismith.domain.services.style_template_manager import StyleTemplateManager
 from emojismith.domain.value_objects.style_template import StyleTemplate
+from emojismith.infrastructure.repositories.style_template_config_repository import (
+    StyleTemplateConfigRepository,
+)
 from shared.domain.value_objects import StyleType
 
 
 class TestStyleTemplateManager:
     """Test StyleTemplateManager behavior."""
 
-    def test_manager_has_templates_for_all_style_types(self):
+    @pytest.fixture
+    def repository(self):
+        """Create style template repository."""
+        return StyleTemplateConfigRepository()
+
+    @pytest.fixture
+    def manager(self, repository):
+        """Create StyleTemplateManager instance."""
+        return StyleTemplateManager(repository)
+
+    def test_manager_has_templates_for_all_style_types(self, manager):
         """Manager should have templates for all defined style types."""
-        manager = StyleTemplateManager()
 
         for style_type in StyleType:
             template = manager.get_template(style_type)
@@ -19,9 +31,8 @@ class TestStyleTemplateManager:
             assert isinstance(template, StyleTemplate)
             assert template.style_type == style_type
 
-    def test_cartoon_style_template_configuration(self):
+    def test_cartoon_style_template_configuration(self, manager):
         """Cartoon style should have appropriate template configuration."""
-        manager = StyleTemplateManager()
         template = manager.get_template(StyleType.CARTOON)
 
         assert template.prefix == "Create a vibrant, cartoon-style emoji with"
@@ -35,9 +46,8 @@ class TestStyleTemplateManager:
         assert "realistic" in template.avoid_words
         assert "photographic" in template.avoid_words
 
-    def test_pixel_art_style_template_configuration(self):
+    def test_pixel_art_style_template_configuration(self, manager):
         """Pixel art style should have appropriate template configuration."""
-        manager = StyleTemplateManager()
         template = manager.get_template(StyleType.PIXEL_ART)
 
         assert template.prefix == "Design a retro pixel art emoji showing"
@@ -51,9 +61,8 @@ class TestStyleTemplateManager:
         assert "smooth" in template.avoid_words
         assert "realistic" in template.avoid_words
 
-    def test_minimalist_style_template_configuration(self):
+    def test_minimalist_style_template_configuration(self, manager):
         """Minimalist style should have appropriate template configuration."""
-        manager = StyleTemplateManager()
         template = manager.get_template(StyleType.MINIMALIST)
 
         assert template.prefix == "Create a simple, minimalist emoji depicting"
@@ -67,9 +76,8 @@ class TestStyleTemplateManager:
         assert "complex" in template.avoid_words
         assert "detailed" in template.avoid_words
 
-    def test_realistic_style_template_configuration(self):
+    def test_realistic_style_template_configuration(self, manager):
         """Realistic style should have appropriate template configuration."""
-        manager = StyleTemplateManager()
         template = manager.get_template(StyleType.REALISTIC)
 
         assert template.prefix == "Generate a realistic, detailed emoji showing"
@@ -80,9 +88,8 @@ class TestStyleTemplateManager:
         assert "cartoon" in template.avoid_words
         assert "abstract" in template.avoid_words
 
-    def test_apply_style_template_basic_prompt(self):
+    def test_apply_style_template_basic_prompt(self, manager):
         """Apply style template should enhance basic prompts correctly."""
-        manager = StyleTemplateManager()
 
         result = manager.apply_style_template(
             base_prompt="a happy cat", style_type=StyleType.CARTOON
@@ -95,9 +102,8 @@ class TestStyleTemplateManager:
         )
         assert "vibrant" in result or "playful" in result  # Keywords should be added
 
-    def test_apply_style_template_avoids_redundant_keywords(self):
+    def test_apply_style_template_avoids_redundant_keywords(self, manager):
         """Apply style template should not add keywords already in prompt."""
-        manager = StyleTemplateManager()
 
         result = manager.apply_style_template(
             base_prompt="a vibrant colorful happy cat", style_type=StyleType.CARTOON
@@ -110,9 +116,8 @@ class TestStyleTemplateManager:
         assert result.count("colorful") == 1  # Only in prompt
         assert "playful" in result  # Should be added as a missing keyword
 
-    def test_apply_style_template_removes_avoid_words(self):
+    def test_apply_style_template_removes_avoid_words(self, manager):
         """Apply style template should remove words that conflict with style."""
-        manager = StyleTemplateManager()
 
         result = manager.apply_style_template(
             base_prompt="a realistic photographic cat", style_type=StyleType.CARTOON
@@ -123,9 +128,8 @@ class TestStyleTemplateManager:
         assert "photographic" not in result
         assert "a cat" in result  # Core subject should remain
 
-    def test_apply_style_template_preserves_context(self):
+    def test_apply_style_template_preserves_context(self, manager):
         """Apply style template should preserve important context."""
-        manager = StyleTemplateManager()
 
         result = manager.apply_style_template(
             base_prompt="a cat wearing a party hat celebrating a birthday",
@@ -137,9 +141,8 @@ class TestStyleTemplateManager:
         assert "party hat" in result
         assert "birthday" in result
 
-    def test_apply_style_template_handles_empty_prompt(self):
+    def test_apply_style_template_handles_empty_prompt(self, manager):
         """Apply style template should handle empty prompts gracefully."""
-        manager = StyleTemplateManager()
 
         result = manager.apply_style_template(
             base_prompt="", style_type=StyleType.PIXEL_ART
@@ -150,27 +153,24 @@ class TestStyleTemplateManager:
             "in 8-bit or 16-bit pixel art style with clean pixelated edges"
         )
 
-    def test_get_all_templates_returns_all_styles(self):
+    def test_get_all_templates_returns_all_styles(self, manager):
         """Get all templates should return templates for all style types."""
-        manager = StyleTemplateManager()
         templates = manager.get_all_templates()
 
         assert len(templates) == len(StyleType)
         style_types = {template.style_type for template in templates.values()}
         assert style_types == set(StyleType)
 
-    def test_templates_are_immutable(self):
+    def test_templates_are_immutable(self, manager):
         """Style templates should be immutable value objects."""
-        manager = StyleTemplateManager()
         template = manager.get_template(StyleType.CARTOON)
 
         # Verify template is frozen (immutable)
         with pytest.raises(AttributeError):
             template.prefix = "Modified prefix"
 
-    def test_apply_style_template_with_complex_prompt(self):
+    def test_apply_style_template_with_complex_prompt(self, manager):
         """Apply style template should handle complex prompts with punctuation."""
-        manager = StyleTemplateManager()
 
         result = manager.apply_style_template(
             base_prompt='a developer saying "I deployed on Friday!"',

@@ -14,6 +14,7 @@ class EmojiGenerationService:
         openai_repo: OpenAIRepository,
         image_processor: ImageProcessor,
         emoji_validator: EmojiValidationService,
+        style_template_manager: StyleTemplateManager,
     ) -> None:
         self._openai_repo = openai_repo
         self._image_processor = image_processor

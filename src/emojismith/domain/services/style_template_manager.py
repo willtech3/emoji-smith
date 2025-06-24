@@ -1,95 +1,31 @@
 """Manager for style-specific prompt templates."""
 
 from typing import Dict
+from emojismith.domain.repositories.style_template_repository import (
+    StyleTemplateRepository,
+)
 from emojismith.domain.value_objects.style_template import StyleTemplate
 from shared.domain.value_objects import StyleType
+
+
+# Configuration constants
+MAX_KEYWORDS_TO_ADD = 2
 
 
 class StyleTemplateManager:
     """Manages style-specific templates for prompt generation."""
 
-    def __init__(self) -> None:
-        """Initialize with predefined style templates."""
-        self._templates = self._create_templates()
-
-    def _create_templates(self) -> Dict[StyleType, StyleTemplate]:
-        """Create all style templates."""
-        return {
-            StyleType.CARTOON: StyleTemplate(
-                style_type=StyleType.CARTOON,
-                prefix="Create a vibrant, cartoon-style emoji with",
-                suffix=(
-                    "in a fun, animated style with bold colors and "
-                    "expressive features"
-                ),
-                keywords=(
-                    "vibrant",
-                    "playful",
-                    "colorful",
-                    "animated",
-                    "bold",
-                    "expressive",
-                ),
-                avoid_words=(
-                    "realistic",
-                    "photographic",
-                    "detailed",
-                    "subtle",
-                    "muted",
-                ),
-            ),
-            StyleType.PIXEL_ART: StyleTemplate(
-                style_type=StyleType.PIXEL_ART,
-                prefix="Design a retro pixel art emoji showing",
-                suffix="in 8-bit or 16-bit pixel art style with clean pixelated edges",
-                keywords=("8-bit", "16-bit", "pixelated", "retro", "blocky", "crisp"),
-                avoid_words=("smooth", "realistic", "gradient", "blended", "soft"),
-            ),
-            StyleType.MINIMALIST: StyleTemplate(
-                style_type=StyleType.MINIMALIST,
-                prefix="Create a simple, minimalist emoji depicting",
-                suffix=(
-                    "using clean lines, minimal details, and essential "
-                    "elements only"
-                ),
-                keywords=(
-                    "simple",
-                    "clean",
-                    "minimal",
-                    "essential",
-                    "basic",
-                    "geometric",
-                ),
-                avoid_words=("complex", "detailed", "ornate", "busy", "cluttered"),
-            ),
-            StyleType.REALISTIC: StyleTemplate(
-                style_type=StyleType.REALISTIC,
-                prefix="Generate a realistic, detailed emoji showing",
-                suffix="with photorealistic details and natural textures",
-                keywords=(
-                    "realistic",
-                    "detailed",
-                    "photorealistic",
-                    "natural",
-                    "textured",
-                ),
-                avoid_words=(
-                    "cartoon",
-                    "abstract",
-                    "simplified",
-                    "stylized",
-                    "pixelated",
-                ),
-            ),
-        }
+    def __init__(self, template_repository: StyleTemplateRepository) -> None:
+        """Initialize with style template repository."""
+        self._template_repository = template_repository
 
     def get_template(self, style_type: StyleType) -> StyleTemplate:
         """Get template for specific style type."""
-        return self._templates[style_type]
+        return self._template_repository.get_template(style_type)
 
     def get_all_templates(self) -> Dict[StyleType, StyleTemplate]:
         """Get all available templates."""
-        return self._templates.copy()
+        return self._template_repository.get_all_templates()
 
     def apply_style_template(self, base_prompt: str, style_type: StyleType) -> str:
         """Apply style template to enhance base prompt."""
@@ -127,7 +63,7 @@ class StyleTemplateManager:
 
         # Find keywords not already in the original prompt
         missing_keywords = []
-        for keyword in template.keywords[:2]:  # Add up to 2 keywords
+        for keyword in template.keywords[:MAX_KEYWORDS_TO_ADD]:
             if keyword.lower() not in prompt_lower:
                 missing_keywords.append(keyword)
 

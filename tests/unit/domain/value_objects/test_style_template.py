@@ -124,7 +124,7 @@ class TestStyleTemplate:
 
         assert result == "Create a minimal emoji  with clean design"
 
-    def test_has_keyword(self):
+    def test_has_keyword_checks_case_insensitively(self):
         """Has keyword should check case-insensitively."""
         template = StyleTemplate(
             style_type=StyleType.PIXEL_ART,
@@ -140,7 +140,7 @@ class TestStyleTemplate:
         assert template.has_keyword("8-bit")
         assert not template.has_keyword("smooth")
 
-    def test_should_avoid_word(self):
+    def test_should_avoid_word_checks_case_insensitively(self):
         """Should avoid word should check case-insensitively."""
         template = StyleTemplate(
             style_type=StyleType.CARTOON,
