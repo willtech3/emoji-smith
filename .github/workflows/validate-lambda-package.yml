@@ -40,6 +40,10 @@ jobs:
         mkdir -p /tmp/lambda_test
         unzip webhook_package.zip -d /tmp/lambda_test
         cd /tmp/lambda_test
+        export AWS_DEFAULT_REGION=us-east-2
+        export SLACK_BOT_TOKEN=dummy
+        export SLACK_SIGNING_SECRET=dummy
+        export SQS_QUEUE_URL=dummy
         python3 -c "import webhook_handler; assert hasattr(webhook_handler, 'handler'); print('✅ Lambda handler imports correctly')"
 
     - name: Run integration tests

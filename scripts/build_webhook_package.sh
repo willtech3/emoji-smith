@@ -73,6 +73,7 @@ import os
 os.environ['SLACK_BOT_TOKEN'] = 'dummy'
 os.environ['SLACK_SIGNING_SECRET'] = 'dummy'
 os.environ['SQS_QUEUE_URL'] = 'dummy'
+os.environ['AWS_DEFAULT_REGION'] = 'us-east-2'  # Required for boto3
 try:
     import webhook_handler
     assert hasattr(webhook_handler, 'handler')

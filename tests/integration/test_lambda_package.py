@@ -36,7 +36,13 @@ class TestLambdaPackage:
             # Test import in subprocess to avoid polluting test environment
             test_code = """
 import sys
+import os
 sys.path.insert(0, r'{}')
+# Set required environment variables for boto3
+os.environ['AWS_DEFAULT_REGION'] = 'us-east-2'
+os.environ['SLACK_BOT_TOKEN'] = 'dummy'
+os.environ['SLACK_SIGNING_SECRET'] = 'dummy'
+os.environ['SQS_QUEUE_URL'] = 'dummy'
 import webhook_handler
 assert hasattr(webhook_handler, 'handler')
 print('Handler import successful')
