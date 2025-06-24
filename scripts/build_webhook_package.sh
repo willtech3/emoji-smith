@@ -47,6 +47,9 @@ touch "$TEMP_DIR/emojismith/infrastructure/aws/__init__.py"
 # Copy secrets_loader to root for Lambda package imports
 cp src/emojismith/infrastructure/aws/secrets_loader.py "$TEMP_DIR/"
 
+# Copy top-level webhook_handler.py for Lambda entry point
+cp src/webhook_handler.py "$TEMP_DIR/"
+
 # Create package zip
 echo -e "${YELLOW}Creating webhook package zip...${NC}"
 cd "$TEMP_DIR"
