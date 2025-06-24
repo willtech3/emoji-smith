@@ -35,10 +35,23 @@ class TestWebhookSecurityService:
             signature="v0=abc123def456",
         )
 
-    def test_init_with_signature_validator(self, mock_signature_validator):
-        """Test initialization with signature validator."""
+    def test_init_with_signature_validator(
+        self, mock_signature_validator, valid_webhook_request
+    ):
+        """Test initialization with signature validator creates working service."""
         service = WebhookSecurityService(signature_validator=mock_signature_validator)
-        assert service._signature_validator == mock_signature_validator
+
+        # Verify behavior: service should use the provided validator correctly
+        # instead of checking private attribute _signature_validator
+        mock_signature_validator.validate_request.return_value = True
+
+        result = service.is_authentic_webhook(valid_webhook_request)
+
+        # Verify the service works and uses the provided validator
+        assert result is True
+        mock_signature_validator.validate_request.assert_called_once_with(
+            valid_webhook_request
+        )
 
     def test_is_authentic_webhook_with_valid_request_returns_true(
         self, security_service, mock_signature_validator, valid_webhook_request

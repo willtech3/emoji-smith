@@ -13,7 +13,7 @@ class TestEmojiSmithStack:
     """Test suite for CDK stack configuration."""
 
     def test_webhook_lambda_handler_path_is_correct(self):
-        """Webhook Lambda handler must use correct module path."""
+        """Webhook Lambda handler must use simplified entry point for imports."""
         # Arrange
         app = App()
 
@@ -35,13 +35,10 @@ class TestEmojiSmithStack:
                 template = Template.from_stack(stack)
 
                 # Assert - verify the handler path in the synthesized template
+                # Updated to match the simplified handler path that fixes Lambda imports
                 template.has_resource_properties(
                     "AWS::Lambda::Function",
-                    {
-                        "Handler": (
-                            "emojismith.infrastructure.aws.webhook_handler.handler"
-                        )
-                    },
+                    {"Handler": "webhook_handler.handler"},
                 )
             finally:
                 # Clean up the temporary file

@@ -142,6 +142,26 @@ class OpenAIService:
 
 ## Lambda Handler Patterns
 
+### Critical: Lambda Import Requirements
+
+**AWS Lambda expects handlers at the package root level.** To maintain our clean architecture while satisfying Lambda's requirements:
+
+1. **Handler Location**: Keep implementation at `src/emojismith/infrastructure/aws/webhook_handler.py`
+2. **Entry Point**: Create `src/webhook_handler.py` that imports from the proper location
+3. **CDK Configuration**: Use `webhook_handler.handler` (not the full path)
+
+```python
+# src/webhook_handler.py - Lambda entry point
+"""Top-level webhook handler for Lambda.
+
+This file exists at the package root to handle Lambda's import mechanism
+while maintaining our architectural structure.
+"""
+from emojismith.infrastructure.aws.webhook_handler import handler
+
+__all__ = ["handler"]
+```
+
 ### Webhook Handler (Fast Response)
 ```python
 # src/emojismith/infrastructure/aws/webhook_handler.py
