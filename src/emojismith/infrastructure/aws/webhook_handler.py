@@ -147,4 +147,4 @@ def _create_app() -> Any:
 
 
 app = _create_app()
-handler = Mangum(app)
+handler = Mangum(app, lifespan="off", api_gateway_base_path="/")
