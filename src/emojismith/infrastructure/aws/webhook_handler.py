@@ -22,9 +22,13 @@ except ImportError:
     # When running locally or in tests, use relative import
     from .secrets_loader import AWSSecretsLoader
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging for Lambda CloudWatch
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+# Also configure root logger for Lambda
+logging.getLogger().setLevel(logging.INFO)
 
 # Global secrets loader
 _secrets_loader = AWSSecretsLoader()
@@ -87,8 +91,11 @@ def _create_app() -> Any:
 
     @app.post("/slack/events")
     async def slack_events(request: Request) -> dict:
+        logger.info("Received request to /slack/events")
         body = await request.body()
         headers = dict(request.headers)
+        logger.info(f"Request headers: {headers}")
+        logger.info(f"Request body length: {len(body)}")
 
         # Verify Slack signature
         from webhook.domain.webhook_request import WebhookRequest
@@ -140,11 +147,26 @@ def _create_app() -> Any:
 
     @app.post("/slack/interactive")
     async def slack_interactive(request: Request) -> dict:
+        logger.info("Received request to /slack/interactive")
         # Same as events endpoint for interactive components
         return await slack_events(request)
+
+    @app.post("/webhook")
+    async def webhook_legacy(request: Request) -> dict:
+        logger.info("Received request to legacy /webhook endpoint")
+        # Forward to events endpoint
+        return await slack_events(request)
+
+    # Add catch-all route for debugging
+    @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+    async def catch_all(request: Request, path: str) -> dict:
+        logger.warning(f"Unhandled request to: /{path}")
+        logger.warning(f"Method: {request.method}")
+        logger.warning(f"Headers: {dict(request.headers)}")
+        return {"error": f"Unhandled path: /{path}", "method": request.method}
 
     return app
 
 
 app = _create_app()
-handler = Mangum(app)
+handler = Mangum(app, lifespan="off", api_gateway_base_path="/")
