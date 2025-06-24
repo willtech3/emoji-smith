@@ -63,5 +63,33 @@ cd "$PROJECT_ROOT"
 # Cleanup
 rm -rf "$TEMP_DIR"
 
+# Validate the package can be imported correctly
+echo -e "${YELLOW}Validating Lambda handler import...${NC}"
+if unzip -q webhook_package.zip -d /tmp/webhook_test_$$ && \
+   cd /tmp/webhook_test_$$ && \
+   python3 -c "
+import os
+# Set dummy env vars for validation only
+os.environ['SLACK_BOT_TOKEN'] = 'dummy'
+os.environ['SLACK_SIGNING_SECRET'] = 'dummy'
+os.environ['SQS_QUEUE_URL'] = 'dummy'
+try:
+    import webhook_handler
+    assert hasattr(webhook_handler, 'handler')
+    print('✅ Handler imports correctly')
+except Exception as e:
+    print(f'❌ Import failed: {e}')
+    exit(1)
+" 2>&1; then
+    echo -e "${GREEN}✅ Lambda handler validation passed${NC}"
+    cd "$PROJECT_ROOT"
+    rm -rf /tmp/webhook_test_$$
+else
+    echo -e "${RED}❌ Lambda handler import validation failed${NC}"
+    cd "$PROJECT_ROOT"
+    rm -rf /tmp/webhook_test_$$
+    exit 1
+fi
+
 echo -e "${GREEN}✅ Webhook package built successfully: webhook_package.zip${NC}"
 echo -e "${GREEN}   Package size: $(du -h webhook_package.zip | cut -f1)${NC}"

@@ -1,0 +1,56 @@
+name: Validate Lambda Package
+
+on:
+  pull_request:
+    paths:
+      - 'src/webhook_handler.py'
+      - 'src/emojismith/infrastructure/aws/webhook_handler.py'
+      - 'src/webhook/**'
+      - 'scripts/build_webhook_package.sh'
+      - 'requirements-webhook.txt'
+      - 'requirements-webhook.lock'
+      - 'infra/stacks/emoji_smith_stack.py'
+
+jobs:
+  validate-lambda-package:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+
+    - name: Build webhook package
+      run: |
+        ./scripts/build_webhook_package.sh
+
+    - name: Validate package structure
+      run: |
+        echo "Checking package contents..."
+        unzip -l webhook_package.zip | grep -E "(webhook_handler\.py|mangum|fastapi|slack_sdk)" || exit 1
+
+    - name: Test Lambda handler import
+      run: |
+        mkdir -p /tmp/lambda_test
+        unzip webhook_package.zip -d /tmp/lambda_test
+        cd /tmp/lambda_test
+        python3 -c "import webhook_handler; assert hasattr(webhook_handler, 'handler'); print('✅ Lambda handler imports correctly')"
+
+    - name: Run integration tests
+      run: |
+        uv sync --all-extras
+        source .venv/bin/activate
+        pytest tests/integration/test_lambda_package.py -v
+
+    - name: Upload package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: webhook-package
+        path: webhook_package.zip
+        retention-days: 7
