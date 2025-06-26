@@ -1,4 +1,4 @@
-from .prompt_service import AIPromptService
 from .generation_service import EmojiGenerationService
+from .style_template_manager import StyleTemplateManager
 
-__all__ = ["AIPromptService", "EmojiGenerationService"]
+__all__ = ["EmojiGenerationService", "StyleTemplateManager"]

@@ -2,6 +2,7 @@
 
 from typing import List, Dict, Optional
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
+from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
 
 class PromptBuilderService:
@@ -9,17 +10,19 @@ class PromptBuilderService:
 
     def __init__(
         self,
+        style_template_manager: Optional[StyleTemplateManager] = None,
         max_prompt_length: int = 150,
-        style_modifiers: Optional[Dict[str, str]] = None,
     ) -> None:
         """Initialize the service with configuration.
 
         Args:
+            style_template_manager: Manager for style templates
             max_prompt_length: Maximum length for generated prompts
-            style_modifiers: Custom style modifier templates
         """
+        self.style_template_manager = style_template_manager
         self.max_prompt_length = max_prompt_length
-        self.style_modifiers = style_modifiers or self._default_style_modifiers()
+        # Keep backwards compatibility
+        self.style_modifiers = self._default_style_modifiers()
 
     def _default_style_modifiers(self) -> Dict[str, str]:
         """Provide default style modifiers."""
@@ -181,6 +184,11 @@ class PromptBuilderService:
         Returns:
             The prompt with style modifiers applied
         """
+        # Use StyleTemplateManager if available
+        if self.style_template_manager:
+            return self.style_template_manager.apply_style_template(base_prompt, style)
+
+        # Fall back to built-in style modifiers
         if style in self.style_modifiers:
             return f"{base_prompt} {self.style_modifiers[style]}"
         return base_prompt
