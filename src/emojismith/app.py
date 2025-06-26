@@ -8,6 +8,7 @@ from openai import AsyncOpenAI
 from slack_sdk.web.async_client import AsyncWebClient
 
 from emojismith.application.services.emoji_service import EmojiCreationService
+from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
 from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.services.emoji_sharing_service import (
@@ -56,6 +57,12 @@ def create_worker_emoji_service() -> EmojiCreationService:
         emoji_validator=emoji_validation_service,
     )
 
+    # Create the build prompt use case
+    build_prompt_use_case = BuildPromptUseCase(
+        openai_repository=openai_repo,
+        prompt_builder_service=None,  # Will use default PromptBuilderService
+    )
+
     file_sharing_repo = SlackFileSharingRepository(slack_client)
 
     # Determine workspace type from environment
@@ -79,6 +86,7 @@ def create_worker_emoji_service() -> EmojiCreationService:
     return EmojiCreationService(
         slack_repo=slack_repo,
         emoji_generator=generator,
+        build_prompt_use_case=build_prompt_use_case,
         job_queue=None,
         file_sharing_repo=file_sharing_repo,
         sharing_service=sharing_service,

@@ -13,6 +13,7 @@ from emojismith.domain.services.emoji_sharing_service import (
     WorkspaceType,
 )
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
+from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
 from shared.domain.value_objects import (
     EmojiStylePreferences,
     EmojiSharingPreferences,
@@ -28,12 +29,14 @@ class EmojiCreationService:
         self,
         slack_repo: SlackRepository,
         emoji_generator: EmojiGenerationService,
+        build_prompt_use_case: BuildPromptUseCase,
         job_queue: Optional[JobQueueRepository] = None,
         file_sharing_repo: Optional[FileSharingRepository] = None,
         sharing_service: Optional[EmojiSharingService] = None,
     ) -> None:
         self._slack_repo = slack_repo
         self._emoji_generator = emoji_generator
+        self._build_prompt_use_case = build_prompt_use_case
         self._job_queue = job_queue
         self._file_sharing_repo = file_sharing_repo
         self._sharing_service = sharing_service or EmojiSharingService()
@@ -50,9 +53,17 @@ class EmojiCreationService:
             context=job.message_text,
             style=job.style_preferences,
         )
+
+        # Build and enhance prompt using the use case
+        enhanced_prompt = await self._build_prompt_use_case.build_prompt(
+            spec=spec, enhance=True  # Enable AI enhancement
+        )
+
         # Use provided emoji name, sanitize for Slack (max 32 chars)
         name = job.emoji_name.replace(" ", "_").lower()[:32]
-        emoji = await self._emoji_generator.generate(spec, name)
+
+        # Generate emoji using the enhanced prompt
+        emoji = await self._emoji_generator.generate_from_prompt(enhanced_prompt, name)
 
         # Get workspace type from sharing service
         workspace_type = self._sharing_service.workspace_type

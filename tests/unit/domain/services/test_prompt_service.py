@@ -308,7 +308,6 @@ async def test_prompt_service_handles_context_with_multiple_keywords() -> None:
 @pytest.mark.unit
 async def test_generation_service_flow() -> None:
     repo = AsyncMock()
-    repo.enhance_prompt.return_value = "good"
     img = Image.new("RGBA", (128, 128), "red")
     bio = BytesIO()
     img.save(bio, format="PNG")
@@ -322,10 +321,10 @@ async def test_generation_service_flow() -> None:
     mock_validator.validate_emoji_format.return_value = None
 
     service = EmojiGenerationService(repo, processor, validation_service)
-    spec = EmojiSpecification(context="ctx", description="desc")
-    emoji = await service.generate(spec, "name")
+    # Use a pre-built prompt since the service no longer builds prompts
+    prompt = "a happy face emoji in cartoon style"
+    emoji = await service.generate_from_prompt(prompt, "name")
     assert isinstance(emoji, GeneratedEmoji)
     assert emoji.name == "name"
-    repo.enhance_prompt.assert_called_once()
-    repo.generate_image.assert_called_once()
+    repo.generate_image.assert_called_once_with(prompt)
     mock_validator.validate_emoji_format.assert_called_once_with(image_data)
