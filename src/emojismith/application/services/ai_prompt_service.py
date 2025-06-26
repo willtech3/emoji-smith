@@ -1,33 +1,24 @@
 """Service for AI prompt enhancement."""
 
-from typing import Optional, Dict
+from typing import Optional
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
+from emojismith.domain.services.style_template_manager import (
+    StyleTemplateManager,
+    MAX_PROMPT_LENGTH,
+)
 
 
 class AIPromptService:
     """Enhance prompts using OpenAI's chat models with fallback."""
 
-    def __init__(self, openai_repo: OpenAIRepository) -> None:
+    def __init__(
+        self,
+        openai_repo: OpenAIRepository,
+        style_template_manager: StyleTemplateManager,
+    ) -> None:
         self._repo = openai_repo
-        self._style_strategies: Dict[str, str] = {
-            "professional": (
-                "Create a professional, business-appropriate emoji that "
-                "conveys {description} in a corporate setting."
-            ),
-            "playful": (
-                "Design a fun, vibrant, and playful emoji showing "
-                "{description} with energy and excitement."
-            ),
-            "minimal": (
-                "Create a simple, clean, minimalist emoji representing "
-                "{description} with essential elements only."
-            ),
-            "retro": (
-                "Design a nostalgic, retro-style emoji showing "
-                "{description} with vintage aesthetics."
-            ),
-        }
+        self._style_template_manager = style_template_manager
 
     async def enhance(self, spec: EmojiSpecification) -> str:
         return await self._repo.enhance_prompt(spec.context, spec.description)
@@ -38,11 +29,11 @@ class AIPromptService:
         """Build enhanced prompt with style strategies and context enrichment."""
         base_prompt = spec.to_prompt()
 
-        # Apply style strategy if specified
-        if style and style in self._style_strategies:
-            style_template = self._style_strategies[style]
-            base_prompt = style_template.format(description=spec.description)
-            base_prompt += f" Context: {spec.context}"
+        # Apply style template if specified
+        if style:
+            base_prompt = self._style_template_manager.apply_style_template(
+                base_prompt, style
+            )
 
         # Enrich based on context patterns
         enriched = self._enrich_context(base_prompt, spec.context)
@@ -68,13 +59,9 @@ class AIPromptService:
         return prompt
 
     def _handle_edge_cases(self, prompt: str) -> str:
-        """Handle edge cases like length limits and sanitization."""
+        """Handle edge cases like length limits."""
         # Truncate if too long
-        if len(prompt) > 1000:
-            prompt = prompt[:997] + "..."
-
-        # Basic sanitization
-        prompt = prompt.replace("<script>", "").replace("</script>", "")
-        prompt = prompt.replace("<", "&lt;").replace(">", "&gt;")
+        if len(prompt) > MAX_PROMPT_LENGTH:
+            prompt = prompt[: MAX_PROMPT_LENGTH - 3] + "..."
 
         return prompt

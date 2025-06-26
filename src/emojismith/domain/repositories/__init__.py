@@ -8,6 +8,7 @@ from .slack_repository import (
 from .job_queue_repository import JobQueueProducer, JobQueueConsumer, JobQueueRepository
 from .image_processor import ImageProcessor
 from .file_sharing_repository import FileSharingRepository, FileSharingResult
+from .style_template_repository import StyleTemplateRepository
 
 __all__ = [
     "SlackModalRepository",
@@ -19,4 +20,5 @@ __all__ = [
     "ImageProcessor",
     "FileSharingRepository",
     "FileSharingResult",
+    "StyleTemplateRepository",
 ]

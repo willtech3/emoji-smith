@@ -15,12 +15,17 @@ from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingService,
     WorkspaceType,
 )
+from emojismith.domain.services.style_template_manager import StyleTemplateManager
+from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
 from emojismith.infrastructure.image.processing import PillowImageProcessor
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 from emojismith.infrastructure.slack.slack_file_sharing import (
     SlackFileSharingRepository,
+)
+from emojismith.infrastructure.repositories.style_template_config_repository import (
+    StyleTemplateConfigRepository,
 )
 
 # Profile imports to identify bottlenecks
@@ -57,10 +62,17 @@ def create_worker_emoji_service() -> EmojiCreationService:
         emoji_validator=emoji_validation_service,
     )
 
+    # Create style template manager and prompt builder
+    style_template_repo = StyleTemplateConfigRepository()
+    style_template_manager = StyleTemplateManager(style_template_repo)
+    prompt_builder_service = PromptBuilderService(
+        style_template_manager=style_template_manager
+    )
+
     # Create the build prompt use case
     build_prompt_use_case = BuildPromptUseCase(
         openai_repository=openai_repo,
-        prompt_builder_service=None,  # Will use default PromptBuilderService
+        prompt_builder_service=prompt_builder_service,
     )
 
     file_sharing_repo = SlackFileSharingRepository(slack_client)

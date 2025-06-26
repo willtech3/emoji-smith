@@ -248,13 +248,12 @@ class TestPromptBuilderService:
         assert len(optimized) <= 100
 
     def test_configuration_custom_style_modifiers(self):
-        """Should use custom style modifiers if provided."""
-        custom_modifiers = {
-            "custom_style": "in a custom artistic style with special effects"
-        }
-        service = PromptBuilderService(style_modifiers=custom_modifiers)
-
-        styled = service.apply_style_modifiers("base prompt", "custom_style")
-
-        assert "custom artistic style" in styled
-        assert "special effects" in styled
+        """Should use fallback style modifiers when no style template manager."""
+        # Create service without style template manager
+        service = PromptBuilderService(style_template_manager=None)
+        
+        # It should still have default style modifiers
+        styled = service.apply_style_modifiers("base prompt", "cartoon")
+        
+        assert "cartoon" in styled.lower()
+        assert "vibrant" in styled
