@@ -22,6 +22,10 @@ from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 from emojismith.infrastructure.slack.slack_file_sharing import (
     SlackFileSharingRepository,
 )
+from emojismith.domain.services.style_template_manager import StyleTemplateManager
+from emojismith.infrastructure.repositories.style_template_config_repository import (
+    StyleTemplateConfigRepository,
+)
 
 # Profile imports to identify bottlenecks
 logger = logging.getLogger(__name__)
@@ -51,10 +55,15 @@ def create_worker_emoji_service() -> EmojiCreationService:
     image_validator = PILImageValidator()
     emoji_validation_service = EmojiValidationService(image_validator)
 
+    # Create style template dependencies
+    style_template_repository = StyleTemplateConfigRepository()
+    style_template_manager = StyleTemplateManager(style_template_repository)
+
     generator = EmojiGenerationService(
         openai_repo=openai_repo,
         image_processor=image_processor,
         emoji_validator=emoji_validation_service,
+        style_template_manager=style_template_manager,
     )
 
     # Create the build prompt use case
