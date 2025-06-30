@@ -210,31 +210,82 @@ pytest --cov=src tests/      # Tests with 90%+ coverage
 
 ```
 emoji-smith/
-├── src/emojismith/          # Main application (Clean Architecture)
-│   ├── domain/             # 🏛️  Domain Layer (pure business logic)
-│   │   ├── entities/       # Core business objects
-│   │   ├── value_objects/  # Immutable domain concepts
-│   │   ├── services/       # Domain business rules
-│   │   └── repositories/   # Repository interfaces (abstractions)
-│   ├── application/        # 🎯 Application Layer (use cases)
-│   │   ├── services/       # Application services (orchestration)
-│   │   └── handlers/       # Slack webhook handlers
-│   ├── infrastructure/     # 🔧 Infrastructure Layer (external concerns)
-│   │   ├── slack/          # Slack API implementations
-│   │   ├── openai/         # OpenAI API implementations
-│   │   └── aws/            # AWS service integrations
-│   │       ├── lambda_handler.py   # AWS Lambda entrypoint
-│   │       ├── webhook_handler.py  # FastAPI webhook handler
-│   │       └── worker_handler.py   # SQS worker handler
-│   ├── app.py             # FastAPI application factory
-│   └── dev_server.py       # Local development server
-├── tests/                  # 🧪 Test Suite (TDD)
-│   ├── unit/              # Domain and application logic tests
-│   ├── integration/       # Infrastructure integration tests
-│   └── fixtures/          # Test data and mocks
-├── infra/                 # ☁️  AWS CDK Infrastructure
-├── .github/workflows/     # 🚀 CI/CD Pipeline
-└── docs/                  # 📚 Documentation
+├── src/
+│   ├── emojismith/         # Main application (Clean Architecture)
+│   │   ├── domain/         # 🏛️  Domain Layer (pure business logic)
+│   │   │   ├── entities/   # Core business objects
+│   │   │   ├── value_objects/  # Immutable domain concepts
+│   │   │   ├── services/   # Domain business rules
+│   │   │   ├── repositories/   # Repository interfaces (abstractions)
+│   │   │   ├── protocols/  # Domain protocol definitions
+│   │   │   ├── errors.py   # Domain-specific errors
+│   │   │   └── exceptions.py   # Domain exceptions
+│   │   ├── application/    # 🎯 Application Layer (use cases)
+│   │   │   ├── services/   # Application services (orchestration)
+│   │   │   ├── handlers/   # Slack webhook handlers
+│   │   │   ├── use_cases/  # Application use cases
+│   │   │   └── create_webhook_app.py  # Webhook app factory
+│   │   ├── infrastructure/ # 🔧 Infrastructure Layer (external concerns)
+│   │   │   ├── slack/      # Slack API implementations
+│   │   │   ├── openai/     # OpenAI API implementations
+│   │   │   ├── image/      # Image processing implementations
+│   │   │   ├── jobs/       # Job queue implementations
+│   │   │   ├── security/   # Security implementations
+│   │   │   └── aws/        # AWS service integrations
+│   │   │       ├── webhook_handler.py  # Webhook Lambda handler
+│   │   │       ├── worker_handler.py   # Worker Lambda handler
+│   │   │       └── secrets_loader.py   # AWS Secrets Manager
+│   │   ├── presentation/   # 🌐 Presentation Layer
+│   │   │   └── web/
+│   │   │       └── slack_webhook_api.py  # API endpoints
+│   │   ├── app.py         # FastAPI application factory
+│   │   └── dev_server.py  # Local development server
+│   ├── shared/            # Shared domain code
+│   │   └── domain/
+│   │       ├── entities/
+│   │       ├── repositories/
+│   │       └── value_objects.py
+│   └── webhook/           # Legacy webhook code (deprecated)
+│       ├── domain/
+│       ├── infrastructure/
+│       └── handler.py
+├── tests/                 # 🧪 Test Suite (TDD)
+│   ├── unit/             # Domain and application logic tests
+│   ├── integration/      # Infrastructure integration tests
+│   ├── contract/         # Contract tests for external services
+│   ├── e2e/             # End-to-end tests
+│   ├── security/        # Security-focused tests
+│   ├── performance/     # Performance tests
+│   ├── fixtures/        # Test data and mocks
+│   └── conftest.py      # Pytest configuration
+├── infra/               # ☁️  AWS CDK Infrastructure
+│   ├── stacks/          # CDK stack definitions
+│   ├── app.py          # CDK app entry point
+│   ├── cdk.json        # CDK configuration
+│   └── requirements.txt # CDK dependencies
+├── docs/                # 📚 Documentation
+│   ├── adr/            # Architecture Decision Records
+│   ├── architecture/   # Architecture documentation
+│   ├── testing/        # Testing documentation
+│   ├── claude/         # Claude AI-specific templates
+│   ├── backup/         # Backup documentation
+│   └── CLAUDE-*.md     # Task-specific guides
+├── scripts/            # 🛠️  Development scripts
+│   ├── build_webhook_package.sh
+│   ├── check-quality.sh
+│   ├── claude-refresh.sh
+│   ├── dev-setup.sh
+│   └── run-tests.sh
+├── .github/            # 🚀 GitHub configuration
+│   └── workflows/      # CI/CD pipelines
+├── .claude/            # 🤖 Claude AI configuration
+│   └── commands/       # Claude command definitions
+├── stubs/              # Type stubs
+└── Configuration files
+    ├── .pre-commit-config.yaml
+    ├── pyproject.toml
+    ├── requirements-webhook.txt
+    └── run_dev.sh
 ```
 
 ## 📚 Documentation Structure
