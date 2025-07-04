@@ -79,26 +79,28 @@ class BuildPromptUseCase:
         quality_score, issues = self._description_quality_analyzer.analyze_description(
             spec.description
         )
-        
+
         # If description is poor quality, use fallback generation
         if self._description_quality_analyzer.is_poor_quality(spec.description):
             self._logger.info(
                 f"Using fallback prompt generation due to poor description quality. "
                 f"Score: {quality_score:.2f}, Issues: {', '.join(issues)}"
             )
-            
+
             # Generate a better prompt using context
-            fallback_description = self._description_quality_analyzer.generate_fallback_prompt(
-                spec.context, spec.description
+            fallback_description = (
+                self._description_quality_analyzer.generate_fallback_prompt(
+                    spec.context, spec.description
+                )
             )
-            
+
             # Create a new spec with the improved description
             improved_spec = EmojiSpecification(
                 description=fallback_description,
                 context=spec.context,
                 style=spec.style,
             )
-            
+
             # Build prompt with improved description
             base_prompt = self._prompt_builder_service.build_prompt(improved_spec)
         else:
