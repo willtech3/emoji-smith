@@ -268,8 +268,7 @@ emoji-smith/
 │   ├── architecture/   # Architecture documentation
 │   ├── testing/        # Testing documentation
 │   ├── claude/         # Claude AI-specific templates
-│   ├── backup/         # Backup documentation
-│   └── CLAUDE-*.md     # Task-specific guides
+│   └── backup/         # Backup documentation
 ├── scripts/            # 🛠️  Development scripts
 │   ├── build_webhook_package.sh
 │   ├── check-quality.sh
@@ -291,11 +290,16 @@ emoji-smith/
 ## 📚 Documentation Structure
 
 - `CLAUDE.md` - Core development rules (always read first)
-- `docs/CLAUDE-*.md` - Task-specific detailed guides
+- Co-located `CLAUDE.md` files in each directory:
+  - `src/CLAUDE.md` - Security guidelines
+  - `src/emojismith/domain/CLAUDE.md` - Domain layer guidelines
+  - `src/emojismith/infrastructure/CLAUDE.md` - Infrastructure guidelines
+  - `tests/CLAUDE.md` - Testing guidelines
+  - `.github/CLAUDE.md` - Deployment and CI/CD guidelines
 - `.claude/context.md` - Current task tracking (git-ignored)
 - `scripts/claude-refresh.sh` - Quick context refresh
 
-For AI agents: Always start by reading CLAUDE.md, then load the appropriate task-specific guide.
+For AI agents: Always start by reading root CLAUDE.md, then follow the hierarchy to the relevant local CLAUDE.md files.
 
 ## 🤝 Contributing
 
