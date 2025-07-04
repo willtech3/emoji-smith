@@ -6,17 +6,17 @@ import json
 import logging
 import os
 import urllib.parse
-from typing import Any, Tuple
+from typing import Any
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from mangum import Mangum
 from slack_sdk.web.async_client import AsyncWebClient
 
 from webhook.domain.webhook_request import WebhookRequest
 from webhook.handler import WebhookHandler
 from webhook.infrastructure.slack_api import SlackAPIRepository
-from webhook.infrastructure.sqs_job_queue import SQSJobQueue
 from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
+from webhook.infrastructure.sqs_job_queue import SQSJobQueue
 from webhook.security.webhook_security_service import WebhookSecurityService
 
 try:
@@ -38,7 +38,7 @@ logging.getLogger().setLevel(logging.INFO)
 _secrets_loader = AWSSecretsLoader()
 
 
-def create_webhook_handler() -> Tuple[WebhookHandler, WebhookSecurityService]:
+def create_webhook_handler() -> tuple[WebhookHandler, WebhookSecurityService]:
     """Create webhook handler with minimal dependencies."""
     slack_token = os.getenv("SLACK_BOT_TOKEN")
     slack_signing_secret = os.getenv("SLACK_SIGNING_SECRET")
@@ -67,7 +67,7 @@ def create_webhook_handler() -> Tuple[WebhookHandler, WebhookSecurityService]:
 if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
     try:
         _secrets_loader.load_secrets()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.error(
             "Failed to load secrets, continuing with environment variables: %s",
             e,

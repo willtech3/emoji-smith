@@ -1,12 +1,12 @@
 """Use case for building optimized prompts for emoji generation."""
 
 import logging
-from typing import Optional
-from emojismith.domain.services.prompt_builder_service import PromptBuilderService
+
+from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from emojismith.domain.services.description_quality_analyzer import (
     DescriptionQualityAnalyzer,
 )
-from emojismith.domain.repositories.openai_repository import OpenAIRepository
+from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 
 
@@ -18,8 +18,8 @@ class BuildPromptUseCase:
     def __init__(
         self,
         openai_repository: OpenAIRepository,
-        prompt_builder_service: Optional[PromptBuilderService] = None,
-        description_quality_analyzer: Optional[DescriptionQualityAnalyzer] = None,
+        prompt_builder_service: PromptBuilderService | None = None,
+        description_quality_analyzer: DescriptionQualityAnalyzer | None = None,
     ) -> None:
         """Initialize the use case.
 
@@ -40,7 +40,7 @@ class BuildPromptUseCase:
         self,
         spec: EmojiSpecification,
         enhance: bool = True,
-        style_override: Optional[str] = None,
+        style_override: str | None = None,
     ) -> str:
         """Build an optimized prompt for emoji generation.
 

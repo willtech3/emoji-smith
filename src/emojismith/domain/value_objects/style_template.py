@@ -1,7 +1,7 @@
 """Style template value object for prompt generation."""
 
 from dataclasses import dataclass, field
-from typing import Tuple
+
 from shared.domain.value_objects import StyleType
 
 
@@ -12,8 +12,8 @@ class StyleTemplate:
     style_type: StyleType
     prefix: str
     suffix: str
-    keywords: Tuple[str, ...] = field(default_factory=tuple)
-    avoid_words: Tuple[str, ...] = field(default_factory=tuple)
+    keywords: tuple[str, ...] = field(default_factory=tuple)
+    avoid_words: tuple[str, ...] = field(default_factory=tuple)
 
     def format_prompt(self, content: str) -> str:
         """Format prompt with prefix, content, and suffix."""

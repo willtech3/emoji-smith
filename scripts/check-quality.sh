@@ -15,16 +15,16 @@ fi
 echo "✓ Virtual environment active: $VIRTUAL_ENV"
 echo ""
 
-# Black formatting
-echo "⚫ Running Black formatter check..."
-black --check src/ tests/
-echo "✓ Black formatting check passed"
+# Ruff formatting
+echo "⚫ Running Ruff formatter check..."
+ruff format --check src/ tests/
+echo "✓ Ruff formatting check passed"
 echo ""
 
-# Flake8 linting
-echo "🔍 Running Flake8 linter..."
-flake8 src/ tests/
-echo "✓ Flake8 linting passed"
+# Ruff linting
+echo "🔍 Running Ruff linter..."
+ruff check src/ tests/
+echo "✓ Ruff linting passed"
 echo ""
 
 # Test naming conventions
@@ -39,11 +39,6 @@ mypy src/
 echo "✓ MyPy type checking passed"
 echo ""
 
-# Bandit security scanning
-echo "🔒 Running Bandit security scanner..."
-bandit -r src/
-echo "✓ Bandit security scan passed"
-echo ""
 
 # Pytest with coverage
 echo "🧪 Running tests with coverage..."

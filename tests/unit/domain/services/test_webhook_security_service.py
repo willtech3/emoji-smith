@@ -1,21 +1,23 @@
 """Tests for webhook security domain service."""
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
+
 from emojismith.domain.services.webhook_security_service import WebhookSecurityService
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestWebhookSecurityService:
     """Test webhook security domain service."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_signature_validator(self):
         """Mock signature validator."""
         return Mock()
 
-    @pytest.fixture
+    @pytest.fixture()
     def security_service(self, mock_signature_validator):
         """Webhook security service with mocked validator."""
         return WebhookSecurityService(mock_signature_validator)

@@ -1,17 +1,17 @@
 """Shared repository interfaces for Slack and job queues."""
 
+from .job_queue_repository import JobQueueConsumer, JobQueueProducer, JobQueueRepository
 from .slack_repository import (
-    SlackModalRepository,
     SlackEmojiRepository,
+    SlackModalRepository,
     SlackRepository,
 )
-from .job_queue_repository import JobQueueProducer, JobQueueConsumer, JobQueueRepository
 
 __all__ = [
-    "SlackModalRepository",
-    "SlackEmojiRepository",
-    "SlackRepository",
-    "JobQueueProducer",
     "JobQueueConsumer",
+    "JobQueueProducer",
     "JobQueueRepository",
+    "SlackEmojiRepository",
+    "SlackModalRepository",
+    "SlackRepository",
 ]

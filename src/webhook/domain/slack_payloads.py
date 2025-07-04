@@ -1,7 +1,7 @@
 """Slack payload models for webhook package."""
 
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -10,11 +10,11 @@ class SlackUser:
 
     id: str
     name: str = ""  # Make name optional with default
-    username: Optional[str] = None
-    team_id: Optional[str] = None
+    username: str | None = None
+    team_id: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SlackUser":
+    def from_dict(cls, data: dict[str, Any]) -> "SlackUser":
         """Create from dictionary, ignoring extra fields."""
         return cls(
             id=data["id"],
@@ -29,10 +29,10 @@ class SlackChannel:
     """Slack channel information."""
 
     id: str
-    name: Optional[str] = None
+    name: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SlackChannel":
+    def from_dict(cls, data: dict[str, Any]) -> "SlackChannel":
         """Create from dictionary, ignoring extra fields."""
         return cls(id=data["id"], name=data.get("name"))
 
@@ -42,10 +42,10 @@ class SlackTeam:
     """Slack team information."""
 
     id: str
-    domain: Optional[str] = None
+    domain: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SlackTeam":
+    def from_dict(cls, data: dict[str, Any]) -> "SlackTeam":
         """Create from dictionary, ignoring extra fields."""
         return cls(id=data["id"], domain=data.get("domain"))
 
@@ -59,7 +59,7 @@ class SlackMessage:
     user: str
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SlackMessage":
+    def from_dict(cls, data: dict[str, Any]) -> "SlackMessage":
         """Create from dictionary, ignoring extra fields."""
         return cls(text=data["text"], ts=data["ts"], user=data["user"])
 
@@ -77,7 +77,7 @@ class MessageActionPayload:
     team: SlackTeam
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MessageActionPayload":
+    def from_dict(cls, data: dict[str, Any]) -> "MessageActionPayload":
         """Create from dictionary."""
         return cls(
             type=data["type"],
@@ -101,7 +101,7 @@ class FormElement:
 class FormSelect:
     """Slack form select element."""
 
-    selected_option: Dict[str, str]
+    selected_option: dict[str, str]
 
     def __getitem__(self, key: str) -> Any:
         """Allow dict-like access for compatibility."""
@@ -114,15 +114,15 @@ class FormSelect:
 class FormBlock:
     """Slack form block."""
 
-    description: Optional[FormElement] = None
-    name: Optional[FormElement] = None
-    share_location_select: Optional[FormSelect] = None
-    visibility_select: Optional[FormSelect] = None
-    size_select: Optional[FormSelect] = None
-    style_select: Optional[FormSelect] = None
-    color_select: Optional[FormSelect] = None
-    detail_select: Optional[FormSelect] = None
-    tone_select: Optional[FormSelect] = None
+    description: FormElement | None = None
+    name: FormElement | None = None
+    share_location_select: FormSelect | None = None
+    visibility_select: FormSelect | None = None
+    size_select: FormSelect | None = None
+    style_select: FormSelect | None = None
+    color_select: FormSelect | None = None
+    detail_select: FormSelect | None = None
+    tone_select: FormSelect | None = None
 
 
 @dataclass
@@ -172,14 +172,14 @@ class ModalSubmissionPayload:
     view: ModalView
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ModalSubmissionPayload":
+    def from_dict(cls, data: dict[str, Any]) -> "ModalSubmissionPayload":
         """Create from dictionary."""
         view_data = data["view"]
         state_data = view_data["state"]
         values_data = state_data["values"]
 
         # Create form blocks with proper handling of optional fields
-        def create_form_block(block_data: Dict[str, Any]) -> FormBlock:
+        def create_form_block(block_data: dict[str, Any]) -> FormBlock:
             block = FormBlock()
             if "description" in block_data:
                 block.description = FormElement(

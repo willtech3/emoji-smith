@@ -293,24 +293,20 @@ repos:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
 
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
-    hooks:
-      - id: bandit
-        args: ['-r', 'src/', '-ll']
+  # Security checks are now included in ruff
+  # Configure security rules in pyproject.toml [tool.ruff.lint]
 ```
 
-### Bandit Security Scanning
+### Ruff Security Scanning
 ```bash
-# Run security scan
-bandit -r src/ -f json -o bandit-report.json
+# Security checks are integrated into ruff
+ruff check src/ tests/
 
-# Focus on high severity
-bandit -r src/ -ll
-
-# Skip specific checks if needed (document why!)
-# B104: Hardcoded bind all interfaces
-bandit -r src/ -s B104
+# Security-specific rules are prefixed with 'S' (from flake8-bandit)
+# Configure in pyproject.toml:
+# [tool.ruff.lint]
+# select = ["S"]  # Include security rules
+# ignore = ["S101", "S104"]  # Skip specific checks with documentation
 ```
 
 ### Dependency Scanning
@@ -420,7 +416,7 @@ except Exception as e:
 - [ ] Input validation implemented
 - [ ] Error messages don't leak information
 - [ ] Dependencies are up to date
-- [ ] Security scan passes (bandit)
+- [ ] Security scan passes (ruff check)
 
 ### Before Deployment
 - [ ] Secrets rotated recently

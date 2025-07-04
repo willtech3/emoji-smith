@@ -1,8 +1,8 @@
 """Service for generating emoji images."""
 
-from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.repositories.image_processor import ImageProcessor
+from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.services.style_template_manager import StyleTemplateManager
 

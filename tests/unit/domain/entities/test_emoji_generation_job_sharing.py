@@ -5,13 +5,13 @@ import pytest
 from shared.domain.entities import EmojiGenerationJob
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
-    ShareLocation,
-    InstructionVisibility,
     ImageSize,
+    InstructionVisibility,
+    ShareLocation,
 )
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiGenerationJobSharing:
     """Test emoji generation job with sharing preferences."""
 

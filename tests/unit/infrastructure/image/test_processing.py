@@ -1,9 +1,11 @@
 """Tests for PillowImageProcessor."""
 
-from io import BytesIO
 import logging
-from PIL import Image
+from io import BytesIO
+
 import pytest
+from PIL import Image
+
 from emojismith.infrastructure.image.processing import PillowImageProcessor
 
 
@@ -14,7 +16,7 @@ def _create_image(size=(1024, 1024)) -> bytes:
     return bio.getvalue()
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_processor_resizes_and_compresses() -> None:
     processor = PillowImageProcessor()
     data = _create_image()
@@ -26,7 +28,7 @@ def test_processor_resizes_and_compresses() -> None:
     assert len(out) < 64 * 1024
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_image_processor_reduces_colors_iteratively(monkeypatch) -> None:
     processor = PillowImageProcessor()
 
@@ -52,7 +54,7 @@ def test_image_processor_reduces_colors_iteratively(monkeypatch) -> None:
     assert calls == [256, 128]
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_image_processor_logs_processing_metrics(caplog) -> None:
     processor = PillowImageProcessor()
     with caplog.at_level(logging.INFO):
@@ -72,7 +74,7 @@ def test_image_processor_logs_processing_metrics(caplog) -> None:
     assert "colors_used" in processed_record.__dict__
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_raises_when_image_too_large(monkeypatch) -> None:
     processor = PillowImageProcessor()
 

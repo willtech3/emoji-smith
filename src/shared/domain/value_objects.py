@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Any
 
 
 class ShareLocation(Enum):
@@ -76,7 +76,7 @@ class EmojiSharingPreferences:
     instruction_visibility: InstructionVisibility
     image_size: ImageSize
     include_upload_instructions: bool = True
-    thread_ts: Optional[str] = None
+    thread_ts: str | None = None
 
     @classmethod
     def from_form_values(
@@ -84,7 +84,7 @@ class EmojiSharingPreferences:
         share_location: str,
         instruction_visibility: str,
         image_size: str,
-        thread_ts: Optional[str] = None,
+        thread_ts: str | None = None,
     ) -> "EmojiSharingPreferences":
         """Create from Slack form values."""
         return cls(
@@ -96,7 +96,7 @@ class EmojiSharingPreferences:
             thread_ts=thread_ts,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "share_location": self.share_location.value,
@@ -107,7 +107,7 @@ class EmojiSharingPreferences:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "EmojiSharingPreferences":
+    def from_dict(cls, data: dict[str, Any]) -> "EmojiSharingPreferences":
         """Create from dictionary."""
         return cls(
             share_location=ShareLocation(data["share_location"]),
@@ -124,7 +124,7 @@ class EmojiSharingPreferences:
         cls,
         context: str = "general",
         is_in_thread: bool = False,
-        thread_ts: Optional[str] = None,
+        thread_ts: str | None = None,
     ) -> "EmojiSharingPreferences":
         """Create default preferences for a given context."""
         return cls(

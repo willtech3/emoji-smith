@@ -1,8 +1,10 @@
 """Image processing utilities for emoji generation."""
 
-from io import BytesIO
 import logging
+from io import BytesIO
+
 from PIL import Image
+
 from emojismith.domain.repositories.image_processor import ImageProcessor  # noqa: F401
 
 # Use LANCZOS for high-quality resampling

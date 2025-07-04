@@ -1,6 +1,5 @@
 """Service for building contextual prompts for emoji generation."""
 
-from typing import List, Dict, Optional
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 
 
@@ -10,7 +9,7 @@ class PromptBuilderService:
     def __init__(
         self,
         max_prompt_length: int = 150,
-        style_modifiers: Optional[Dict[str, str]] = None,
+        style_modifiers: dict[str, str] | None = None,
     ) -> None:
         """Initialize the service with configuration.
 
@@ -21,7 +20,7 @@ class PromptBuilderService:
         self.max_prompt_length = max_prompt_length
         self.style_modifiers = style_modifiers or self._default_style_modifiers()
 
-    def _default_style_modifiers(self) -> Dict[str, str]:
+    def _default_style_modifiers(self) -> dict[str, str]:
         """Provide default style modifiers."""
         return {
             "cartoon": (
@@ -33,7 +32,7 @@ class PromptBuilderService:
                 "clean lines, and minimal details"
             ),
             "pixel_art": (
-                "in a retro pixel art style, 8-bit aesthetic " "with nostalgic charm"
+                "in a retro pixel art style, 8-bit aesthetic with nostalgic charm"
             ),
             "realistic": (
                 "in a realistic, detailed style with lifelike "
@@ -74,7 +73,7 @@ class PromptBuilderService:
 
         return optimized
 
-    def extract_themes(self, context: str) -> List[str]:
+    def extract_themes(self, context: str) -> list[str]:
         """Extract meaningful themes and emotions from context.
 
         Args:
@@ -139,7 +138,7 @@ class PromptBuilderService:
         return list(set(themes))  # Remove duplicates
 
     def merge_description_and_context(
-        self, description: str, context: str, themes: List[str]
+        self, description: str, context: str, themes: list[str]
     ) -> str:
         """Intelligently merge description with context and themes.
 
@@ -219,7 +218,7 @@ class PromptBuilderService:
 
         return truncated
 
-    def extract_keywords(self, message: str) -> List[str]:
+    def extract_keywords(self, message: str) -> list[str]:
         """Extract relevant keywords from the original message.
 
         Args:

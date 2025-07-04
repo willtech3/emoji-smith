@@ -1,10 +1,8 @@
 """Application service for AI prompt enhancement."""
 
-from typing import Optional, Dict
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
-from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from emojismith.domain.services.style_template_manager import StyleTemplateManager
-
+from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 
 # Configuration constants
 MAX_PROMPT_LENGTH = 1000
@@ -20,7 +18,7 @@ class AIPromptService:
     ) -> None:
         self._repo = openai_repo
         self._style_template_manager = style_template_manager
-        self._style_strategies: Dict[str, str] = {
+        self._style_strategies: dict[str, str] = {
             "professional": (
                 "Create a professional, business-appropriate emoji that "
                 "conveys {description} in a corporate setting."
@@ -58,7 +56,7 @@ class AIPromptService:
         return enhanced_prompt
 
     async def build_prompt(
-        self, spec: EmojiSpecification, style: Optional[str] = None
+        self, spec: EmojiSpecification, style: str | None = None
     ) -> str:
         """Build enhanced prompt with style strategies and context enrichment."""
         base_prompt = spec.to_prompt()

@@ -1,15 +1,16 @@
 """Tests for EmojiSharingPreferences value object."""
 
 import pytest
+
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
-    ShareLocation,
-    InstructionVisibility,
     ImageSize,
+    InstructionVisibility,
+    ShareLocation,
 )
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiSharingPreferences:
     """Test emoji sharing preferences value object."""
 

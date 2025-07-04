@@ -3,17 +3,17 @@ from __future__ import annotations
 import json
 import logging
 import urllib.parse
-from typing import Any, Dict, Protocol
+from typing import Any, Protocol
 
-from webhook.security.webhook_security_service import WebhookSecurityService
 from webhook.domain.webhook_request import WebhookRequest
 from webhook.handler import WebhookHandler
+from webhook.security.webhook_security_service import WebhookSecurityService
 
 
 class SlackEventProcessor(Protocol):
     """Protocol for processing Slack event payloads."""
 
-    async def process(self, body: bytes) -> Dict[str, Any]:
+    async def process(self, body: bytes) -> dict[str, Any]:
         """Process a raw webhook body."""
         ...
 
@@ -25,7 +25,7 @@ class WebhookEventProcessor:
         self._webhook_handler = webhook_handler
         self._logger = logging.getLogger(__name__)
 
-    async def process(self, body: bytes) -> Dict[str, Any]:
+    async def process(self, body: bytes) -> dict[str, Any]:
         try:
             payload = json.loads(body.decode("utf-8"))
         except Exception:
@@ -59,13 +59,13 @@ class SlackWebhookHandler:
         self._security_service = security_service
         self._event_processor = event_processor
 
-    def health_check(self) -> Dict[str, str]:
+    def health_check(self) -> dict[str, str]:
         """Return basic health information."""
         return {"status": "healthy"}
 
     async def handle_event(
-        self, body: bytes, headers: Dict[str, str]
-    ) -> Dict[str, Any]:
+        self, body: bytes, headers: dict[str, str]
+    ) -> dict[str, Any]:
         """Validate and process an incoming Slack webhook event."""
         timestamp = headers.get("X-Slack-Request-Timestamp") or headers.get(
             "x-slack-request-timestamp"
@@ -73,8 +73,9 @@ class SlackWebhookHandler:
         signature = headers.get("X-Slack-Signature") or headers.get("x-slack-signature")
         request = WebhookRequest(body=body, timestamp=timestamp, signature=signature)
 
-        if not body.startswith(b'{"type":"url_verification"'):
-            if not self._security_service.is_authentic_webhook(request):
-                raise UnauthorizedError("Invalid webhook signature")
+        if not body.startswith(
+            b'{"type":"url_verification"'
+        ) and not self._security_service.is_authentic_webhook(request):
+            raise UnauthorizedError("Invalid webhook signature")
 
         return await self._event_processor.process(body)

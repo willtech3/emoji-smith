@@ -1,20 +1,22 @@
 """Tests for Slack API infrastructure implementation."""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
+
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestSlackAPIRepository:
     """Test Slack API repository implementation."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_slack_client(self):
         """Mock Slack WebClient."""
         return AsyncMock()
 
-    @pytest.fixture
+    @pytest.fixture()
     def slack_repo(self, mock_slack_client):
         """Slack repository with mocked client."""
         return SlackAPIRepository(slack_client=mock_slack_client)

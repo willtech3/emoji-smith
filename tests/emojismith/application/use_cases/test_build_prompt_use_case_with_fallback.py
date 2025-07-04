@@ -1,16 +1,18 @@
 """Tests for BuildPromptUseCase with description quality analyzer integration."""
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock
+
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
-from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.domain.services.description_quality_analyzer import (
     DescriptionQualityAnalyzer,
 )
+from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_openai_repository():
     """Create a mock OpenAI repository."""
     repo = Mock()
@@ -18,19 +20,19 @@ def mock_openai_repository():
     return repo
 
 
-@pytest.fixture
+@pytest.fixture()
 def prompt_builder_service():
     """Create a real prompt builder service."""
     return PromptBuilderService()
 
 
-@pytest.fixture
+@pytest.fixture()
 def description_quality_analyzer():
     """Create a real description quality analyzer."""
     return DescriptionQualityAnalyzer(quality_threshold=0.5)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_build_prompt_with_poor_description_uses_fallback(
     mock_openai_repository, prompt_builder_service, description_quality_analyzer
 ):
@@ -67,7 +69,7 @@ async def test_build_prompt_with_poor_description_uses_fallback(
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_build_prompt_with_good_description_no_fallback(
     mock_openai_repository, prompt_builder_service, description_quality_analyzer
 ):
@@ -101,7 +103,7 @@ async def test_build_prompt_with_good_description_no_fallback(
     assert "dancing" in prompt_arg.lower()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_build_prompt_logs_fallback_usage(
     mock_openai_repository, prompt_builder_service, description_quality_analyzer, caplog
 ):
@@ -137,7 +139,7 @@ async def test_build_prompt_logs_fallback_usage(
     assert any("score:" in record.message.lower() for record in caplog.records)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_build_prompt_without_enhancement_still_uses_fallback(
     mock_openai_repository, prompt_builder_service, description_quality_analyzer
 ):
@@ -165,7 +167,7 @@ async def test_build_prompt_without_enhancement_still_uses_fallback(
     assert "nice" not in result.lower()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_configurable_quality_threshold(
     mock_openai_repository, prompt_builder_service
 ):

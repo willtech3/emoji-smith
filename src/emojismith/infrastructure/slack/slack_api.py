@@ -1,9 +1,10 @@
 """Slack API repository implementation."""
 
 import logging
-from typing import Dict, Any
-from slack_sdk.web.async_client import AsyncWebClient
+from typing import Any
+
 from slack_sdk.errors import SlackApiError
+from slack_sdk.web.async_client import AsyncWebClient
 
 from shared.domain.repositories import SlackRepository
 
@@ -15,7 +16,7 @@ class SlackAPIRepository(SlackRepository):
         self._client = slack_client
         self._logger = logging.getLogger(__name__)
 
-    async def open_modal(self, trigger_id: str, view: Dict[str, Any]) -> None:
+    async def open_modal(self, trigger_id: str, view: dict[str, Any]) -> None:
         """Open modal dialog in Slack."""
         await self._client.views_open(trigger_id=trigger_id, view=view)
 

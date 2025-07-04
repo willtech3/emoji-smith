@@ -1,10 +1,11 @@
 """Tests for webhook request value object."""
 
 import pytest
+
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestWebhookRequest:
     """Test webhook request value object."""
 

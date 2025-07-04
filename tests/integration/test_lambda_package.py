@@ -11,7 +11,7 @@ import pytest
 class TestLambdaPackage:
     """Test Lambda package can be imported correctly."""
 
-    @pytest.mark.integration
+    @pytest.mark.integration()
     def test_webhook_handler_importable(self):
         """Ensure Lambda handler can be imported as expected by AWS."""
         # Build the webhook package
@@ -34,10 +34,10 @@ class TestLambdaPackage:
                 zip_ref.extractall(temp_dir)
 
             # Test import in subprocess to avoid polluting test environment
-            test_code = """
+            test_code = f"""
 import sys
 import os
-sys.path.insert(0, r'{}')
+sys.path.insert(0, r'{temp_dir}')
 # Set required environment variables for boto3
 os.environ['AWS_DEFAULT_REGION'] = 'us-east-2'
 os.environ['SLACK_BOT_TOKEN'] = 'dummy'
@@ -46,9 +46,7 @@ os.environ['SQS_QUEUE_URL'] = 'dummy'
 import webhook_handler
 assert hasattr(webhook_handler, 'handler')
 print('Handler import successful')
-""".format(
-                temp_dir
-            )
+"""
 
             result = subprocess.run(
                 ["python3", "-c", test_code], capture_output=True, text=True
@@ -57,7 +55,7 @@ print('Handler import successful')
             assert result.returncode == 0, f"Import failed: {result.stderr}"
             assert "Handler import successful" in result.stdout
 
-    @pytest.mark.integration
+    @pytest.mark.integration()
     def test_webhook_package_structure(self):
         """Verify webhook package has correct structure."""
         project_root = Path(__file__).parent.parent.parent

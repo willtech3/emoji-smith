@@ -6,7 +6,7 @@ for test suites to improve performance when testing with many AWS service mocks.
 
 import json
 import os
-from typing import Dict, Any
+from typing import Any
 from unittest.mock import Mock, patch
 
 import boto3
@@ -20,8 +20,8 @@ SERVICE_PATH = (
 )
 
 
-@pytest.fixture
-def sqs_event() -> Dict[str, Any]:
+@pytest.fixture()
+def sqs_event() -> dict[str, Any]:
     """Sample SQS event for testing with direct job format."""
     return {
         "Records": [
@@ -63,7 +63,7 @@ def sqs_event() -> Dict[str, Any]:
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def context():
     """Mock Lambda context."""
     context = Mock()
@@ -80,7 +80,7 @@ def context():
     return context
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestWorkerHandler:
     """Test cases for the SQS worker Lambda handler."""
 
@@ -115,15 +115,14 @@ class TestWorkerHandler:
                 ),
             )
 
-            with patch(SERVICE_PATH) as mock_create:
-                with patch("asyncio.run") as mock_run:
-                    mock_create.return_value = Mock(process_emoji_generation_job=Mock())
-                    mock_run.return_value = None
+            with patch(SERVICE_PATH) as mock_create, patch("asyncio.run") as mock_run:
+                mock_create.return_value = Mock(process_emoji_generation_job=Mock())
+                mock_run.return_value = None
 
-                    result = handler(sqs_event, context)
+                result = handler(sqs_event, context)
 
-                    assert result == {"batchItemFailures": []}
-                    mock_run.assert_called_once()
+                assert result == {"batchItemFailures": []}
+                mock_run.assert_called_once()
 
     @patch.dict(
         "os.environ",
@@ -186,20 +185,19 @@ class TestWorkerHandler:
                 ),
             )
 
-            with patch(SERVICE_PATH) as mock_create:
-                with patch("asyncio.run") as mock_run:
-                    mock_create.return_value = Mock(
-                        process_emoji_generation_job=Mock(
-                            side_effect=Exception("Processing failed")
-                        )
+            with patch(SERVICE_PATH) as mock_create, patch("asyncio.run") as mock_run:
+                mock_create.return_value = Mock(
+                    process_emoji_generation_job=Mock(
+                        side_effect=Exception("Processing failed")
                     )
-                    mock_run.side_effect = Exception("Processing failed")
+                )
+                mock_run.side_effect = Exception("Processing failed")
 
-                    result = handler(sqs_event, context)
+                result = handler(sqs_event, context)
 
-                    assert result == {
-                        "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
-                    }
+                assert result == {
+                    "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
+                }
 
     @patch.dict(
         "os.environ",

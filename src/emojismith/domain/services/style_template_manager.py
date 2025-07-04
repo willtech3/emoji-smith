@@ -1,12 +1,10 @@
 """Manager for style-specific prompt templates."""
 
-from typing import Dict
 from emojismith.domain.repositories.style_template_repository import (
     StyleTemplateRepository,
 )
 from emojismith.domain.value_objects.style_template import StyleTemplate
 from shared.domain.value_objects import StyleType
-
 
 # Configuration constants
 MAX_KEYWORDS_TO_ADD = 2
@@ -23,7 +21,7 @@ class StyleTemplateManager:
         """Get template for specific style type."""
         return self._template_repository.get_template(style_type)
 
-    def get_all_templates(self) -> Dict[StyleType, StyleTemplate]:
+    def get_all_templates(self) -> dict[StyleType, StyleTemplate]:
         """Get all available templates."""
         return self._template_repository.get_all_templates()
 

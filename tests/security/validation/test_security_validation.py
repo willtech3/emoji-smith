@@ -2,11 +2,11 @@
 
 import pytest
 
-from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from emojismith.domain.exceptions import ValidationError
+from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 
 
-@pytest.mark.security
+@pytest.mark.security()
 class TestSecurityValidation:
     """Test security aspects including input validation and injection prevention."""
 

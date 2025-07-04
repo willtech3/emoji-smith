@@ -1,8 +1,10 @@
 """Tests for PILImageValidator."""
 
 from io import BytesIO
-from PIL import Image
+
 import pytest
+from PIL import Image
+
 from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
 
 
@@ -24,9 +26,9 @@ def _create_jpeg_bytes(
     return bio.getvalue()
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestPILImageValidator:
-    @pytest.fixture
+    @pytest.fixture()
     def validator(self):
         """PILImageValidator instance for testing."""
         return PILImageValidator()

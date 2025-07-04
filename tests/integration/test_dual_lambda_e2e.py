@@ -1,35 +1,36 @@
 """End-to-end integration tests for dual Lambda architecture."""
 
 import json
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-from typing import Dict, Any
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from shared.domain.entities import EmojiGenerationJob
 from webhook.handler import WebhookHandler
 from webhook.infrastructure.slack_api import SlackAPIRepository
 from webhook.infrastructure.sqs_job_queue import SQSJobQueue
-from shared.domain.entities import EmojiGenerationJob
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestDualLambdaE2EIntegration:
     """End-to-end integration tests for webhook to worker flow."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_slack_repo(self):
         """Mock Slack repository with realistic responses."""
         mock_repo = AsyncMock(spec=SlackAPIRepository)
         mock_repo.open_modal.return_value = None
         return mock_repo
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_sqs_client(self):
         """Mock SQS client that captures sent messages."""
         mock_client = MagicMock()
         mock_client.send_message.return_value = {"MessageId": "test-message-id"}
         return mock_client
 
-    @pytest.fixture
+    @pytest.fixture()
     def webhook_handler(self, mock_slack_repo, mock_sqs_client):
         """Create webhook handler with mocked dependencies."""
         # Create job queue with mocked SQS client
@@ -46,8 +47,8 @@ class TestDualLambdaE2EIntegration:
             webhook_handler._sqs_client = mock_sqs_client
             return webhook_handler
 
-    @pytest.fixture
-    def message_action_payload(self) -> Dict[str, Any]:
+    @pytest.fixture()
+    def message_action_payload(self) -> dict[str, Any]:
         """Complete message action payload for testing."""
         return {
             "type": "message_action",
@@ -63,8 +64,8 @@ class TestDualLambdaE2EIntegration:
             "team": {"id": "T11111"},
         }
 
-    @pytest.fixture
-    def modal_submission_payload(self) -> Dict[str, Any]:
+    @pytest.fixture()
+    def modal_submission_payload(self) -> dict[str, Any]:
         """Complete modal submission payload for testing."""
         return {
             "type": "view_submission",

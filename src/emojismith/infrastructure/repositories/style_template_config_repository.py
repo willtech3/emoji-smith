@@ -1,7 +1,5 @@
 """Configuration-based implementation of style template repository."""
 
-from typing import Dict
-
 # Repository interface is implemented implicitly via duck typing
 from emojismith.domain.value_objects.style_template import StyleTemplate
 from shared.domain.value_objects import StyleType
@@ -14,7 +12,7 @@ class StyleTemplateConfigRepository:
         """Initialize with default style templates."""
         self._templates = self._load_templates()
 
-    def _load_templates(self) -> Dict[StyleType, StyleTemplate]:
+    def _load_templates(self) -> dict[StyleType, StyleTemplate]:
         """Load style templates from configuration."""
         # In a real implementation, this would load from a config file or database
         # For now, we'll keep the templates here but they're properly abstracted
@@ -23,8 +21,7 @@ class StyleTemplateConfigRepository:
                 style_type=StyleType.CARTOON,
                 prefix="Create a vibrant, cartoon-style emoji with",
                 suffix=(
-                    "in a fun, animated style with bold colors and "
-                    "expressive features"
+                    "in a fun, animated style with bold colors and expressive features"
                 ),
                 keywords=(
                     "vibrant",
@@ -53,7 +50,7 @@ class StyleTemplateConfigRepository:
                 style_type=StyleType.MINIMALIST,
                 prefix="Create a simple, minimalist emoji depicting",
                 suffix=(
-                    "using clean lines, minimal details, and essential " "elements only"
+                    "using clean lines, minimal details, and essential elements only"
                 ),
                 keywords=(
                     "simple",
@@ -90,6 +87,6 @@ class StyleTemplateConfigRepository:
         """Get template for specific style type."""
         return self._templates[style_type]
 
-    def get_all_templates(self) -> Dict[StyleType, StyleTemplate]:
+    def get_all_templates(self) -> dict[StyleType, StyleTemplate]:
         """Get all available templates."""
         return self._templates.copy()

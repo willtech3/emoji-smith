@@ -1,30 +1,31 @@
 """Unit tests for SlackSignatureValidator."""
 
-import time
-import hmac
 import hashlib
+import hmac
+import time
 from unittest.mock import patch
+
 import pytest
 
 from webhook.domain.webhook_request import WebhookRequest
 from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestSlackSignatureValidator:
     """Test cases for SlackSignatureValidator."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def signing_secret_bytes(self):
         """Fixture providing a test signing secret as bytes."""
         return b"test_signing_secret_123"
 
-    @pytest.fixture
+    @pytest.fixture()
     def validator(self, signing_secret_bytes):
         """Fixture providing a configured validator."""
         return SlackSignatureValidator(signing_secret=signing_secret_bytes)
 
-    @pytest.fixture
+    @pytest.fixture()
     def valid_request_data(self):
         """Fixture providing valid request data."""
         body = (
@@ -504,7 +505,7 @@ class TestSlackSignatureValidator:
 
     def test_unicode_handling_in_body(self, validator, signing_secret_bytes):
         """Test that unicode characters in body are handled correctly."""
-        body = '{"message": "Hello 🌟 World"}'.encode("utf-8")
+        body = '{"message": "Hello 🌟 World"}'.encode()
         timestamp = str(int(time.time()))
 
         # Create valid signature for unicode body

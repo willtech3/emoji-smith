@@ -3,10 +3,11 @@
 import json
 import logging
 import os
-from typing import Any, Dict
+from typing import Any
 
 from emojismith.app import create_worker_emoji_service
 from shared.domain.entities import EmojiGenerationJob
+
 from .secrets_loader import AWSSecretsLoader
 
 # Configure logging
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 _secrets_loader = AWSSecretsLoader()
 
 
-def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     AWS Lambda handler for processing SQS emoji generation jobs.
 

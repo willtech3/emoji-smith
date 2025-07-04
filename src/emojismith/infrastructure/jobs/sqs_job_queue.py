@@ -2,9 +2,10 @@
 
 import json
 import logging
-from typing import Any, Optional, Tuple
-from shared.domain.entities import EmojiGenerationJob
+from typing import Any
+
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from shared.domain.entities import EmojiGenerationJob
 
 
 class SQSJobQueue(JobQueueRepository):
@@ -42,7 +43,7 @@ class SQSJobQueue(JobQueueRepository):
 
         return job.job_id
 
-    async def dequeue_job(self) -> Optional[Tuple[EmojiGenerationJob, str]]:
+    async def dequeue_job(self) -> tuple[EmojiGenerationJob, str] | None:
         """Dequeue the next pending job for processing.
 
         Returns a tuple containing the job and the SQS receipt handle used
@@ -91,7 +92,7 @@ class SQSJobQueue(JobQueueRepository):
             "Completed and removed job from queue", extra={"job_id": job.job_id}
         )
 
-    async def _delete_message(self, receipt_handle: Optional[str]) -> None:
+    async def _delete_message(self, receipt_handle: str | None) -> None:
         """Delete message from SQS queue if a receipt handle is present."""
         if not receipt_handle:
             return
@@ -100,7 +101,7 @@ class SQSJobQueue(JobQueueRepository):
                 QueueUrl=self._queue_url, ReceiptHandle=receipt_handle
             )
 
-    async def get_job_status(self, job_id: str) -> Optional[str]:
+    async def get_job_status(self, job_id: str) -> str | None:
         """Get the current status of a job."""
         # For SQS implementation, we'll rely on message visibility
         # In production, you might want to use DynamoDB for status tracking

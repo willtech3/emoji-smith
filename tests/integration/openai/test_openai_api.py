@@ -1,15 +1,17 @@
 """Tests for OpenAIAPIRepository."""
 
+from unittest.mock import AsyncMock
+
 import httpx
 import openai
-from emojismith.domain.errors import RateLimitExceededError
 import pytest
-from unittest.mock import AsyncMock
+
+from emojismith.domain.errors import RateLimitExceededError
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_enhances_prompt_with_ai_assistance() -> None:
     client = AsyncMock()
     client.chat.completions.create.return_value = AsyncMock(
@@ -21,8 +23,8 @@ async def test_enhances_prompt_with_ai_assistance() -> None:
     client.chat.completions.create.assert_called_once()
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_enhance_prompt_uses_comprehensive_system_prompt() -> None:
     """Test that enhance_prompt uses a comprehensive system prompt for DALL-E."""
     client = AsyncMock()
@@ -56,8 +58,8 @@ async def test_enhance_prompt_uses_comprehensive_system_prompt() -> None:
     )  # Should be comprehensive, not just "Enhance emoji prompt"
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_uses_fallback_model_when_preferred_model_unavailable() -> None:
     client = AsyncMock()
     client.models.retrieve = AsyncMock(side_effect=[Exception(), None])
@@ -71,8 +73,8 @@ async def test_uses_fallback_model_when_preferred_model_unavailable() -> None:
     assert client.chat.completions.create.call_args.kwargs["model"] == "gpt-4"
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_uses_environment_configured_model_for_chat() -> None:
     """Test that repository respects OPENAI_CHAT_MODEL from environment."""
     import os
@@ -99,8 +101,8 @@ async def test_uses_environment_configured_model_for_chat() -> None:
     del os.environ["OPENAI_CHAT_MODEL"]
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_rejects_image_generation_when_no_data_returned() -> None:
     client = AsyncMock()
     client.images.generate.return_value = AsyncMock(data=[])
@@ -109,8 +111,8 @@ async def test_rejects_image_generation_when_no_data_returned() -> None:
         await repo.generate_image("p")
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_rejects_image_generation_when_b64_json_is_none() -> None:
     """Test that None b64_json is handled gracefully."""
     client = AsyncMock()
@@ -120,8 +122,8 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
         await repo.generate_image("prompt")
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
     """Test that image generation falls back to DALL-E 2 when DALL-E 3 fails."""
     client = AsyncMock()
@@ -151,8 +153,8 @@ async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
     assert isinstance(result, bytes)
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_enhance_prompt_raises_rate_limit_error() -> None:
     client = AsyncMock()
     client.chat.completions.create.side_effect = openai.RateLimitError(
@@ -165,8 +167,8 @@ async def test_enhance_prompt_raises_rate_limit_error() -> None:
         await repo.enhance_prompt("ctx", "desc")
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_generate_image_raises_rate_limit_error() -> None:
     client = AsyncMock()
     client.images.generate.side_effect = [

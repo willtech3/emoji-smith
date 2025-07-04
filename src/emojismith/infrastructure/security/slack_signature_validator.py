@@ -1,11 +1,11 @@
 """Slack signature validator infrastructure implementation."""
 
-import os
-import hmac
 import hashlib
-import time
+import hmac
 import logging
-from typing import Optional
+import os
+import time
+
 from emojismith.domain.protocols.signature_validator import SignatureValidator
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
 
@@ -23,7 +23,7 @@ class SlackSignatureValidator(SignatureValidator):
 
     def __init__(
         self,
-        signing_secret: Optional[str] = None,
+        signing_secret: str | None = None,
         replay_window_seconds: int = DEFAULT_REPLAY_WINDOW,
     ) -> None:
         """Initialize Slack signature validator.

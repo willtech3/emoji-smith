@@ -1,6 +1,7 @@
 """Protocol for webhook signature validation."""
 
 from typing import Protocol, runtime_checkable
+
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
 
 

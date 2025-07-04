@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
@@ -12,7 +12,7 @@ from botocore.exceptions import ClientError
 class AWSSecretsLoader:
     """Load secrets from AWS Secrets Manager."""
 
-    _instance: Optional[AWSSecretsLoader] = None
+    _instance: AWSSecretsLoader | None = None
     _loaded: bool = False
 
     def __new__(cls, secrets_name: str | None = None) -> AWSSecretsLoader:
@@ -26,7 +26,7 @@ class AWSSecretsLoader:
             self._logger = logging.getLogger(__name__)
             self.__class__._loaded = True
 
-    def load_secrets(self) -> Dict[str, Any]:
+    def load_secrets(self) -> dict[str, Any]:
         """Load secrets and inject them into environment variables."""
         if not self._secrets_name:
             self._logger.info("SECRETS_NAME not set, skipping secrets loading")
@@ -35,7 +35,7 @@ class AWSSecretsLoader:
         try:
             client = boto3.client("secretsmanager")
             response = client.get_secret_value(SecretId=self._secrets_name)
-            secrets: Dict[str, Any] = json.loads(response["SecretString"])
+            secrets: dict[str, Any] = json.loads(response["SecretString"])
 
             for key, value in secrets.items():
                 if key != "generated_password":
@@ -52,6 +52,6 @@ class AWSSecretsLoader:
         except json.JSONDecodeError as exc:
             self._logger.exception("Failed to parse secrets JSON: %s", exc)
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._logger.exception("Unexpected error loading secrets: %s", exc)
             raise

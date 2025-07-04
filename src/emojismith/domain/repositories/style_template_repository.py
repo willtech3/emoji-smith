@@ -1,6 +1,7 @@
 """Protocol for style template repository."""
 
-from typing import Protocol, Dict
+from typing import Protocol
+
 from emojismith.domain.value_objects.style_template import StyleTemplate
 from shared.domain.value_objects import StyleType
 
@@ -12,6 +13,6 @@ class StyleTemplateRepository(Protocol):
         """Get template for specific style type."""
         ...
 
-    def get_all_templates(self) -> Dict[StyleType, StyleTemplate]:
+    def get_all_templates(self) -> dict[StyleType, StyleTemplate]:
         """Get all available templates."""
         ...

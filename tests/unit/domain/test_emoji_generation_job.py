@@ -3,10 +3,10 @@
 import pytest
 
 from shared.domain.entities import EmojiGenerationJob
-from shared.domain.value_objects import JobStatus, EmojiSharingPreferences
+from shared.domain.value_objects import EmojiSharingPreferences, JobStatus
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiGenerationJob:
     """Test creation and state transitions for EmojiGenerationJob."""
 

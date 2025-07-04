@@ -70,11 +70,10 @@ uv sync --all-extras
 
 ```bash
 # Run the verification suite
-pytest -q                    # Should pass 1 test
-black --check src/ tests/    # Should show "All done!"
-flake8 src/ tests/          # Should show no errors
-mypy src/                   # Should show "Success: no issues found"
-bandit -r src/              # Should show no security issues
+pytest -q                        # Should pass 1 test
+ruff format --check src/ tests/  # Should show files are formatted
+ruff check src/ tests/           # Should show no errors
+mypy src/                        # Should show "Success: no issues found"
 ```
 
 ### 3. Environment Configuration (3 minutes)
@@ -176,10 +175,9 @@ ngrok http 8000
 
 ```bash
 # Run all quality checks before committing (NEVER use 'git add .')
-black src/ tests/           # Format code
-flake8 src/ tests/          # Check style
+ruff format src/ tests/     # Format code
+ruff check src/ tests/      # Check style + security
 mypy src/                   # Type checking
-bandit -r src/              # Security scanning
 pytest --cov=src tests/     # Run tests with coverage
 
 # Feature branch workflow

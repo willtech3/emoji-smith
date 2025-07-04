@@ -1,7 +1,9 @@
 import asyncio
+
 import boto3
 import pytest
 from moto import mock_aws
+
 from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 from shared.domain.entities import EmojiGenerationJob
 from shared.domain.value_objects import EmojiSharingPreferences
@@ -40,8 +42,8 @@ class AsyncBoto3Session:
         return AsyncClientWrapper(client)
 
 
-@pytest.mark.integration
-@pytest.mark.asyncio
+@pytest.mark.integration()
+@pytest.mark.asyncio()
 async def test_enqueue_and_complete_job_flow() -> None:
     """Enqueue and dequeue a job using a real SQS backend."""
     with mock_aws():
@@ -77,8 +79,8 @@ async def test_enqueue_and_complete_job_flow() -> None:
             assert "Messages" not in messages
 
 
-@pytest.mark.integration
-@pytest.mark.asyncio
+@pytest.mark.integration()
+@pytest.mark.asyncio()
 async def test_dequeue_empty_queue_returns_none() -> None:
     """Dequeuing an empty queue should return None."""
     with mock_aws():

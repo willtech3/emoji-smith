@@ -5,11 +5,12 @@ EmojiValidationService, so these tests focus on basic entity validation.
 """
 
 import pytest
+
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.exceptions import ValidationError
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestGeneratedEmoji:
     def test_generated_emoji_when_valid_returns_entity(self) -> None:
         """Test creating valid emoji entity."""

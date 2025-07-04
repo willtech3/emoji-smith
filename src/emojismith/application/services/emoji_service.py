@@ -1,22 +1,23 @@
 """Emoji creation service for orchestrating the workflow."""
 
 import logging
-from typing import Dict, Any, Optional
-from shared.domain.entities import EmojiGenerationJob
-from emojismith.domain.repositories.slack_repository import SlackRepository
-from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from typing import Any
+
+from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
 from emojismith.domain.repositories.file_sharing_repository import FileSharingRepository
-from emojismith.domain.services.generation_service import EmojiGenerationService
+from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
+from emojismith.domain.repositories.slack_repository import SlackRepository
 from emojismith.domain.services.emoji_sharing_service import (
-    EmojiSharingService,
     EmojiSharingContext,
+    EmojiSharingService,
     WorkspaceType,
 )
+from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
-from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
+from shared.domain.entities import EmojiGenerationJob
 from shared.domain.value_objects import (
-    EmojiStylePreferences,
     EmojiSharingPreferences,
+    EmojiStylePreferences,
 )
 
 
@@ -30,9 +31,9 @@ class EmojiCreationService:
         slack_repo: SlackRepository,
         emoji_generator: EmojiGenerationService,
         build_prompt_use_case: BuildPromptUseCase,
-        job_queue: Optional[JobQueueRepository] = None,
-        file_sharing_repo: Optional[FileSharingRepository] = None,
-        sharing_service: Optional[EmojiSharingService] = None,
+        job_queue: JobQueueRepository | None = None,
+        file_sharing_repo: FileSharingRepository | None = None,
+        sharing_service: EmojiSharingService | None = None,
     ) -> None:
         self._slack_repo = slack_repo
         self._emoji_generator = emoji_generator
@@ -56,7 +57,8 @@ class EmojiCreationService:
 
         # Build and enhance prompt using the use case
         enhanced_prompt = await self._build_prompt_use_case.build_prompt(
-            spec=spec, enhance=True  # Enable AI enhancement
+            spec=spec,
+            enhance=True,  # Enable AI enhancement
         )
 
         # Use provided emoji name, sanitize for Slack (max 32 chars)
@@ -138,7 +140,7 @@ class EmojiCreationService:
             extra={"job_id": job.job_id, "emoji_name": name},
         )
 
-    async def process_emoji_generation_job_dict(self, job_data: Dict[str, Any]) -> None:
+    async def process_emoji_generation_job_dict(self, job_data: dict[str, Any]) -> None:
         """Generate emoji using dict payload, upload to Slack, and add reaction."""
         # Convert dict to job entity for consistent processing
         job = EmojiGenerationJob.create_new(

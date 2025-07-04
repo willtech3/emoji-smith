@@ -1,6 +1,7 @@
 """Tests for PromptBuilderService."""
 
 import pytest
+
 from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from shared.domain.value_objects import EmojiStylePreferences, StyleType
@@ -9,12 +10,12 @@ from shared.domain.value_objects import EmojiStylePreferences, StyleType
 class TestPromptBuilderService:
     """Test suite for PromptBuilderService."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def service(self) -> PromptBuilderService:
         """Create a PromptBuilderService instance."""
         return PromptBuilderService()
 
-    @pytest.fixture
+    @pytest.fixture()
     def basic_spec(self) -> EmojiSpecification:
         """Create a basic emoji specification."""
         return EmojiSpecification(

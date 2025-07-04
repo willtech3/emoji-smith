@@ -1,10 +1,11 @@
 """Tests for BackgroundWorker job processing loop using real services."""
 
 import asyncio
+import contextlib
 import os
 import time
-from unittest.mock import AsyncMock, patch
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -34,7 +35,7 @@ class InMemoryJobQueue:
         try:
             # Non-blocking get with timeout
             return await asyncio.wait_for(self._queue.get(), timeout=0.1)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return None
 
     async def update_job_status(self, job_id: str, status: str):
@@ -62,12 +63,12 @@ class InMemoryJobQueue:
         try:
             await asyncio.wait_for(self._job_completed[job_id].wait(), timeout=timeout)
             return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_background_worker_processes_job_end_to_end():
     """Test worker processes jobs using real services with minimal mocking."""
     start_time = time.time()
@@ -167,10 +168,8 @@ async def test_background_worker_processes_job_end_to_end():
 
     # Cancel the worker task
     worker_task.cancel()
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await worker_task
-    except asyncio.CancelledError:
-        pass
 
     # Verify job was processed using public API
     assert job_queue.get_pending_jobs() == 0
@@ -190,8 +189,8 @@ async def test_background_worker_processes_job_end_to_end():
     print(f"Test execution time: {elapsed:.2f}s")
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_worker_handles_multiple_jobs_concurrently():
     """Test worker can process multiple jobs concurrently."""
     start_time = time.time()
@@ -279,10 +278,8 @@ async def test_worker_handles_multiple_jobs_concurrently():
     # Stop worker
     await worker.stop()
     worker_task.cancel()
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await worker_task
-    except asyncio.CancelledError:
-        pass
 
     # Verify all jobs were processed using public API
     assert job_queue.get_pending_jobs() == 0

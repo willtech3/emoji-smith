@@ -2,13 +2,15 @@
 
 import os
 import tempfile
+
 import pytest
 from aws_cdk import App
-from aws_cdk.assertions import Template, Match
+from aws_cdk.assertions import Match, Template
+
 from infra.stacks.emoji_smith_stack import EmojiSmithStack
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiSmithStack:
     """Test suite for CDK stack configuration."""
 

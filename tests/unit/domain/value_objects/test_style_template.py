@@ -1,6 +1,7 @@
 """Tests for StyleTemplate value object."""
 
 import pytest
+
 from emojismith.domain.value_objects.style_template import StyleTemplate
 from shared.domain.value_objects import StyleType
 
@@ -38,7 +39,7 @@ class TestStyleTemplate:
             template.prefix = "Modified prefix"
 
         with pytest.raises(AttributeError):
-            template.keywords = template.keywords + ("new keyword",)
+            template.keywords = (*template.keywords, "new keyword")
 
     def test_style_template_equality(self):
         """StyleTemplates with same values should be equal."""

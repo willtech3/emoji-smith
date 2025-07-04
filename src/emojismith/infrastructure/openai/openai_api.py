@@ -5,11 +5,13 @@
 from __future__ import annotations
 
 import base64
-import openai
-from emojismith.domain.errors import RateLimitExceededError
 import logging
-from typing import Iterable, List
+from collections.abc import Iterable
+
+import openai
 from openai import AsyncOpenAI
+
+from emojismith.domain.errors import RateLimitExceededError
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
 
 
@@ -25,7 +27,7 @@ class OpenAIAPIRepository(OpenAIRepository):
         self._client = client
         self._logger = logging.getLogger(__name__)
         self._model = model
-        self._fallback_models: List[str] = list(
+        self._fallback_models: list[str] = list(
             fallback_models or ["gpt-4", "gpt-3.5-turbo"]
         )
         self._checked_model = False

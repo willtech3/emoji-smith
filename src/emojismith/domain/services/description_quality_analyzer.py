@@ -1,12 +1,12 @@
 """Service for analyzing emoji description quality and generating fallbacks."""
 
-from typing import List, Tuple, Set
+from typing import ClassVar
 
 
 class DescriptionQualityAnalyzer:
     """Analyze description quality and provide fallback strategies."""
 
-    VAGUE_TERMS: Set[str] = {
+    VAGUE_TERMS: ClassVar[set[str]] = {
         "emoji",
         "nice",
         "good",
@@ -24,7 +24,7 @@ class DescriptionQualityAnalyzer:
 
     MIN_MEANINGFUL_WORDS = 2
 
-    VISUAL_TERMS: Set[str] = {
+    VISUAL_TERMS: ClassVar[set[str]] = {
         "color",
         "colorful",
         "bright",
@@ -60,7 +60,7 @@ class DescriptionQualityAnalyzer:
         "opaque",
     }
 
-    EMOTION_TERMS: Set[str] = {
+    EMOTION_TERMS: ClassVar[set[str]] = {
         "happy",
         "sad",
         "angry",
@@ -82,7 +82,7 @@ class DescriptionQualityAnalyzer:
         "surprised",
     }
 
-    ACTION_TERMS: Set[str] = {
+    ACTION_TERMS: ClassVar[set[str]] = {
         "running",
         "jumping",
         "dancing",
@@ -112,7 +112,7 @@ class DescriptionQualityAnalyzer:
         """
         self.quality_threshold = quality_threshold
 
-    def analyze_description(self, description: str) -> Tuple[float, List[str]]:
+    def analyze_description(self, description: str) -> tuple[float, list[str]]:
         """Analyze description quality and return score with improvement suggestions.
 
         Args:
@@ -199,7 +199,7 @@ class DescriptionQualityAnalyzer:
         score, _ = self.analyze_description(description)
         return score < self.quality_threshold
 
-    def extract_concepts(self, context: str) -> List[str]:
+    def extract_concepts(self, context: str) -> list[str]:
         """Extract key concepts from context.
 
         Args:

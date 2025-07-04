@@ -1,6 +1,6 @@
 """Shared domain models following DDD principles."""
 
-from .entities.slack_message import SlackMessage
 from .entities import EmojiGenerationJob
+from .entities.slack_message import SlackMessage
 
-__all__ = ["SlackMessage", "EmojiGenerationJob"]
+__all__ = ["EmojiGenerationJob", "SlackMessage"]

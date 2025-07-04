@@ -1,48 +1,50 @@
 """Tests for EmojiValidationService."""
 
 import os
+
 import pytest
-from emojismith.domain.services.emoji_validation_service import EmojiValidationService
+
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiValidationService:
-    @pytest.fixture
+    @pytest.fixture()
     def fixtures_dir(self):
         """Path to test fixtures directory."""
         return os.path.join(os.path.dirname(__file__), "../../../fixtures/images")
 
-    @pytest.fixture
+    @pytest.fixture()
     def image_validator(self):
         """Real PILImageValidator for testing."""
         return PILImageValidator()
 
-    @pytest.fixture
+    @pytest.fixture()
     def validation_service(self, image_validator):
         """EmojiValidationService with real validator."""
         return EmojiValidationService(image_validator)
 
-    @pytest.fixture
+    @pytest.fixture()
     def valid_image_data(self, fixtures_dir):
         """Load valid PNG image data."""
         with open(os.path.join(fixtures_dir, "valid_emoji.png"), "rb") as f:
             return f.read()
 
-    @pytest.fixture
+    @pytest.fixture()
     def wrong_size_image_data(self, fixtures_dir):
         """Load wrong size PNG image data."""
         with open(os.path.join(fixtures_dir, "wrong_size.png"), "rb") as f:
             return f.read()
 
-    @pytest.fixture
+    @pytest.fixture()
     def wrong_format_image_data(self, fixtures_dir):
         """Load JPEG image data."""
         with open(os.path.join(fixtures_dir, "wrong_format.jpg"), "rb") as f:
             return f.read()
 
-    @pytest.fixture
+    @pytest.fixture()
     def corrupted_image_data(self, fixtures_dir):
         """Load corrupted PNG image data."""
         with open(os.path.join(fixtures_dir, "corrupted.png"), "rb") as f:

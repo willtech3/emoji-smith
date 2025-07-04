@@ -1,37 +1,38 @@
 """Tests for Slack file sharing repository."""
 
-import pytest
-from unittest.mock import AsyncMock
 from io import BytesIO
+from unittest.mock import AsyncMock
+
+import pytest
 from PIL import Image
 
+from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.infrastructure.slack.slack_file_sharing import (
     SlackFileSharingRepository,
 )
-from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
-    ShareLocation,
-    InstructionVisibility,
     ImageSize,
+    InstructionVisibility,
+    ShareLocation,
 )
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestSlackFileSharingRepository:
     """Test Slack file sharing repository."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_slack_client(self):
         """Create mock Slack client."""
         return AsyncMock()
 
-    @pytest.fixture
+    @pytest.fixture()
     def file_sharing_repo(self, mock_slack_client):
         """Create file sharing repository with mock client."""
         return SlackFileSharingRepository(mock_slack_client)
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_emoji(self):
         """Create sample emoji with image data."""
         # Create a small test image
@@ -209,7 +210,7 @@ class TestSlackFileSharingRepository:
         self, file_sharing_repo, mock_slack_client
     ):
         """Test early rejection when image exceeds Slack file size limit."""
-        # Arrange – We can't create a GeneratedEmoji larger than 64KB due to
+        # Arrange - We can't create a GeneratedEmoji larger than 64KB due to
         # domain constraints, so we'll test this by mocking the
         # _prepare_image_data method to return large data
         import unittest.mock
@@ -236,7 +237,7 @@ class TestSlackFileSharingRepository:
                 requester_user_id="U123",
             )
 
-        # Assert – should fail fast before Slack API call
+        # Assert - should fail fast before Slack API call
         assert result.success is False
         assert result.error == "file_too_large"
         mock_slack_client.files_upload_v2.assert_not_called()

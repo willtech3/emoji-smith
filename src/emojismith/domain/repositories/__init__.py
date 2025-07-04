@@ -1,22 +1,22 @@
 """Domain repository interfaces."""
 
+from .file_sharing_repository import FileSharingRepository, FileSharingResult
+from .image_processor import ImageProcessor
+from .job_queue_repository import JobQueueConsumer, JobQueueProducer, JobQueueRepository
 from .slack_repository import (
-    SlackModalRepository,
     SlackEmojiRepository,
+    SlackModalRepository,
     SlackRepository,
 )
-from .job_queue_repository import JobQueueProducer, JobQueueConsumer, JobQueueRepository
-from .image_processor import ImageProcessor
-from .file_sharing_repository import FileSharingRepository, FileSharingResult
 
 __all__ = [
-    "SlackModalRepository",
-    "SlackEmojiRepository",
-    "SlackRepository",
-    "JobQueueProducer",
-    "JobQueueConsumer",
-    "JobQueueRepository",
-    "ImageProcessor",
     "FileSharingRepository",
     "FileSharingResult",
+    "ImageProcessor",
+    "JobQueueConsumer",
+    "JobQueueProducer",
+    "JobQueueRepository",
+    "SlackEmojiRepository",
+    "SlackModalRepository",
+    "SlackRepository",
 ]

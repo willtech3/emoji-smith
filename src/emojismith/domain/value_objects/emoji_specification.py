@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
-from shared.domain.value_objects import EmojiStylePreferences
 from emojismith.domain.exceptions import ValidationError
+from shared.domain.value_objects import EmojiStylePreferences
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,7 @@
 """Domain interface for signature validation."""
 
 from typing import Protocol
+
 from webhook.domain.webhook_request import WebhookRequest
 
 

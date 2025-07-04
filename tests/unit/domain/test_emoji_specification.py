@@ -1,12 +1,13 @@
 """Tests for EmojiSpecification value object."""
 
 import pytest
-from emojismith.domain.value_objects import EmojiSpecification
+
 from emojismith.domain.exceptions import ValidationError
+from emojismith.domain.value_objects import EmojiSpecification
 from shared.domain.value_objects import EmojiStylePreferences, StyleType
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiSpecification:
     def test_emoji_specification_to_prompt_includes_style(self) -> None:
         style = EmojiStylePreferences(style_type=StyleType.PIXEL_ART)

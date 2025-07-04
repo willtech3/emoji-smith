@@ -1,10 +1,12 @@
 """Tests for BuildPromptUseCase."""
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock
+
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
-from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
+from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from shared.domain.value_objects import EmojiStylePreferences, StyleType
 
@@ -12,19 +14,19 @@ from shared.domain.value_objects import EmojiStylePreferences, StyleType
 class TestBuildPromptUseCase:
     """Test suite for BuildPromptUseCase."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_openai_repo(self) -> Mock:
         """Create a mock OpenAI repository."""
         repo = Mock(spec=OpenAIRepository)
         repo.enhance_prompt = AsyncMock(return_value="enhanced prompt")
         return repo
 
-    @pytest.fixture
+    @pytest.fixture()
     def prompt_builder_service(self) -> PromptBuilderService:
         """Create a PromptBuilderService instance."""
         return PromptBuilderService()
 
-    @pytest.fixture
+    @pytest.fixture()
     def use_case(
         self, mock_openai_repo: Mock, prompt_builder_service: PromptBuilderService
     ) -> BuildPromptUseCase:
@@ -34,7 +36,7 @@ class TestBuildPromptUseCase:
             prompt_builder_service=prompt_builder_service,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def basic_spec(self) -> EmojiSpecification:
         """Create a basic emoji specification."""
         return EmojiSpecification(

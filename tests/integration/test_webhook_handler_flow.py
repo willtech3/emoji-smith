@@ -1,23 +1,22 @@
+import hashlib
+import hmac
 import json
 import time
-import hmac
-import hashlib
-from typing import Tuple
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock, patch
 
-from emojismith.presentation.web.slack_webhook_api import create_webhook_api
 from emojismith.application.handlers.slack_webhook_handler import (
     SlackWebhookHandler,
     WebhookEventProcessor,
 )
+from emojismith.presentation.web.slack_webhook_api import create_webhook_api
+from shared.domain.repositories import SlackModalRepository
 from webhook.handler import WebhookHandler
 from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
-from webhook.security.webhook_security_service import WebhookSecurityService
 from webhook.infrastructure.sqs_job_queue import SQSJobQueue
-from shared.domain.repositories import SlackModalRepository
+from webhook.security.webhook_security_service import WebhookSecurityService
 
 
 def _sign(body: bytes, secret: bytes, timestamp: str) -> str:
@@ -27,8 +26,8 @@ def _sign(body: bytes, secret: bytes, timestamp: str) -> str:
     return "v0=" + digest
 
 
-@pytest.fixture
-def app_with_mocks() -> Tuple[TestClient, AsyncMock, MagicMock, bytes]:
+@pytest.fixture()
+def app_with_mocks() -> tuple[TestClient, AsyncMock, MagicMock, bytes]:
     secret = b"test_secret"
     slack_repo = AsyncMock(spec=SlackModalRepository)
     sqs_client = MagicMock()
@@ -115,7 +114,7 @@ def _headers(body: bytes, secret: bytes) -> dict:
 
 
 def test_complete_webhook_flow(
-    app_with_mocks: Tuple[TestClient, AsyncMock, MagicMock, bytes],
+    app_with_mocks: tuple[TestClient, AsyncMock, MagicMock, bytes],
 ) -> None:
     client, slack_repo, sqs_client, secret = app_with_mocks
     # Step 1: message action
@@ -137,7 +136,7 @@ def test_complete_webhook_flow(
 
 
 def test_invalid_signature_rejected(
-    app_with_mocks: Tuple[TestClient, AsyncMock, MagicMock, bytes],
+    app_with_mocks: tuple[TestClient, AsyncMock, MagicMock, bytes],
 ) -> None:
     client, slack_repo, sqs_client, secret = app_with_mocks
     body = json.dumps(_message_action_payload()).encode()

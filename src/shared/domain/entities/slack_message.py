@@ -1,7 +1,7 @@
 """SlackMessage domain entity shared between packages."""
 
 from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ class SlackMessage:
         """Return message context truncated for AI prompts."""
         return self.text[:200] if len(self.text) > 200 else self.text
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize message for transport between services."""
         return {
             "text": self.text,
@@ -39,7 +39,7 @@ class SlackMessage:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SlackMessage":
+    def from_dict(cls, data: dict[str, Any]) -> "SlackMessage":
         """Create SlackMessage from dictionary."""
         return cls(
             text=data["text"],

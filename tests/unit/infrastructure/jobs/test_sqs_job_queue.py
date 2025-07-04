@@ -1,21 +1,23 @@
 """Tests for SQS job queue implementation."""
 
 import json
-import pytest
 from unittest.mock import AsyncMock, Mock
+
+import pytest
+
 from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestSQSJobQueue:
     """Test SQS job queue implementation."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_sqs_client(self):
         """Mock SQS client."""
         return AsyncMock()
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_session(self, mock_sqs_client):
         """Mock aioboto3 session that returns mocked SQS client."""
         session = Mock()
@@ -26,7 +28,7 @@ class TestSQSJobQueue:
         session.client.return_value = async_context_manager
         return session
 
-    @pytest.fixture
+    @pytest.fixture()
     def sqs_queue(self, mock_session):
         """SQS job queue with mocked session."""
         return SQSJobQueue(
@@ -40,7 +42,6 @@ class TestSQSJobQueue:
         """Test enqueuing job sends job directly to SQS."""
         # Arrange
         from shared.domain.entities import EmojiGenerationJob
-
         from shared.domain.value_objects import EmojiSharingPreferences
 
         job = EmojiGenerationJob.create_new(

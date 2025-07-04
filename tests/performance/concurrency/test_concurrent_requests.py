@@ -1,20 +1,21 @@
 """Tests for concurrent request handling in emoji generation."""
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock
 import time
+from unittest.mock import AsyncMock, Mock
 
+import pytest
+
+from emojismith.application.services.emoji_service import EmojiCreationService
 from shared.domain.entities import EmojiGenerationJob
 from shared.domain.value_objects import EmojiSharingPreferences
-from emojismith.application.services.emoji_service import EmojiCreationService
 
 
-@pytest.mark.performance
+@pytest.mark.performance()
 class TestConcurrentRequests:
     """Test concurrent request handling capabilities."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_generation_service(self):
         """Mock generation service that simulates processing time."""
         service = AsyncMock()
@@ -26,14 +27,14 @@ class TestConcurrentRequests:
         service.generate_from_prompt = generate_with_delay
         return service
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_build_prompt_use_case(self):
         """Mock build prompt use case that returns a simple prompt."""
         mock = AsyncMock()
         mock.build_prompt.return_value = "test prompt"
         return mock
 
-    @pytest.fixture
+    @pytest.fixture()
     def emoji_service(self, mock_generation_service, mock_build_prompt_use_case):
         """Create emoji service with mocked dependencies."""
         return EmojiCreationService(

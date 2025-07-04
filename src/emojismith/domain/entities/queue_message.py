@@ -2,10 +2,10 @@
 
 from dataclasses import dataclass, replace
 from enum import Enum
-from typing import Dict, Any, ClassVar
+from typing import Any, ClassVar
 
-from shared.domain.entities import EmojiGenerationJob
 from emojismith.domain.exceptions import RetryExceededError
+from shared.domain.entities import EmojiGenerationJob
 
 
 class MessageType(Enum):
@@ -43,7 +43,7 @@ class QueueMessage:
                 f"for message type {self.message_type.value}"
             )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for SQS serialization."""
         return {
             "message_type": self.message_type.value,
@@ -52,7 +52,7 @@ class QueueMessage:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "QueueMessage":
+    def from_dict(cls, data: dict[str, Any]) -> "QueueMessage":
         """Create from dictionary."""
         message_type = MessageType(data["message_type"])
 
