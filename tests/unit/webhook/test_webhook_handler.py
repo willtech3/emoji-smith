@@ -1,23 +1,25 @@
 """Tests for simplified webhook handler (package Lambda)."""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
+
 from webhook.handler import WebhookHandler
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestWebhookHandler:
     """Test webhook handler for package Lambda."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_slack_repo(self):
         return AsyncMock()
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_job_queue(self):
         return AsyncMock()
 
-    @pytest.fixture
+    @pytest.fixture()
     def webhook_handler(self, mock_slack_repo, mock_job_queue):
         return WebhookHandler(slack_repo=mock_slack_repo, job_queue=mock_job_queue)
 

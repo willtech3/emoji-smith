@@ -1,7 +1,6 @@
 """Webhook request value object."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -9,11 +8,11 @@ class WebhookRequest:
     """Value object representing an incoming webhook request for security validation."""
 
     body: bytes
-    timestamp: Optional[str]
-    signature: Optional[str]
+    timestamp: str | None
+    signature: str | None
 
     # Parsed timestamp as integer for validation
-    _timestamp_int: Optional[int] = None
+    _timestamp_int: int | None = None
 
     def __post_init__(self) -> None:
         """Validate webhook request data."""
@@ -41,6 +40,6 @@ class WebhookRequest:
                 raise ValueError("Webhook signature cannot be empty")
 
     @property
-    def timestamp_int(self) -> Optional[int]:
+    def timestamp_int(self) -> int | None:
         """Get the parsed timestamp as integer."""
         return self._timestamp_int

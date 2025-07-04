@@ -3,7 +3,7 @@ import pytest
 from shared.domain.value_objects import EmojiStylePreferences
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiStylePreferences:
     def test_to_prompt_fragment(self) -> None:
         prefs = EmojiStylePreferences()

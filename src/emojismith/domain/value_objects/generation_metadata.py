@@ -1,7 +1,6 @@
 """Value object for tracking emoji generation metadata."""
 
 from dataclasses import dataclass
-from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -9,12 +8,12 @@ class GenerationMetadata:
     """Tracks metadata about the emoji generation process."""
 
     used_fallback: bool
-    fallback_reason: Optional[str] = None
-    quality_score: Optional[float] = None
-    quality_issues: Optional[List[str]] = None
-    suggestions: Optional[List[str]] = None
+    fallback_reason: str | None = None
+    quality_score: float | None = None
+    quality_issues: list[str] | None = None
+    suggestions: list[str] | None = None
 
-    def get_user_notification(self) -> Optional[str]:
+    def get_user_notification(self) -> str | None:
         """Get a user-friendly notification message if fallback was used.
 
         Returns:

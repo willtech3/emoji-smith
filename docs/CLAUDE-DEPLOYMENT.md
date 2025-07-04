@@ -48,10 +48,9 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - Code formatting (black)
-      - Linting (flake8)
+      - Code formatting (ruff format)
+      - Linting + security scanning (ruff check)
       - Type checking (mypy)
-      - Security scanning (bandit)
 
   test:
     runs-on: ubuntu-latest

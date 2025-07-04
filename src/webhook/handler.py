@@ -3,16 +3,16 @@
 import json
 import logging
 import re
-from typing import Dict, Any
+from typing import Any
 
-from shared.domain.entities.slack_message import SlackMessage
 from shared.domain.entities import EmojiGenerationJob
+from shared.domain.entities.slack_message import SlackMessage
+from shared.domain.repositories import JobQueueProducer, SlackModalRepository
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
     EmojiStylePreferences,
 )
 from webhook.domain.slack_payloads import MessageActionPayload, ModalSubmissionPayload
-from shared.domain.repositories import SlackModalRepository, JobQueueProducer
 
 
 class WebhookHandler:
@@ -25,7 +25,7 @@ class WebhookHandler:
         self._job_queue = job_queue
         self._logger = logging.getLogger(__name__)
 
-    async def handle_message_action(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_message_action(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Handle Slack message action - open modal immediately."""
         # Parse payload into structured dataclass first
         try:
@@ -61,7 +61,7 @@ class WebhookHandler:
                 "error": "Failed to create emoji. Please try again later.",
             }
 
-    async def handle_modal_submission(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_modal_submission(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Handle modal submission and queue emoji generation job."""
         # Parse payload into structured dataclass
         try:
@@ -211,7 +211,7 @@ class WebhookHandler:
                         "text": (
                             f'Creating emoji for message: "'
                             f"{slack_message.text[:100]}"
-                            f"{'...' if len(slack_message.text) > 100 else ''}\""
+                            f'{"..." if len(slack_message.text) > 100 else ""}"'
                         ),
                     },
                 },

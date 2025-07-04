@@ -94,10 +94,9 @@ gh pr create --title "type: description" --body "Details of changes"
 
 ### Quick Quality Check
 ```bash
-black src/ tests/ && \
-flake8 src/ tests/ && \
+ruff format src/ tests/ && \
+ruff check src/ tests/ && \
 mypy src/ && \
-bandit -r src/ && \
 pytest tests/
 ```
 

@@ -1,13 +1,13 @@
 """Protocol definitions for Slack repository interfaces."""
 
-from typing import Any, Dict, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
 class SlackModalRepository(Protocol):
     """Protocol for Slack modal operations following ISP principles."""
 
-    async def open_modal(self, trigger_id: str, view: Dict[str, Any]) -> None:
+    async def open_modal(self, trigger_id: str, view: dict[str, Any]) -> None:
         """Open a modal dialog in Slack.
 
         Args:

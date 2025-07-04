@@ -6,7 +6,7 @@ for test suites to improve performance when testing with many AWS service mocks.
 
 import json
 import os
-from typing import Dict, Any
+from typing import Any
 from unittest.mock import Mock, patch
 
 import boto3
@@ -20,8 +20,8 @@ SERVICE_PATH = (
 )
 
 
-@pytest.fixture
-def sqs_event() -> Dict[str, Any]:
+@pytest.fixture()
+def sqs_event() -> dict[str, Any]:
     """Sample SQS event for testing with direct job format."""
     return {
         "Records": [
@@ -63,7 +63,7 @@ def sqs_event() -> Dict[str, Any]:
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def context():
     """Mock Lambda context."""
     context = Mock()
@@ -80,7 +80,7 @@ def context():
     return context
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestWorkerHandler:
     """Test cases for the SQS worker Lambda handler."""
 

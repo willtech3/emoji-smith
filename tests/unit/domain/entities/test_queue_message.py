@@ -1,11 +1,12 @@
 import pytest
+
 from emojismith.domain.entities.queue_message import MessageType, QueueMessage
 from emojismith.domain.exceptions import RetryExceededError
 from shared.domain.entities import EmojiGenerationJob
 from shared.domain.value_objects import EmojiSharingPreferences
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestQueueMessage:
     def test_round_trip_serialization(self) -> None:
         job = EmojiGenerationJob.create_new(

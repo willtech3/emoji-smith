@@ -1,9 +1,9 @@
 """Entity classes shared across packages."""
 
-from dataclasses import dataclass, field
 import uuid
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timezone
+from typing import Any, Dict, Optional
 
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
@@ -29,7 +29,7 @@ class EmojiGenerationJob:
     status: JobStatus
     sharing_preferences: EmojiSharingPreferences
     created_at: datetime
-    thread_ts: Optional[str] = None
+    thread_ts: str | None = None
     style_preferences: EmojiStylePreferences = field(
         default_factory=EmojiStylePreferences
     )
@@ -47,7 +47,7 @@ class EmojiGenerationJob:
         team_id: str,
         sharing_preferences: EmojiSharingPreferences,
         style_preferences: EmojiStylePreferences | None = None,
-        thread_ts: Optional[str] = None,
+        thread_ts: str | None = None,
     ) -> "EmojiGenerationJob":
         """Create a new emoji generation job."""
         return cls(
@@ -62,11 +62,11 @@ class EmojiGenerationJob:
             status=JobStatus.PENDING,
             sharing_preferences=sharing_preferences,
             thread_ts=thread_ts,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             style_preferences=style_preferences or EmojiStylePreferences(),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "job_id": self.job_id,
@@ -85,7 +85,7 @@ class EmojiGenerationJob:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "EmojiGenerationJob":
+    def from_dict(cls, data: dict[str, Any]) -> "EmojiGenerationJob":
         """Create from dictionary."""
         return cls(
             job_id=data["job_id"],
@@ -120,4 +120,4 @@ class EmojiGenerationJob:
         self.status = JobStatus.FAILED
 
 
-__all__ = ["SlackMessage", "EmojiGenerationJob"]
+__all__ = ["EmojiGenerationJob", "SlackMessage"]

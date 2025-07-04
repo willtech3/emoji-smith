@@ -9,22 +9,22 @@ from slack_sdk.web.async_client import AsyncWebClient
 
 from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
-from emojismith.domain.services.emoji_validation_service import EmojiValidationService
-from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingService,
     WorkspaceType,
 )
+from emojismith.domain.services.emoji_validation_service import EmojiValidationService
+from emojismith.domain.services.generation_service import EmojiGenerationService
+from emojismith.domain.services.style_template_manager import StyleTemplateManager
 from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
 from emojismith.infrastructure.image.processing import PillowImageProcessor
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
+from emojismith.infrastructure.repositories.style_template_config_repository import (
+    StyleTemplateConfigRepository,
+)
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 from emojismith.infrastructure.slack.slack_file_sharing import (
     SlackFileSharingRepository,
-)
-from emojismith.domain.services.style_template_manager import StyleTemplateManager
-from emojismith.infrastructure.repositories.style_template_config_repository import (
-    StyleTemplateConfigRepository,
 )
 
 # Profile imports to identify bottlenecks

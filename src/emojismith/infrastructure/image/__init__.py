@@ -1,3 +1,3 @@
-from .processing import PillowImageProcessor, ImageProcessor
+from .processing import ImageProcessor, PillowImageProcessor
 
-__all__ = ["PillowImageProcessor", "ImageProcessor"]
+__all__ = ["ImageProcessor", "PillowImageProcessor"]

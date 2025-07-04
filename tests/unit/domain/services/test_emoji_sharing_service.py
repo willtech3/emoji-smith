@@ -1,36 +1,37 @@
 """Tests for emoji sharing domain service."""
 
 import pytest
+
+from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.services.emoji_sharing_service import (
-    EmojiSharingService,
     EmojiSharingContext,
+    EmojiSharingService,
     WorkspaceType,
 )
-from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from shared.domain.entities.slack_message import SlackMessage
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
-    ShareLocation,
-    InstructionVisibility,
     ImageSize,
+    InstructionVisibility,
+    ShareLocation,
 )
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiSharingService:
     """Test emoji sharing service determines correct strategy."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def sharing_service(self):
         """Create emoji sharing service."""
         return EmojiSharingService()
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_emoji(self):
         """Create sample generated emoji."""
         return GeneratedEmoji(name="test_emoji", image_data=b"fake_png_data")
 
-    @pytest.fixture
+    @pytest.fixture()
     def sample_message(self):
         """Create sample Slack message."""
         return SlackMessage(
@@ -41,7 +42,7 @@ class TestEmojiSharingService:
             team_id="T999999",
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def channel_sharing_prefs(self):
         """Create preferences for channel sharing."""
         return EmojiSharingPreferences(
@@ -141,7 +142,7 @@ class TestEmojiSharingService:
         assert enterprise_service.workspace_type == WorkspaceType.ENTERPRISE_GRID
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiSharingContext:
     """Test emoji sharing context entity."""
 

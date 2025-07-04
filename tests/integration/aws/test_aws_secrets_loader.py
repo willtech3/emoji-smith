@@ -17,7 +17,7 @@ from moto import mock_aws
 from emojismith.infrastructure.aws.secrets_loader import AWSSecretsLoader
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestAWSSecretsLoader:
     """Test the AWSSecretsLoader class."""
 
@@ -34,9 +34,8 @@ class TestAWSSecretsLoader:
     def test_skips_when_secrets_name_not_set(self, caplog):
         """Should skip loading when SECRETS_NAME is not set."""
         loader = AWSSecretsLoader()
-        with patch.dict(os.environ, {}, clear=True):
-            with caplog.at_level("INFO"):
-                loader.load_secrets()
+        with patch.dict(os.environ, {}, clear=True), caplog.at_level("INFO"):
+            loader.load_secrets()
 
         assert "SECRETS_NAME not set, skipping secrets loading" in caplog.text
 
@@ -72,14 +71,16 @@ class TestAWSSecretsLoader:
 
     def test_raises_client_error_when_secret_does_not_exist(self):
         """Should raise ClientError when attempting to load non-existent secret."""
-        with mock_aws():
-            with patch.dict(
+        with (
+            mock_aws(),
+            patch.dict(
                 os.environ,
                 {"SECRETS_NAME": "missing", "AWS_DEFAULT_REGION": "us-east-1"},
-            ):
-                loader = AWSSecretsLoader()
-                with pytest.raises(ClientError):
-                    loader.load_secrets()
+            ),
+        ):
+            loader = AWSSecretsLoader()
+            with pytest.raises(ClientError):
+                loader.load_secrets()
 
     def test_raises_json_decode_error_when_secret_contains_invalid_json(self):
         """Should raise JSONDecodeError when secret string cannot be parsed as JSON."""

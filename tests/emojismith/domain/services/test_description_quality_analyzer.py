@@ -59,9 +59,9 @@ class TestDescriptionQualityAnalyzer:
 
         for desc, min_score, max_score in test_cases:
             score, issues = analyzer.analyze_description(desc)
-            assert (
-                min_score <= score <= max_score
-            ), f"'{desc}' score {score} not in range [{min_score}, {max_score}]"
+            assert min_score <= score <= max_score, (
+                f"'{desc}' score {score} not in range [{min_score}, {max_score}]"
+            )
 
     def test_visual_descriptors_improve_score(self):
         """Test that visual descriptors improve the quality score."""
@@ -157,6 +157,6 @@ class TestDescriptionQualityAnalyzer:
             issues_text = " ".join(issues).lower()
 
             if expected_keywords:
-                assert any(
-                    keyword in issues_text for keyword in expected_keywords
-                ), f"Expected keywords {expected_keywords} in issues: {issues}"
+                assert any(keyword in issues_text for keyword in expected_keywords), (
+                    f"Expected keywords {expected_keywords} in issues: {issues}"
+                )

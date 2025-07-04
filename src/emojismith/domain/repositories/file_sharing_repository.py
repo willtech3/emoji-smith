@@ -1,7 +1,8 @@
 """Protocol for file sharing repository."""
 
-from typing import Protocol, Optional
 from dataclasses import dataclass
+from typing import Protocol
+
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from shared.domain.value_objects import EmojiSharingPreferences
 
@@ -11,9 +12,9 @@ class FileSharingResult:
     """Result of file sharing operation."""
 
     success: bool
-    thread_ts: Optional[str] = None
-    file_url: Optional[str] = None
-    error: Optional[str] = None
+    thread_ts: str | None = None
+    file_url: str | None = None
+    error: str | None = None
 
 
 class FileSharingRepository(Protocol):
@@ -25,7 +26,7 @@ class FileSharingRepository(Protocol):
         channel_id: str,
         preferences: EmojiSharingPreferences,
         requester_user_id: str,
-        original_message_ts: Optional[str] = None,
+        original_message_ts: str | None = None,
     ) -> FileSharingResult:
         """Share emoji as a file with upload instructions.
 

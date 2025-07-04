@@ -2,31 +2,32 @@
 
 import json
 from unittest.mock import Mock, patch
+
 import pytest
 
 from webhook.domain.webhook_request import WebhookRequest
-from webhook.security.webhook_security_service import WebhookSecurityService
 from webhook.infrastructure.slack_signature_validator import (
-    SlackSignatureValidator,
     MissingSigningSecretError,
+    SlackSignatureValidator,
 )
+from webhook.security.webhook_security_service import WebhookSecurityService
 
 
-@pytest.mark.security
+@pytest.mark.security()
 class TestWebhookSecurityService:
     """Test cases for WebhookSecurityService."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_signature_validator(self):
         """Fixture providing a mock signature validator."""
         return Mock(spec=SlackSignatureValidator)
 
-    @pytest.fixture
+    @pytest.fixture()
     def security_service(self, mock_signature_validator):
         """Fixture providing a configured security service."""
         return WebhookSecurityService(signature_validator=mock_signature_validator)
 
-    @pytest.fixture
+    @pytest.fixture()
     def valid_webhook_request(self):
         """Fixture providing a valid webhook request."""
         return WebhookRequest(

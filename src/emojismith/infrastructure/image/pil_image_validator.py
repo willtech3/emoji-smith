@@ -1,7 +1,9 @@
 """PIL-based implementation of ImageValidator protocol."""
 
 from io import BytesIO
+
 from PIL import Image
+
 from emojismith.domain.repositories.image_validator import ImageValidator
 
 

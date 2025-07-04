@@ -1,25 +1,26 @@
 """Integration tests for dual Lambda architecture."""
 
 import json
-import pytest
+from typing import Any
 from unittest.mock import AsyncMock, patch
-from typing import Dict, Any
+
+import pytest
 
 from webhook.handler import WebhookHandler
-from webhook.infrastructure.sqs_job_queue import SQSJobQueue
 from webhook.infrastructure.slack_api import SlackAPIRepository
+from webhook.infrastructure.sqs_job_queue import SQSJobQueue
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestDualLambdaIntegration:
     """Test integration between webhook and worker Lambdas."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_slack_repo(self):
         """Mock Slack repository."""
         return AsyncMock(spec=SlackAPIRepository)
 
-    @pytest.fixture
+    @pytest.fixture()
     def webhook_handler(self, mock_slack_repo):
         """Create webhook handler with dependencies."""
         # Patch boto3.client during job queue creation
@@ -34,8 +35,8 @@ class TestDualLambdaIntegration:
             job_queue._mock_sqs_client = mock_sqs_client
             return WebhookHandler(slack_repo=mock_slack_repo, job_queue=job_queue)
 
-    @pytest.fixture
-    def message_action_payload(self) -> Dict[str, Any]:
+    @pytest.fixture()
+    def message_action_payload(self) -> dict[str, Any]:
         """Sample message action payload."""
         return {
             "type": "message_action",
@@ -51,8 +52,8 @@ class TestDualLambdaIntegration:
             "team": {"id": "T11111"},
         }
 
-    @pytest.fixture
-    def modal_submission_payload(self) -> Dict[str, Any]:
+    @pytest.fixture()
+    def modal_submission_payload(self) -> dict[str, Any]:
         """Sample modal submission payload."""
         return {
             "type": "view_submission",

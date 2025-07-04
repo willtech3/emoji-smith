@@ -1,7 +1,9 @@
 """Integration tests for AIPromptService with StyleTemplateManager."""
 
-import pytest
 from unittest.mock import AsyncMock, Mock
+
+import pytest
+
 from emojismith.application.services.ai_prompt_service import AIPromptService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from shared.domain.value_objects import EmojiStylePreferences, StyleType
@@ -10,14 +12,14 @@ from shared.domain.value_objects import EmojiStylePreferences, StyleType
 class TestAIPromptServiceWithTemplates:
     """Test AIPromptService integration with StyleTemplateManager."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_openai_repo(self):
         """Create mock OpenAI repository."""
         repo = Mock()
         repo.enhance_prompt = AsyncMock()
         return repo
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_style_template_repository(self):
         """Create mock style template repository."""
         from emojismith.infrastructure.repositories.style_template_config_repository import (  # noqa: E501
@@ -26,7 +28,7 @@ class TestAIPromptServiceWithTemplates:
 
         return StyleTemplateConfigRepository()
 
-    @pytest.fixture
+    @pytest.fixture()
     def style_template_manager(self, mock_style_template_repository):
         """Create StyleTemplateManager instance."""
         from emojismith.domain.services.style_template_manager import (
@@ -35,12 +37,12 @@ class TestAIPromptServiceWithTemplates:
 
         return StyleTemplateManager(mock_style_template_repository)
 
-    @pytest.fixture
+    @pytest.fixture()
     def prompt_service(self, mock_openai_repo, style_template_manager):
         """Create AIPromptService instance."""
         return AIPromptService(mock_openai_repo, style_template_manager)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_enhance_uses_style_template_for_cartoon(
         self, prompt_service, mock_openai_repo
     ):
@@ -59,7 +61,7 @@ class TestAIPromptServiceWithTemplates:
         assert "a happy cat" in result
         assert "Context: team celebration" in result
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_enhance_uses_style_template_for_pixel_art(
         self, prompt_service, mock_openai_repo
     ):
@@ -77,7 +79,7 @@ class TestAIPromptServiceWithTemplates:
         assert "retro game character" in result
         assert "8-bit or 16-bit pixel art style" in result
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_enhance_uses_style_template_for_minimalist(
         self, prompt_service, mock_openai_repo
     ):
@@ -94,7 +96,7 @@ class TestAIPromptServiceWithTemplates:
         assert "Create a simple, minimalist emoji depicting" in result
         assert "clean lines, minimal details" in result
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_enhance_uses_style_template_for_realistic(
         self, prompt_service, mock_openai_repo
     ):
@@ -111,7 +113,7 @@ class TestAIPromptServiceWithTemplates:
         assert "Generate a realistic, detailed emoji showing" in result
         assert "photorealistic details and natural textures" in result
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_enhance_removes_conflicting_words(
         self, prompt_service, mock_openai_repo
     ):
@@ -128,7 +130,7 @@ class TestAIPromptServiceWithTemplates:
         assert "realistic" not in result
         assert "cartoon character" in result
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_enhance_falls_back_to_ai_without_style(
         self, prompt_service, mock_openai_repo
     ):
@@ -145,7 +147,7 @@ class TestAIPromptServiceWithTemplates:
         )
         assert result == "AI enhanced: surprise face"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_enhance_includes_context(self, prompt_service, mock_openai_repo):
         """Enhance should include context when present."""
         spec = EmojiSpecification(
@@ -159,7 +161,7 @@ class TestAIPromptServiceWithTemplates:
         assert "Context: celebration" in result
         assert "party hat" in result
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_build_prompt_still_works_with_legacy_styles(
         self, prompt_service, mock_openai_repo
     ):

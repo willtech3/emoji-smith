@@ -1,9 +1,9 @@
 import pytest
 
-from webhook.domain.slack_payloads import SlackChannel, MessageActionPayload
+from webhook.domain.slack_payloads import MessageActionPayload, SlackChannel
 
 
-@pytest.mark.contract
+@pytest.mark.contract()
 class TestSlackChannel:
     """Tests for SlackChannel domain model."""
 
@@ -42,7 +42,7 @@ class TestSlackChannel:
         assert result.name == "general"
 
 
-@pytest.mark.contract
+@pytest.mark.contract()
 class TestMessageActionPayloadWithSlackChannel:
     """Tests for MessageActionPayload parsing with SlackChannel.from_dict()."""
 

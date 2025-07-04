@@ -1,15 +1,17 @@
 """Tests for AIPromptService and EmojiGenerationService."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock
 from io import BytesIO
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 from PIL import Image
-from emojismith.domain.value_objects import EmojiSpecification
+
 from emojismith.application.services import AIPromptService
-from emojismith.domain.services import EmojiGenerationService
-from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.repositories.image_processor import ImageProcessor
+from emojismith.domain.services import EmojiGenerationService
+from emojismith.domain.services.emoji_validation_service import EmojiValidationService
+from emojismith.domain.value_objects import EmojiSpecification
 
 
 class DummyProcessor(ImageProcessor):
@@ -17,8 +19,8 @@ class DummyProcessor(ImageProcessor):
         return image_data
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_enhances() -> None:
     repo = AsyncMock()
     repo.enhance_prompt.return_value = "enhanced"
@@ -26,6 +28,7 @@ async def test_prompt_service_enhances() -> None:
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -37,8 +40,8 @@ async def test_prompt_service_enhances() -> None:
     repo.enhance_prompt.assert_called_once_with("ctx", "desc")
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_build_with_style_strategy() -> None:
     """Service should apply style-specific prompt building strategy."""
     repo = AsyncMock()
@@ -48,6 +51,7 @@ async def test_prompt_service_build_with_style_strategy() -> None:
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -65,14 +69,15 @@ async def test_prompt_service_build_with_style_strategy() -> None:
     assert "vibrant" in playful_prompt
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_build_with_context_enrichment() -> None:
     """Service should enrich prompts based on message context."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -91,14 +96,15 @@ async def test_prompt_service_build_with_context_enrichment() -> None:
     assert "risk" in prompt.lower() or "careful" in prompt.lower()
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_handles_edge_cases() -> None:
     """Service should handle edge cases gracefully."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -118,14 +124,15 @@ async def test_prompt_service_handles_edge_cases() -> None:
     assert len(prompt) <= 1000  # Should truncate if too long
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_truncates_very_long_prompts() -> None:
     """Service should truncate prompts that exceed 1000 characters."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -146,14 +153,15 @@ async def test_prompt_service_truncates_very_long_prompts() -> None:
     assert prompt.endswith("...")  # Should end with ellipsis
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_enriches_deployment_context_without_friday() -> None:
     """Service should enrich deployment context even when not on Friday."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -176,14 +184,15 @@ async def test_prompt_service_enriches_deployment_context_without_friday() -> No
     assert "careful" not in prompt.lower()
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_handles_unknown_style() -> None:
     """Service should handle unknown style gracefully."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -199,14 +208,15 @@ async def test_prompt_service_handles_unknown_style() -> None:
     # Should fall back to basic prompt without style template
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_handles_minimal_and_retro_styles() -> None:
     """Service should correctly apply minimal and retro style strategies."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -228,14 +238,15 @@ async def test_prompt_service_handles_minimal_and_retro_styles() -> None:
     assert "vintage" in retro_prompt
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_sanitizes_various_html_entities() -> None:
     """Service should sanitize various HTML entities and tags."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -255,14 +266,15 @@ async def test_prompt_service_sanitizes_various_html_entities() -> None:
     assert len(prompt) <= 1000
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_enriches_release_context() -> None:
     """Service should enrich release context similarly to deployment."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -281,14 +293,15 @@ async def test_prompt_service_enriches_release_context() -> None:
     assert "Include elements suggesting deployment or release activity" in prompt
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_with_emoji_specification_style() -> None:
     """Service should incorporate EmojiStylePreferences from specification."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -296,10 +309,10 @@ async def test_prompt_service_with_emoji_specification_style() -> None:
     service = AIPromptService(repo, mock_style_manager)
 
     from shared.domain.value_objects import (
-        EmojiStylePreferences,
-        StyleType,
         ColorScheme,
         DetailLevel,
+        EmojiStylePreferences,
+        StyleType,
         Tone,
     )
 
@@ -323,14 +336,15 @@ async def test_prompt_service_with_emoji_specification_style() -> None:
     assert spec.style.to_prompt_fragment() in prompt
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_handles_empty_style_strategies_dict() -> None:
     """Service should handle if style_strategies dict is modified."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -348,14 +362,15 @@ async def test_prompt_service_handles_empty_style_strategies_dict() -> None:
     assert "emoji" in prompt
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_combines_style_and_context_enrichment() -> None:
     """Service should apply both style strategy and context enrichment."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -375,14 +390,15 @@ async def test_prompt_service_combines_style_and_context_enrichment() -> None:
     assert "Include elements suggesting deployment or release activity" in prompt
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_prompt_service_handles_context_with_multiple_keywords() -> None:
     """Service should handle context with multiple deployment-related keywords."""
     repo = AsyncMock()
 
     # Create mock style template manager
     from unittest.mock import Mock
+
     from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
@@ -402,8 +418,8 @@ async def test_prompt_service_handles_context_with_multiple_keywords() -> None:
     assert prompt.count("Include subtle elements") == 1
 
 
-@pytest.mark.asyncio
-@pytest.mark.unit
+@pytest.mark.asyncio()
+@pytest.mark.unit()
 async def test_generation_service_flow() -> None:
     repo = AsyncMock()
     img = Image.new("RGBA", (128, 128), "red")

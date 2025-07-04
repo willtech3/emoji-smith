@@ -1,10 +1,9 @@
 """Webhook security service for signature validation."""
 
 import logging
-from typing import Optional
 
-from webhook.domain.webhook_request import WebhookRequest
 from webhook.domain.signature_validator import SignatureValidator
+from webhook.domain.webhook_request import WebhookRequest
 from webhook.infrastructure.slack_signature_validator import MissingSigningSecretError
 
 
@@ -84,7 +83,7 @@ class WebhookSecurityService:
             )
             return False
 
-    def validate_url_verification(self, request: WebhookRequest) -> Optional[str]:
+    def validate_url_verification(self, request: WebhookRequest) -> str | None:
         """Handle Slack URL verification challenge.
 
         During initial webhook setup, Slack sends a verification challenge

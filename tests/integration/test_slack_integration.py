@@ -1,18 +1,19 @@
 import os
 from io import BytesIO
-from PIL import Image
+
 import pytest
+from PIL import Image
 from slack_sdk.web.async_client import AsyncWebClient
 
+from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.infrastructure.slack.slack_file_sharing import (
     SlackFileSharingRepository,
 )
-from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
-    ShareLocation,
-    InstructionVisibility,
     ImageSize,
+    InstructionVisibility,
+    ShareLocation,
 )
 
 
@@ -50,7 +51,7 @@ def slack_slack_test_user_id() -> str:
     return user
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_emoji() -> GeneratedEmoji:
     img = Image.new("RGBA", (128, 128), "green")
     buf = BytesIO()
@@ -58,7 +59,7 @@ def sample_emoji() -> GeneratedEmoji:
     return GeneratedEmoji(name="integration_test_emoji", image_data=buf.getvalue())
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_share_emoji_new_thread(
     slack_repo,
     slack_client,
@@ -90,7 +91,7 @@ async def test_share_emoji_new_thread(
     assert result.file_url
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_share_emoji_existing_thread(
     slack_repo,
     slack_client,
@@ -122,8 +123,8 @@ async def test_share_emoji_existing_thread(
     assert result.file_url
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
+@pytest.mark.asyncio()
+@pytest.mark.integration()
 async def test_share_fails_with_invalid_token(slack_slack_test_channel, sample_emoji):
     invalid_client = AsyncWebClient(token="xoxb-invalid-token")
     repo = SlackFileSharingRepository(invalid_client)

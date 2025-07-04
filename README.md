@@ -67,7 +67,7 @@ cp .env.example .env
 # Edit .env with your Slack and OpenAI credentials
 
 # Verify setup
-pytest -q && black --check src/ && bandit -r src/
+pytest -q && ruff check src/ tests/
 ```
 
 ### 2. Slack App Configuration
@@ -183,10 +183,9 @@ If you don’t provide one, `create_app()` auto-constructs a default instance fo
 All code must pass these checks before merging:
 
 ```bash
-black --check src/ tests/     # Code formatting
-flake8 src/ tests/           # Style linting
-mypy src/                    # Type checking
-bandit -r src/               # Security scanning
+ruff format --check src/ tests/  # Code formatting
+ruff check src/ tests/           # Linting + security scanning
+mypy src/                        # Type checking
 pytest --cov=src tests/      # Tests with 90%+ coverage
 ```
 

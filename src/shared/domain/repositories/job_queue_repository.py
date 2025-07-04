@@ -1,6 +1,6 @@
 """Protocol definitions for job queue repositories."""
 
-from typing import Optional, Protocol, Tuple, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from shared.domain.entities import EmojiGenerationJob
 
@@ -16,13 +16,13 @@ class JobQueueProducer(Protocol):
 class JobQueueConsumer(Protocol):
     """Interface for queue consumers."""
 
-    async def dequeue_job(self) -> Optional[Tuple[EmojiGenerationJob, str]]: ...
+    async def dequeue_job(self) -> tuple[EmojiGenerationJob, str] | None: ...
 
     async def complete_job(
         self, job: EmojiGenerationJob, receipt_handle: str
     ) -> None: ...
 
-    async def get_job_status(self, job_id: str) -> Optional[str]: ...
+    async def get_job_status(self, job_id: str) -> str | None: ...
 
     async def update_job_status(self, job_id: str, status: str) -> None: ...
 

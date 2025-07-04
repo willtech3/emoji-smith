@@ -2,10 +2,11 @@
 
 import json
 import logging
+
 import boto3
 
-from shared.domain.repositories import JobQueueProducer
 from shared.domain.entities import EmojiGenerationJob
+from shared.domain.repositories import JobQueueProducer
 
 
 class SQSJobQueue(JobQueueProducer):

@@ -1,45 +1,47 @@
 """Tests for emoji creation service."""
 
-import pytest
-from unittest.mock import AsyncMock
 from io import BytesIO
+from unittest.mock import AsyncMock
+
+import pytest
 from PIL import Image
+
 from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.services.generation_service import EmojiGenerationService
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmojiCreationService:
     """Test emoji creation service orchestration."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_slack_repo(self):
         """Mock Slack repository."""
         return AsyncMock()
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_emoji_generator(self):
         return AsyncMock(spec=EmojiGenerationService)
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_job_queue(self):
         """Mock job queue repository."""
         return AsyncMock()
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_file_sharing_repo(self):
         """Mock file sharing repository."""
         return AsyncMock()
 
-    @pytest.fixture
+    @pytest.fixture()
     def mock_build_prompt_use_case(self):
         """Mock build prompt use case."""
         mock = AsyncMock()
         mock.build_prompt.return_value = "a happy face emoji in cartoon style"
         return mock
 
-    @pytest.fixture
+    @pytest.fixture()
     def emoji_service(
         self,
         mock_slack_repo,
@@ -55,7 +57,7 @@ class TestEmojiCreationService:
             file_sharing_repo=mock_file_sharing_repo,
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def emoji_service_with_queue(
         self,
         mock_slack_repo,
@@ -123,12 +125,14 @@ class TestEmojiCreationService:
     ):
         """Test processing emoji generation job from job entity."""
         # Arrange
-        from shared.domain.entities import EmojiGenerationJob
-        from shared.domain.value_objects import EmojiSharingPreferences
+        from io import BytesIO
+
+        from PIL import Image
+
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
-        from io import BytesIO
-        from PIL import Image
+        from shared.domain.entities import EmojiGenerationJob
+        from shared.domain.value_objects import EmojiSharingPreferences
 
         job = EmojiGenerationJob.create_new(
             message_text="The deployment failed again 😭",
@@ -181,12 +185,14 @@ class TestEmojiCreationService:
     ):
         """Test processing emoji generation job when file sharing fails gracefully."""
         # Arrange
-        from shared.domain.entities import EmojiGenerationJob
-        from shared.domain.value_objects import EmojiSharingPreferences
+        from io import BytesIO
+
+        from PIL import Image
+
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
-        from io import BytesIO
-        from PIL import Image
+        from shared.domain.entities import EmojiGenerationJob
+        from shared.domain.value_objects import EmojiSharingPreferences
 
         job = EmojiGenerationJob.create_new(
             message_text="Test message",
@@ -230,10 +236,12 @@ class TestEmojiCreationService:
     ):
         """Test processing emoji generation job dict when sharing fails."""
         # Arrange
+        from io import BytesIO
+
+        from PIL import Image
+
         from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
-        from io import BytesIO
-        from PIL import Image
 
         job_data = {
             "message_text": "Test message",

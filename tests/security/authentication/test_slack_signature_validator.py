@@ -1,27 +1,29 @@
 """Tests for Slack signature validator infrastructure."""
 
-import pytest
-import hmac
 import hashlib
+import hmac
 import time
 from unittest.mock import patch
-from emojismith.infrastructure.security.slack_signature_validator import (
-    SlackSignatureValidator,
-    MissingSigningSecretError,
-)
+
+import pytest
+
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
+from emojismith.infrastructure.security.slack_signature_validator import (
+    MissingSigningSecretError,
+    SlackSignatureValidator,
+)
 
 
-@pytest.mark.security
+@pytest.mark.security()
 class TestSlackSignatureValidator:
     """Test Slack signature validator implementation."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def signing_secret(self):
         """Test signing secret."""
         return "test_signing_secret"
 
-    @pytest.fixture
+    @pytest.fixture()
     def validator(self, signing_secret):
         """Slack signature validator with test signing secret."""
         return SlackSignatureValidator(signing_secret=signing_secret)
@@ -176,7 +178,7 @@ class TestSlackSignatureValidator:
                 signature="v0=some_signature",
             )
 
-    @pytest.fixture
+    @pytest.fixture()
     def known_signature(self) -> dict[str, str | bytes]:
         """Provide known Slack signature example from documentation."""
         secret = "8f742231b10e8888abcd99yyyzzz85a5"

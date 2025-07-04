@@ -1,6 +1,7 @@
 """Tests for StyleTemplateManager in domain layer."""
 
 import pytest
+
 from emojismith.domain.services.style_template_manager import StyleTemplateManager
 from emojismith.domain.value_objects.style_template import StyleTemplate
 from emojismith.infrastructure.repositories.style_template_config_repository import (
@@ -12,12 +13,12 @@ from shared.domain.value_objects import StyleType
 class TestStyleTemplateManager:
     """Test StyleTemplateManager behavior."""
 
-    @pytest.fixture
+    @pytest.fixture()
     def repository(self):
         """Create style template repository."""
         return StyleTemplateConfigRepository()
 
-    @pytest.fixture
+    @pytest.fixture()
     def manager(self, repository):
         """Create StyleTemplateManager instance."""
         return StyleTemplateManager(repository)

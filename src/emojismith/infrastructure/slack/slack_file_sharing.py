@@ -1,19 +1,19 @@
 """Slack file sharing repository implementation."""
 
 import logging
-from typing import Optional, Any, Dict
 from io import BytesIO
-from PIL import Image
+from typing import Any
 
-from slack_sdk.web.async_client import AsyncWebClient
+from PIL import Image
 from slack_sdk.errors import SlackApiError
+from slack_sdk.web.async_client import AsyncWebClient
 
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.repositories.file_sharing_repository import FileSharingResult
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
-    InstructionVisibility,
     ImageSize,
+    InstructionVisibility,
 )
 
 # Slack limits file uploads to 1–10 MB depending on plan; use safe lower bound.
@@ -33,7 +33,7 @@ class SlackFileSharingRepository:
         channel_id: str,
         preferences: EmojiSharingPreferences,
         requester_user_id: str,
-        original_message_ts: Optional[str] = None,
+        original_message_ts: str | None = None,
     ) -> FileSharingResult:
         """Share emoji as a file with upload instructions."""
         try:
@@ -54,7 +54,7 @@ class SlackFileSharingRepository:
                 return FileSharingResult(success=False, error="file_too_large")
 
             # Determine upload parameters based on share location
-            upload_params: Dict[str, Any] = {
+            upload_params: dict[str, Any] = {
                 "filename": f"{emoji.name}.png",
                 "channels": [
                     channel_id
@@ -88,7 +88,7 @@ class SlackFileSharingRepository:
                     success=False, error=response.get("error", "Unknown error")
                 )
 
-            file_info: Dict[str, Any] = response.get("file", {})
+            file_info: dict[str, Any] = response.get("file", {})
             file_url = file_info.get("url_private")
 
             # If creating new thread, get the timestamp from the file share
@@ -181,7 +181,7 @@ class SlackFileSharingRepository:
     async def _post_instructions(
         self,
         channel_id: str,
-        thread_ts: Optional[str],
+        thread_ts: str | None,
         emoji_name: str,
         preferences: EmojiSharingPreferences,
         requester_user_id: str,
