@@ -29,8 +29,8 @@ class WebhookRequest:
                 # Use object.__setattr__ to set the parsed timestamp since
                 # the dataclass is frozen
                 object.__setattr__(self, "_timestamp_int", int(self.timestamp))
-            except ValueError:
-                raise ValueError("Webhook timestamp must be a valid integer")
+            except ValueError as e:
+                raise ValueError("Webhook timestamp must be a valid integer") from e
 
         # Validate signature
         if self.signature is not None:

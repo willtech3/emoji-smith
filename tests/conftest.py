@@ -5,7 +5,7 @@ is tested without being installed in editable/development mode.  It adjusts
 ``sys.path`` at collection time so that ``import emojismith`` works regardless
 of whether the caller remembered to run ``pip install -e .`` first.
 
-The logic is intentionally *very* small to avoid masking real import errors –
+The logic is intentionally *very* small to avoid masking real import errors --
 it only prepends the absolute path to the *src* directory if it is not already
 on ``sys.path``.
 """
@@ -23,4 +23,4 @@ src_str = str(SRC_PATH)
 if src_str not in sys.path:
     sys.path.insert(0, src_str)
 
-# Nothing to expose as fixtures – the sole purpose is import side-effects.
+# Nothing to expose as fixtures - the sole purpose is import side-effects.

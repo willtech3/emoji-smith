@@ -25,6 +25,7 @@ class BackgroundWorker:
         self._logger = logging.getLogger(__name__)
         self._running = False
         self._semaphore = asyncio.Semaphore(max_concurrent_jobs)
+        self._tasks: set[asyncio.Task] = set()
 
     @property
     def running(self) -> bool:
@@ -47,6 +48,10 @@ class BackgroundWorker:
         self._running = False
         self._logger.info("Stopping background worker")
 
+        # Wait for all pending tasks to complete
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+
     async def _process_jobs(self) -> None:
         """Main processing loop."""
         while self._running:
@@ -57,7 +62,11 @@ class BackgroundWorker:
                 if job_tuple:
                     job, receipt_handle = job_tuple
                     # Process job concurrently within semaphore limits
-                    asyncio.create_task(self._process_single_job(job, receipt_handle))
+                    task = asyncio.create_task(
+                        self._process_single_job(job, receipt_handle)
+                    )
+                    self._tasks.add(task)
+                    task.add_done_callback(self._tasks.discard)
                 else:
                     # No jobs available, wait before polling again
                     await asyncio.sleep(self._poll_interval)

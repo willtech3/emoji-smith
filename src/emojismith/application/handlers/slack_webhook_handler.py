@@ -73,8 +73,9 @@ class SlackWebhookHandler:
         signature = headers.get("X-Slack-Signature") or headers.get("x-slack-signature")
         request = WebhookRequest(body=body, timestamp=timestamp, signature=signature)
 
-        if not body.startswith(b'{"type":"url_verification"'):
-            if not self._security_service.is_authentic_webhook(request):
-                raise UnauthorizedError("Invalid webhook signature")
+        if not body.startswith(
+            b'{"type":"url_verification"'
+        ) and not self._security_service.is_authentic_webhook(request):
+            raise UnauthorizedError("Invalid webhook signature")
 
         return await self._event_processor.process(body)

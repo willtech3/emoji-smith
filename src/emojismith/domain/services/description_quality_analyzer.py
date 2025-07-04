@@ -1,10 +1,12 @@
 """Service for analyzing emoji description quality and generating fallbacks."""
 
+from typing import ClassVar
+
 
 class DescriptionQualityAnalyzer:
     """Analyze description quality and provide fallback strategies."""
 
-    VAGUE_TERMS: set[str] = {
+    VAGUE_TERMS: ClassVar[set[str]] = {
         "emoji",
         "nice",
         "good",
@@ -22,7 +24,7 @@ class DescriptionQualityAnalyzer:
 
     MIN_MEANINGFUL_WORDS = 2
 
-    VISUAL_TERMS: set[str] = {
+    VISUAL_TERMS: ClassVar[set[str]] = {
         "color",
         "colorful",
         "bright",
@@ -58,7 +60,7 @@ class DescriptionQualityAnalyzer:
         "opaque",
     }
 
-    EMOTION_TERMS: set[str] = {
+    EMOTION_TERMS: ClassVar[set[str]] = {
         "happy",
         "sad",
         "angry",
@@ -80,7 +82,7 @@ class DescriptionQualityAnalyzer:
         "surprised",
     }
 
-    ACTION_TERMS: set[str] = {
+    ACTION_TERMS: ClassVar[set[str]] = {
         "running",
         "jumping",
         "dancing",

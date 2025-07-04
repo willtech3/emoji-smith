@@ -16,7 +16,7 @@ from shared.domain.value_objects import (
     InstructionVisibility,
 )
 
-# Slack limits file uploads to 1–10 MB depending on plan; use safe lower bound.
+# Slack limits file uploads to 1-10 MB depending on plan; use safe lower bound.
 MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024  # 8 MiB
 
 

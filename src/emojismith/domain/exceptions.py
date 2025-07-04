@@ -1,37 +1,37 @@
 """Domain-specific exceptions for Emoji Smith."""
 
 
-class DomainException(Exception):
+class DomainError(Exception):
     """Base exception for all domain errors."""
 
     pass
 
 
-class ValidationError(DomainException):
+class ValidationError(DomainError):
     """Raised when domain validation rules are violated."""
 
     pass
 
 
-class RateLimitExceededError(DomainException):
+class RateLimitExceededError(DomainError):
     """Raised when rate limits are exceeded."""
 
     pass
 
 
-class EmojiGenerationError(DomainException):
+class EmojiGenerationError(DomainError):
     """Raised when emoji generation fails."""
 
     pass
 
 
-class PromptEnhancementError(DomainException):
+class PromptEnhancementError(DomainError):
     """Raised when prompt enhancement fails."""
 
     pass
 
 
-class RetryExceededError(DomainException):
+class RetryExceededError(DomainError):
     """Raised when maximum retry attempts have been exceeded."""
 
     pass

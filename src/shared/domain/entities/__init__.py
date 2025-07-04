@@ -2,8 +2,8 @@
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from shared.domain.value_objects import (
     EmojiSharingPreferences,

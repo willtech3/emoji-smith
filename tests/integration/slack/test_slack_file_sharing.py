@@ -210,7 +210,7 @@ class TestSlackFileSharingRepository:
         self, file_sharing_repo, mock_slack_client
     ):
         """Test early rejection when image exceeds Slack file size limit."""
-        # Arrange – We can't create a GeneratedEmoji larger than 64KB due to
+        # Arrange - We can't create a GeneratedEmoji larger than 64KB due to
         # domain constraints, so we'll test this by mocking the
         # _prepare_image_data method to return large data
         import unittest.mock
@@ -237,7 +237,7 @@ class TestSlackFileSharingRepository:
                 requester_user_id="U123",
             )
 
-        # Assert – should fail fast before Slack API call
+        # Assert - should fail fast before Slack API call
         assert result.success is False
         assert result.error == "file_too_large"
         mock_slack_client.files_upload_v2.assert_not_called()
