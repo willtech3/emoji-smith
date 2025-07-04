@@ -1,6 +1,13 @@
-# CLAUDE Deployment Guidelines for Emoji Smith
+# CLAUDE.md - Deployment and CI/CD Guidelines
 
-**Context:** This document should be loaded when working with CI/CD pipelines, CDK infrastructure, or deployment processes.
+## Inheritance
+- **Extends:** /CLAUDE.md (root)
+- **Overrides:** None (CRITICAL RULES cannot be overridden)
+- **Scope:** All GitHub Actions workflows, CI/CD pipelines, and deployment processes
+
+## Rules
+
+**Context:** This document provides guidelines for working with CI/CD pipelines, CDK infrastructure, and deployment processes. Read this when configuring GitHub Actions, deploying infrastructure, or managing the deployment pipeline.
 
 ## 🚀 Deployment Philosophy
 

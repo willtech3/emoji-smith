@@ -1,6 +1,13 @@
-# CLAUDE Testing Guidelines for Emoji Smith
+# CLAUDE.md - Testing Guidelines
 
-**Context:** This document should be loaded when writing tests, reviewing test quality, or debugging test failures.
+## Inheritance
+- **Extends:** /CLAUDE.md (root)
+- **Overrides:** None (CRITICAL RULES cannot be overridden)
+- **Scope:** All files within tests directory and subdirectories
+
+## Rules
+
+**Context:** This document provides testing best practices and guidelines for Emoji Smith. Read this when writing tests, reviewing test quality, or debugging test failures.
 
 ---
 

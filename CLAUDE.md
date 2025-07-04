@@ -18,6 +18,7 @@
 7. **🚀 ALWAYS use CI for deployment** - Never deploy manually if CI exists
 8. **🌿 ALWAYS use feature branches** - Never commit directly to main
 9. **🔄 ALWAYS create pull requests** - All changes go through PR review
+10. **📖 ALWAYS read documentation hierarchy** - Root → intermediate → local CLAUDE.md files
 
 ## 🏗️ Architecture Constraints (IMMUTABLE)
 
@@ -42,18 +43,34 @@ echo $VIRTUAL_ENV      # Should show .venv path
 git branch             # Should NOT be on main
 ```
 
-## 📋 Task Router
+## 📖 Documentation Hierarchy
 
-**What are you working on?**
+**CLAUDE.md files are now co-located with the code they describe:**
 
-| Task Type | Required Reading | Command |
-|-----------|------------------|---------|
-| Writing Tests | `CLAUDE-TESTING.md` | `cat docs/CLAUDE-TESTING.md` |
-| AWS/Infrastructure | `CLAUDE-INFRASTRUCTURE.md` | `cat docs/CLAUDE-INFRASTRUCTURE.md` |
-| Domain Logic | `CLAUDE-DOMAIN.md` | `cat docs/CLAUDE-DOMAIN.md` |
-| Deployment | `CLAUDE-DEPLOYMENT.md` | `cat docs/CLAUDE-DEPLOYMENT.md` |
-| Security Review | `CLAUDE-SECURITY.md` | `cat docs/CLAUDE-SECURITY.md` |
-| Debugging Issues | `TROUBLESHOOTING.md` | `cat TROUBLESHOOTING.md` |
+```
+/CLAUDE.md                    # Root - Core rules (this file)
+├── src/
+│   ├── CLAUDE.md            # Security guidelines for all source
+│   └── emojismith/
+│       ├── domain/
+│       │   └── CLAUDE.md    # Domain layer guidelines
+│       └── infrastructure/
+│           └── CLAUDE.md    # Infrastructure guidelines
+├── tests/
+│   └── CLAUDE.md            # Testing guidelines
+└── .github/
+    └── CLAUDE.md            # Deployment and CI/CD guidelines
+```
+
+### Reading Order (MANDATORY)
+1. **Always start with root CLAUDE.md** (this file) - contains critical rules
+2. **Read intermediate CLAUDE.md files** along your path
+3. **Read the most specific CLAUDE.md** for your current work
+
+### Rule Precedence
+- More specific rules extend general ones
+- CRITICAL RULES from root are NEVER overridden
+- Each CLAUDE.md clearly marks its inheritance
 
 ## 🔄 Common Workflows
 
@@ -118,7 +135,7 @@ Before implementing ANYTHING:
 - [ ] Have I pulled latest changes?
 - [ ] Do I have a failing test?
 - [ ] Am I in the correct layer?
-- [ ] Have I read the relevant CLAUDE-*.md file?
+- [ ] Have I read the relevant CLAUDE.md files (root → intermediate → local)?
 - [ ] Have I explained what I'm about to do?
 
 ## 🔍 Architecture Quick Reference
@@ -163,4 +180,4 @@ If still stuck: Review `TROUBLESHOOTING.md`
 
 ---
 
-**Remember:** This document contains ONLY the essential rules. For detailed guidance on specific tasks, always consult the appropriate CLAUDE-*.md file from the Task Router above.
+**Remember:** This document contains ONLY the essential rules. For detailed guidance on specific tasks, always consult the appropriate CLAUDE.md file in the relevant directory following the documentation hierarchy.

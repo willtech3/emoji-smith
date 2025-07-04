@@ -1,6 +1,13 @@
-# CLAUDE Security Guidelines for Emoji Smith
+# CLAUDE.md - Security Guidelines
 
-**Context:** This document should be loaded when reviewing security practices, handling secrets, or implementing authentication/authorization.
+## Inheritance
+- **Extends:** /CLAUDE.md (root)
+- **Overrides:** None (CRITICAL RULES cannot be overridden)
+- **Scope:** All source code files in src directory and subdirectories
+
+## Rules
+
+**Context:** This document provides security guidelines that apply across all source code. Read this when reviewing security practices, handling secrets, or implementing authentication/authorization.
 
 ## 🔐 Security Principles
 
