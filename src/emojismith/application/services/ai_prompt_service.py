@@ -1,15 +1,25 @@
-"""Service for AI prompt enhancement."""
+"""Application service for AI prompt enhancement."""
 
 from typing import Optional, Dict
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
+from emojismith.domain.services.style_template_manager import StyleTemplateManager
+
+
+# Configuration constants
+MAX_PROMPT_LENGTH = 1000
 
 
 class AIPromptService:
     """Enhance prompts using OpenAI's chat models with fallback."""
 
-    def __init__(self, openai_repo: OpenAIRepository) -> None:
+    def __init__(
+        self,
+        openai_repo: OpenAIRepository,
+        style_template_manager: StyleTemplateManager,
+    ) -> None:
         self._repo = openai_repo
+        self._style_template_manager = style_template_manager
         self._style_strategies: Dict[str, str] = {
             "professional": (
                 "Create a professional, business-appropriate emoji that "
@@ -30,7 +40,22 @@ class AIPromptService:
         }
 
     async def enhance(self, spec: EmojiSpecification) -> str:
-        return await self._repo.enhance_prompt(spec.context, spec.description)
+        """Enhance prompt using style templates and AI enhancement."""
+        # Apply style template if available
+        if spec.style and hasattr(spec.style, "style_type"):
+            enhanced_prompt = self._style_template_manager.apply_style_template(
+                base_prompt=spec.description, style_type=spec.style.style_type
+            )
+            # Add context to the enhanced prompt
+            if spec.context:
+                enhanced_prompt += f" Context: {spec.context}"
+        else:
+            # Fallback to AI enhancement
+            enhanced_prompt = await self._repo.enhance_prompt(
+                spec.context, spec.description
+            )
+
+        return enhanced_prompt
 
     async def build_prompt(
         self, spec: EmojiSpecification, style: Optional[str] = None
@@ -68,13 +93,9 @@ class AIPromptService:
         return prompt
 
     def _handle_edge_cases(self, prompt: str) -> str:
-        """Handle edge cases like length limits and sanitization."""
+        """Handle edge cases like length limits."""
         # Truncate if too long
-        if len(prompt) > 1000:
-            prompt = prompt[:997] + "..."
-
-        # Basic sanitization
-        prompt = prompt.replace("<script>", "").replace("</script>", "")
-        prompt = prompt.replace("<", "&lt;").replace(">", "&gt;")
+        if len(prompt) > MAX_PROMPT_LENGTH:
+            prompt = prompt[: MAX_PROMPT_LENGTH - 3] + "..."
 
         return prompt

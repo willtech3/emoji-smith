@@ -19,19 +19,27 @@ class TestConcurrentRequests:
         """Mock generation service that simulates processing time."""
         service = AsyncMock()
 
-        async def generate_with_delay(*args, **kwargs):
+        async def generate_with_delay(prompt, name):
             await asyncio.sleep(0.1)  # Simulate processing time
-            return Mock(image_data=b"fake_image", name=kwargs.get("name", "test"))
+            return Mock(image_data=b"fake_image", name=name)
 
-        service.generate = generate_with_delay
+        service.generate_from_prompt = generate_with_delay
         return service
 
     @pytest.fixture
-    def emoji_service(self, mock_generation_service):
+    def mock_build_prompt_use_case(self):
+        """Mock build prompt use case that returns a simple prompt."""
+        mock = AsyncMock()
+        mock.build_prompt.return_value = "test prompt"
+        return mock
+
+    @pytest.fixture
+    def emoji_service(self, mock_generation_service, mock_build_prompt_use_case):
         """Create emoji service with mocked dependencies."""
         return EmojiCreationService(
             slack_repo=AsyncMock(),
             emoji_generator=mock_generation_service,
+            build_prompt_use_case=mock_build_prompt_use_case,
             job_queue=AsyncMock(),
         )
 
