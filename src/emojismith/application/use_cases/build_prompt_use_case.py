@@ -3,6 +3,9 @@
 import logging
 from typing import Optional
 from emojismith.domain.services.prompt_builder_service import PromptBuilderService
+from emojismith.domain.services.description_quality_analyzer import (
+    DescriptionQualityAnalyzer,
+)
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 
@@ -16,6 +19,7 @@ class BuildPromptUseCase:
         self,
         openai_repository: OpenAIRepository,
         prompt_builder_service: Optional[PromptBuilderService] = None,
+        description_quality_analyzer: Optional[DescriptionQualityAnalyzer] = None,
     ) -> None:
         """Initialize the use case.
 
@@ -23,9 +27,14 @@ class BuildPromptUseCase:
             openai_repository: Repository for OpenAI operations
             prompt_builder_service: Service for building prompts
                 (creates default if not provided)
+            description_quality_analyzer: Service for analyzing description quality
+                (creates default if not provided)
         """
         self._openai_repository = openai_repository
         self._prompt_builder_service = prompt_builder_service or PromptBuilderService()
+        self._description_quality_analyzer = (
+            description_quality_analyzer or DescriptionQualityAnalyzer()
+        )
 
     async def build_prompt(
         self,
@@ -66,8 +75,37 @@ class BuildPromptUseCase:
                     style=style_prefs,
                 )
 
-        # Build the base prompt using the prompt builder service
-        base_prompt = self._prompt_builder_service.build_prompt(spec)
+        # Check description quality and decide on strategy
+        quality_score, issues = self._description_quality_analyzer.analyze_description(
+            spec.description
+        )
+
+        # If description is poor quality, use fallback generation
+        if self._description_quality_analyzer.is_poor_quality(spec.description):
+            self._logger.info(
+                f"Using fallback prompt generation due to poor description quality. "
+                f"Score: {quality_score:.2f}, Issues: {', '.join(issues)}"
+            )
+
+            # Generate a better prompt using context
+            fallback_description = (
+                self._description_quality_analyzer.generate_fallback_prompt(
+                    spec.context, spec.description
+                )
+            )
+
+            # Create a new spec with the improved description
+            improved_spec = EmojiSpecification(
+                description=fallback_description,
+                context=spec.context,
+                style=spec.style,
+            )
+
+            # Build prompt with improved description
+            base_prompt = self._prompt_builder_service.build_prompt(improved_spec)
+        else:
+            # Description is good enough, use it as-is
+            base_prompt = self._prompt_builder_service.build_prompt(spec)
 
         # If enhancement is requested, use OpenAI to enhance the prompt
         if enhance:
