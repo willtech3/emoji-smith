@@ -134,9 +134,8 @@ class FormValues:
     share_location: FormBlock
     instruction_visibility: FormBlock
     image_size: FormBlock
-    style_type: FormBlock
+    style_preferences: FormBlock
     color_scheme: FormBlock
-    detail_level: FormBlock
     tone: FormBlock
 
     def __getitem__(self, key: str) -> FormBlock:
@@ -227,9 +226,10 @@ class ModalSubmissionPayload:
                 values_data.get("instruction_visibility", {})
             ),
             image_size=create_form_block(values_data.get("image_size", {})),
-            style_type=create_form_block(values_data["style_type"]),
+            style_preferences=create_form_block(
+                values_data.get("style_preferences", {})
+            ),
             color_scheme=create_form_block(values_data.get("color_scheme", {})),
-            detail_level=create_form_block(values_data["detail_level"]),
             tone=create_form_block(values_data.get("tone", {})),
         )
 

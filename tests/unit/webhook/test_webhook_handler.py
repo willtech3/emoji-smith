@@ -50,9 +50,9 @@ class TestWebhookHandler:
         mock_slack_repo.open_modal.assert_called_once()
         view = mock_slack_repo.open_modal.call_args.kwargs["view"]
         block_ids = [b.get("block_id") for b in view["blocks"]]
-        assert "preview_section" in block_ids
-        assert "style_type" in block_ids
-        assert "detail_level" in block_ids
+        assert "emoji_name" in block_ids
+        assert "emoji_description" in block_ids
+        assert "style_preferences" in block_ids
         assert "toggle_advanced" in block_ids
 
     async def test_message_action_accepts_extra_team_fields(
@@ -101,14 +101,12 @@ class TestWebhookHandler:
                         "image_size": {
                             "size_select": {"selected_option": {"value": "512x512"}}
                         },
-                        "style_type": {
-                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        "style_preferences": {
+                            "style_select": {"selected_option": {"value": "cartoon"}},
+                            "detail_select": {"selected_option": {"value": "simple"}},
                         },
                         "color_scheme": {
                             "color_select": {"selected_option": {"value": "auto"}}
-                        },
-                        "detail_level": {
-                            "detail_select": {"selected_option": {"value": "simple"}}
                         },
                         "tone": {"tone_select": {"selected_option": {"value": "fun"}}},
                     }
@@ -255,11 +253,9 @@ class TestWebhookHandler:
                         "emoji_description": {
                             "description": {"value": "thumbs up gesture"}
                         },
-                        "style_type": {
-                            "style_select": {"selected_option": {"value": "cartoon"}}
-                        },
-                        "detail_level": {
-                            "detail_select": {"selected_option": {"value": "simple"}}
+                        "style_preferences": {
+                            "style_select": {"selected_option": {"value": "cartoon"}},
+                            "detail_select": {"selected_option": {"value": "simple"}},
                         },
                         # Advanced fields not present - should use defaults
                     }

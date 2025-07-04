@@ -97,13 +97,15 @@ class WebhookHandler:
             if len(emoji_name) > 32:
                 raise ValueError("Emoji name must be 32 characters or less")
 
-            # Extract style preferences from basic fields (always present)
-            style_block = state["style_type"].style_select
+            # Extract style preferences from combined block (always present)
+            style_prefs = state["style_preferences"]
+
+            style_block = style_prefs.style_select
             if style_block is None:
                 raise ValueError("Missing style type")
             style_type = style_block["selected_option"]["value"]
 
-            detail_block = state["detail_level"].detail_select
+            detail_block = style_prefs.detail_select
             if detail_block is None:
                 raise ValueError("Missing detail level")
             detail_level = detail_block["selected_option"]["value"]
@@ -353,17 +355,12 @@ class WebhookHandler:
 
         # Start with basic blocks
         blocks = [
+            # Preview section
             {
                 "type": "section",
-                "block_id": "preview_section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f'*Creating emoji for:* "{slack_message.text[:100]}"',
-                },
-                "accessory": {
-                    "type": "image",
-                    "image_url": "https://via.placeholder.com/80x80",
-                    "alt_text": "Emoji preview",
+                    "text": " \n\n🎨\n\n*Preview*",
                 },
             },
             {"type": "divider"},
@@ -379,6 +376,10 @@ class WebhookHandler:
                     },
                 },
                 "label": {"type": "plain_text", "text": "Emoji Name"},
+                "hint": {
+                    "type": "plain_text",
+                    "text": "This will become :coding_wizard:",
+                },
             },
             {
                 "type": "input",
@@ -396,12 +397,14 @@ class WebhookHandler:
             },
             {
                 "type": "section",
-                "block_id": "style_header",
-                "text": {"type": "mrkdwn", "text": "*Style Preferences*"},
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "🎨 *Style*\u2003\u2003\u2003\u2003⚡ *Detail*",
+                },
             },
             {
                 "type": "actions",
-                "block_id": "style_type",
+                "block_id": "style_preferences",
                 "elements": [
                     {
                         "type": "static_select",
@@ -432,12 +435,6 @@ class WebhookHandler:
                             },
                         ],
                     },
-                ],
-            },
-            {
-                "type": "actions",
-                "block_id": "detail_level",
-                "elements": [
                     {
                         "type": "static_select",
                         "action_id": "detail_select",
@@ -479,9 +476,9 @@ class WebhookHandler:
         return {
             "type": "modal",
             "callback_id": "emoji_creation_modal",
-            "title": {"type": "plain_text", "text": "Create Custom Emoji"},
+            "title": {"type": "plain_text", "text": "Create Emoji"},
             "blocks": blocks,
-            "submit": {"type": "plain_text", "text": "Generate Emoji"},
+            "submit": {"type": "plain_text", "text": "✨ Generate"},
             "private_metadata": json.dumps(metadata),
         }
 
