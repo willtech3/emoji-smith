@@ -139,6 +139,9 @@ def _create_app() -> Any:
         elif event_type == "view_submission":
             logger.info("Handling view submission")
             return await webhook_handler.handle_modal_submission(payload)
+        elif event_type == "block_actions":
+            logger.info("Handling block actions")
+            return await webhook_handler.handle_block_actions(payload)
 
         logger.warning("Unhandled event type: %s", event_type)
         return {"status": "ignored"}

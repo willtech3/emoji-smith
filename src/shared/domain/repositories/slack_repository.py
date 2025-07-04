@@ -15,6 +15,14 @@ class SlackModalRepository(Protocol):
             view: Modal view definition following Slack Block Kit format
         """
 
+    async def update_modal(self, view_id: str, view: dict[str, Any]) -> None:
+        """Update an existing modal dialog in Slack.
+
+        Args:
+            view_id: ID of the view to update
+            view: Updated modal view definition following Slack Block Kit format
+        """
+
 
 @runtime_checkable
 class SlackEmojiRepository(Protocol):

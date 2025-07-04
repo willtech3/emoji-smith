@@ -19,3 +19,8 @@ class SlackAPIRepository(SlackModalRepository):
         """Open a modal dialog in Slack."""
         self._logger.info(f"Opening modal with trigger_id: {trigger_id}")
         await self._client.views_open(trigger_id=trigger_id, view=view)
+
+    async def update_modal(self, view_id: str, view: dict[str, Any]) -> None:
+        """Update an existing modal dialog in Slack."""
+        self._logger.info(f"Updating modal with view_id: {view_id}")
+        await self._client.views_update(view_id=view_id, view=view)

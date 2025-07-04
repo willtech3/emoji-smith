@@ -222,15 +222,15 @@ class ModalSubmissionPayload:
         form_values = FormValues(
             emoji_name=create_form_block(values_data["emoji_name"]),
             emoji_description=create_form_block(values_data["emoji_description"]),
-            share_location=create_form_block(values_data["share_location"]),
+            share_location=create_form_block(values_data.get("share_location", {})),
             instruction_visibility=create_form_block(
-                values_data["instruction_visibility"]
+                values_data.get("instruction_visibility", {})
             ),
-            image_size=create_form_block(values_data["image_size"]),
+            image_size=create_form_block(values_data.get("image_size", {})),
             style_type=create_form_block(values_data["style_type"]),
-            color_scheme=create_form_block(values_data["color_scheme"]),
+            color_scheme=create_form_block(values_data.get("color_scheme", {})),
             detail_level=create_form_block(values_data["detail_level"]),
-            tone=create_form_block(values_data["tone"]),
+            tone=create_form_block(values_data.get("tone", {})),
         )
 
         view = ModalView(
