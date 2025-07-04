@@ -25,6 +25,37 @@ class WebhookHandler:
         self._job_queue = job_queue
         self._logger = logging.getLogger(__name__)
 
+    def _validate_description(self, description: str) -> tuple[bool, str]:
+        """Validate emoji description for proper content and length."""
+        # Check word count
+        word_count = len(description.split())
+        if word_count < 3:
+            return False, "Please use at least 3 words to describe your emoji"
+        
+        # Check for text/number rendering requests
+        prohibited_keywords = ['text', 'write', 'letters', 'numbers', 'words', 'writing']
+        if any(keyword in description.lower() for keyword in prohibited_keywords):
+            return False, "Emojis cannot contain readable text or numbers. Try describing visual elements instead."
+        
+        # Check character length
+        if len(description) > 100:
+            return False, "Description too long - keep it simple for best results (max 100 characters)"
+        
+        if len(description) < 10:
+            return False, "Description too short - please provide more detail (min 10 characters)"
+        
+        return True, ""
+
+    def _get_style_hint(self, style: str) -> str:
+        """Get style-specific hints for better emoji generation."""
+        style_hints = {
+            "cartoon": "For cartoon style, describe fun, exaggerated features",
+            "realistic": "For realistic style, include details like texture and lighting",
+            "minimalist": "For minimalist style, focus on simple shapes and colors",
+            "pixel": "For pixel art, describe simple shapes that work in low resolution",
+        }
+        return style_hints.get(style, "Describe visual elements only. Avoid text or numbers.")
+
     async def handle_message_action(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Handle Slack message action - open modal immediately."""
         # Parse payload into structured dataclass first
@@ -83,6 +114,11 @@ class WebhookHandler:
             if desc_block is None:
                 raise ValueError("Missing emoji description")
             description = desc_block.value
+            
+            # Validate description content
+            is_valid, error_message = self._validate_description(description)
+            if not is_valid:
+                raise ValueError(error_message)
 
             name_block = state["emoji_name"].name
             if name_block is None:
@@ -388,12 +424,18 @@ class WebhookHandler:
                     "type": "plain_text_input",
                     "action_id": "description",
                     "multiline": True,
+                    "min_length": 10,
+                    "max_length": 100,
                     "placeholder": {
                         "type": "plain_text",
-                        "text": "e.g., A retro computer terminal with green text",
+                        "text": "Simple, visual description (3-15 words). Ex: 'happy sun with sunglasses'",
                     },
                 },
                 "label": {"type": "plain_text", "text": "Description"},
+                "hint": {
+                    "type": "plain_text",
+                    "text": "Describe visual elements only. Avoid text or numbers.",
+                },
             },
             {
                 "type": "section",
