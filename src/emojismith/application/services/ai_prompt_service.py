@@ -1,4 +1,4 @@
-"""Service for AI prompt enhancement."""
+"""Application service for AI prompt enhancement."""
 
 from typing import Optional, Dict
 from emojismith.domain.repositories.openai_repository import OpenAIRepository

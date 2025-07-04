@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock, Mock
 from io import BytesIO
 from PIL import Image
 from emojismith.domain.value_objects import EmojiSpecification
-from emojismith.domain.services import AIPromptService, EmojiGenerationService
+from emojismith.application.services import AIPromptService
+from emojismith.domain.services import EmojiGenerationService
 from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.repositories.image_processor import ImageProcessor
@@ -422,7 +423,9 @@ async def test_generation_service_flow() -> None:
 
     mock_style_manager = Mock(spec=StyleTemplateManager)
 
-    service = EmojiGenerationService(repo, processor, validation_service, mock_style_manager)
+    service = EmojiGenerationService(
+        repo, processor, validation_service, mock_style_manager
+    )
     # Use a pre-built prompt since the service no longer builds prompts
     prompt = "a happy face emoji in cartoon style"
     emoji = await service.generate_from_prompt(prompt, "name")

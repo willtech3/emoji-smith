@@ -4,6 +4,7 @@ from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.repositories.image_processor import ImageProcessor
 from emojismith.domain.services.emoji_validation_service import EmojiValidationService
+from emojismith.domain.services.style_template_manager import StyleTemplateManager
 
 
 class EmojiGenerationService:
@@ -19,6 +20,7 @@ class EmojiGenerationService:
         self._openai_repo = openai_repo
         self._image_processor = image_processor
         self._emoji_validator = emoji_validator
+        self._style_template_manager = style_template_manager
 
     async def generate_from_prompt(self, prompt: str, name: str) -> GeneratedEmoji:
         """Generate emoji from a ready-to-use prompt.

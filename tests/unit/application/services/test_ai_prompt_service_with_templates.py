@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import AsyncMock, Mock
-from emojismith.domain.services.prompt_service import AIPromptService
+from emojismith.application.services.ai_prompt_service import AIPromptService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from shared.domain.value_objects import EmojiStylePreferences, StyleType
 
