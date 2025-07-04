@@ -185,11 +185,8 @@ class WebhookHandler:
                 },
             }
 
-    async def _open_emoji_creation_modal(
-        self, slack_message: SlackMessage, trigger_id: str
-    ) -> None:
-        """Open the emoji creation modal immediately."""
-        # Create metadata for modal
+    async def _build_modern_modal(self, slack_message: SlackMessage) -> dict[str, Any]:
+        """Return the modern modal view definition."""
         metadata = {
             "message_text": slack_message.text,
             "user_id": slack_message.user_id,
@@ -198,23 +195,25 @@ class WebhookHandler:
             "team_id": slack_message.team_id,
         }
 
-        # Modal view definition
-        modal_view = {
+        return {
             "type": "modal",
             "callback_id": "emoji_creation_modal",
             "title": {"type": "plain_text", "text": "Create Custom Emoji"},
             "blocks": [
                 {
                     "type": "section",
+                    "block_id": "preview_section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": (
-                            f'Creating emoji for message: "'
-                            f"{slack_message.text[:100]}"
-                            f'{"..." if len(slack_message.text) > 100 else ""}"'
-                        ),
+                        "text": f'*Creating emoji for:* "{slack_message.text[:100]}"',
+                    },
+                    "accessory": {
+                        "type": "image",
+                        "image_url": "https://via.placeholder.com/80x80",
+                        "alt_text": "Emoji preview",
                     },
                 },
+                {"type": "divider"},
                 {
                     "type": "input",
                     "block_id": "emoji_name",
@@ -223,7 +222,7 @@ class WebhookHandler:
                         "action_id": "name",
                         "placeholder": {
                             "type": "plain_text",
-                            "text": "e.g., 'coding_wizard' → becomes :coding_wizard:",
+                            "text": "e.g., coding_wizard",
                         },
                     },
                     "label": {"type": "plain_text", "text": "Emoji Name"},
@@ -234,243 +233,98 @@ class WebhookHandler:
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "description",
+                        "multiline": True,
                         "placeholder": {
                             "type": "plain_text",
-                            "text": "e.g., 'A retro computer terminal with green text'",
+                            "text": "e.g., A retro computer terminal with green text",
                         },
                     },
-                    "label": {"type": "plain_text", "text": "Emoji Description"},
+                    "label": {"type": "plain_text", "text": "Description"},
                 },
                 {
                     "type": "section",
+                    "block_id": "style_header",
                     "text": {"type": "mrkdwn", "text": "*Style Preferences*"},
                 },
-                {"type": "divider"},
                 {
-                    "type": "input",
-                    "block_id": "style_type",
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "style_select",
-                        "options": [
-                            {
+                    "type": "actions",
+                    "block_id": "style_selections",
+                    "elements": [
+                        {
+                            "type": "static_select",
+                            "action_id": "style_select",
+                            "initial_option": {
                                 "text": {"type": "plain_text", "text": "Cartoon"},
                                 "value": "cartoon",
                             },
-                            {
-                                "text": {"type": "plain_text", "text": "Realistic"},
-                                "value": "realistic",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Minimalist"},
-                                "value": "minimalist",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Pixel Art"},
-                                "value": "pixel_art",
-                            },
-                        ],
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "Cartoon"},
-                            "value": "cartoon",
+                            "options": [
+                                {
+                                    "text": {"type": "plain_text", "text": "Cartoon"},
+                                    "value": "cartoon",
+                                },
+                                {
+                                    "text": {"type": "plain_text", "text": "Realistic"},
+                                    "value": "realistic",
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Minimalist",
+                                    },
+                                    "value": "minimalist",
+                                },
+                                {
+                                    "text": {"type": "plain_text", "text": "Pixel Art"},
+                                    "value": "pixel",
+                                },
+                            ],
                         },
-                    },
-                    "label": {"type": "plain_text", "text": "Style"},
-                },
-                {
-                    "type": "input",
-                    "block_id": "color_scheme",
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "color_select",
-                        "options": [
-                            {
-                                "text": {"type": "plain_text", "text": "Bright"},
-                                "value": "bright",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Muted"},
-                                "value": "muted",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Monochrome"},
-                                "value": "monochrome",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Auto"},
-                                "value": "auto",
-                            },
-                        ],
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "Auto"},
-                            "value": "auto",
-                        },
-                    },
-                    "label": {"type": "plain_text", "text": "Color Scheme"},
-                },
-                {
-                    "type": "input",
-                    "block_id": "detail_level",
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "detail_select",
-                        "options": [
-                            {
+                        {
+                            "type": "static_select",
+                            "action_id": "detail_select",
+                            "initial_option": {
                                 "text": {"type": "plain_text", "text": "Simple"},
                                 "value": "simple",
                             },
-                            {
-                                "text": {"type": "plain_text", "text": "Detailed"},
-                                "value": "detailed",
-                            },
-                        ],
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "Simple"},
-                            "value": "simple",
+                            "options": [
+                                {
+                                    "text": {"type": "plain_text", "text": "Simple"},
+                                    "value": "simple",
+                                },
+                                {
+                                    "text": {"type": "plain_text", "text": "Detailed"},
+                                    "value": "detailed",
+                                },
+                            ],
                         },
-                    },
-                    "label": {"type": "plain_text", "text": "Detail Level"},
+                    ],
                 },
+                {"type": "divider"},
                 {
-                    "type": "input",
-                    "block_id": "tone",
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "tone_select",
-                        "options": [
-                            {
-                                "text": {"type": "plain_text", "text": "Fun"},
-                                "value": "fun",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Neutral"},
-                                "value": "neutral",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Expressive"},
-                                "value": "expressive",
-                            },
-                        ],
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "Fun"},
-                            "value": "fun",
-                        },
-                    },
-                    "label": {"type": "plain_text", "text": "Tone"},
-                },
-                {
-                    "type": "input",
-                    "block_id": "share_location",
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "share_location_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Choose sharing location",
-                        },
-                        "options": [
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Current channel",
-                                },
-                                "value": "channel",
-                            },
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Direct message",
-                                },
-                                "value": "dm",
-                            },
-                        ],
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "Current channel"},
-                            "value": "channel",
-                        },
-                    },
-                    "label": {"type": "plain_text", "text": "Share Location"},
-                },
-                {
-                    "type": "input",
-                    "block_id": "instruction_visibility",
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "visibility_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Choose instruction visibility",
-                        },
-                        "options": [
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Show description",
-                                },
-                                "value": "visible",
-                            },
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Hide description",
-                                },
-                                "value": "hidden",
-                            },
-                        ],
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "Show description"},
-                            "value": "visible",
-                        },
-                    },
-                    "label": {"type": "plain_text", "text": "Instruction Visibility"},
-                },
-                {
-                    "type": "input",
-                    "block_id": "image_size",
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "size_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Choose image size",
-                        },
-                        "options": [
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "512x512 (Recommended)",
-                                },
-                                "value": "512x512",
-                            },
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "256x256 (Smaller)",
-                                },
-                                "value": "256x256",
-                            },
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "1024x1024 (Larger)",
-                                },
-                                "value": "1024x1024",
-                            },
-                        ],
-                        "initial_option": {
+                    "type": "actions",
+                    "block_id": "toggle_advanced",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "action_id": "toggle_advanced",
                             "text": {
                                 "type": "plain_text",
-                                "text": "512x512 (Recommended)",
+                                "text": "⚙️ Advanced Options",
                             },
-                            "value": "512x512",
-                        },
-                    },
-                    "label": {"type": "plain_text", "text": "Image Size"},
+                            "value": "show",
+                        }
+                    ],
                 },
             ],
             "submit": {"type": "plain_text", "text": "Generate Emoji"},
             "private_metadata": json.dumps(metadata),
         }
+
+    async def _open_emoji_creation_modal(
+        self, slack_message: SlackMessage, trigger_id: str
+    ) -> None:
+        """Open the emoji creation modal using the modern design."""
+        modal_view = await self._build_modern_modal(slack_message)
 
         self._logger.info(
             "Opening emoji creation modal", extra={"trigger_id": trigger_id}
