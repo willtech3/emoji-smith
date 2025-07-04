@@ -76,14 +76,12 @@ class TestDualLambdaIntegration:
                         "image_size": {
                             "size_select": {"selected_option": {"value": "emoji_size"}}
                         },
-                        "style_type": {
-                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        "style_preferences": {
+                            "style_select": {"selected_option": {"value": "cartoon"}},
+                            "detail_select": {"selected_option": {"value": "simple"}},
                         },
                         "color_scheme": {
                             "color_select": {"selected_option": {"value": "auto"}}
-                        },
-                        "detail_level": {
-                            "detail_select": {"selected_option": {"value": "simple"}}
                         },
                         "tone": {"tone_select": {"selected_option": {"value": "fun"}}},
                     }
