@@ -73,6 +73,69 @@ class PromptBuilderService:
 
         return optimized
 
+    def build_prompt_with_parsed_context(
+        self, spec: EmojiSpecification, parsed_context: dict
+    ) -> str:
+        """Build an optimized prompt using pre-parsed Slack context.
+
+        Args:
+            spec: The emoji specification containing description and style
+            parsed_context: Parsed context from SlackMessageParser
+
+        Returns:
+            An optimized prompt string ready for DALL-E
+        """
+        if not spec or not spec.description:
+            raise ValueError("Specification must have a description")
+
+        # Extract themes from parsed context
+        themes = self.extract_themes_from_parsed_context(parsed_context)
+
+        # Use clean text for merging
+        clean_text = parsed_context.get("clean_text", "")
+
+        # Build enhanced context description
+        context_parts = []
+
+        # Add code context if present
+        if parsed_context.get("code_context"):
+            context_parts.append(parsed_context["code_context"])
+
+        # Add sentiment context
+        sentiment = parsed_context.get("sentiment")
+        if sentiment == "positive":
+            context_parts.append("celebrating")
+        elif sentiment == "negative":
+            context_parts.append("addressing issues")
+
+        # Add collaboration context if multiple people mentioned
+        mentions = parsed_context.get("mentions", [])
+        if len(mentions) > 1:
+            context_parts.append(f"involving {', '.join(mentions[:2])}")
+
+        # Create enhanced context string
+        enhanced_context = clean_text
+        if context_parts:
+            enhanced_context = f"{clean_text} ({', '.join(context_parts)})"
+
+        # Merge description with enhanced context
+        merged_content = self.merge_description_and_context(
+            spec.description, enhanced_context, themes
+        )
+
+        # Apply style modifiers if specified
+        if spec.style:
+            style_value = spec.style.style_type.value
+            merged_content = self.apply_style_modifiers(merged_content, style_value)
+
+        # Add standard emoji requirements
+        with_requirements = self.add_emoji_requirements(merged_content)
+
+        # Optimize length
+        optimized = self.optimize_prompt_length(with_requirements)
+
+        return optimized
+
     def extract_themes(self, context: str) -> list[str]:
         """Extract meaningful themes and emotions from context.
 
@@ -134,6 +197,49 @@ class PromptBuilderService:
             word in context_lower for word in ["new", "innovative", "creative", "first"]
         ):
             themes.append("innovation")
+
+        return list(set(themes))  # Remove duplicates
+
+    def extract_themes_from_parsed_context(self, parsed_context: dict) -> list[str]:
+        """Extract themes from pre-parsed Slack context.
+
+        Args:
+            parsed_context: Dictionary from SlackMessageParser.extract_clean_context()
+                           with clean_text, mentions, code_context, sentiment, emoji
+
+        Returns:
+            List of identified themes
+        """
+        themes = []
+
+        # Extract themes from clean text
+        if parsed_context.get("clean_text"):
+            themes.extend(self.extract_themes(parsed_context["clean_text"]))
+
+        # Add sentiment-based themes
+        sentiment = parsed_context.get("sentiment")
+        if sentiment == "positive":
+            themes.append("joy")
+        elif sentiment == "negative":
+            themes.append("challenge")
+
+        # Add code-related themes if code was present
+        if parsed_context.get("code_context"):
+            themes.extend(["technical", "development"])
+
+        # Consider existing emoji for theme hints
+        existing_emoji = parsed_context.get("existing_emoji", [])
+        for emoji in existing_emoji:
+            if emoji in ["rocket", "ship", "launch"]:
+                themes.append("achievement")
+            elif emoji in ["party", "tada", "confetti", "celebrate"]:
+                themes.append("celebration")
+            elif emoji in ["bug", "fire", "warning"]:
+                themes.append("problem-solving")
+
+        # Consider mentions for collaboration themes
+        if len(parsed_context.get("mentions", [])) > 1:
+            themes.append("teamwork")
 
         return list(set(themes))  # Remove duplicates
 
