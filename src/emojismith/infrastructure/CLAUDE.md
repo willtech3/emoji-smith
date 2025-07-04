@@ -1,6 +1,13 @@
-# CLAUDE Infrastructure Guidelines for Emoji Smith
+# CLAUDE.md - Infrastructure Layer Guidelines
 
-**Context:** This document should be loaded when working with AWS services, external APIs, or implementing repository patterns.
+## Inheritance
+- **Extends:** /CLAUDE.md (root)
+- **Overrides:** None (CRITICAL RULES cannot be overridden)
+- **Scope:** All files within infrastructure directory and subdirectories
+
+## Rules
+
+**Context:** This document provides guidelines for working with AWS services, external APIs, and implementing repository patterns in the infrastructure layer. Read this when implementing integrations with external systems.
 
 ## Infrastructure Layer Responsibilities
 

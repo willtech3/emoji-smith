@@ -1,6 +1,13 @@
-# CLAUDE Domain Guidelines for Emoji Smith
+# CLAUDE.md - Domain Layer Guidelines
 
-**Context:** This document should be loaded when working on domain entities, value objects, or business logic.
+## Inheritance
+- **Extends:** /CLAUDE.md (root)
+- **Overrides:** None (CRITICAL RULES cannot be overridden)
+- **Scope:** All files within domain directory and subdirectories
+
+## Rules
+
+**Context:** This document provides domain-driven design principles and guidelines for the Emoji Smith domain layer. Read this when working on domain entities, value objects, or business logic.
 
 ## Domain-Driven Design Principles
 
