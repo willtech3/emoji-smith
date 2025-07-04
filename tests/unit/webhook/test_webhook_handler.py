@@ -143,6 +143,91 @@ class TestWebhookHandler:
         with pytest.raises(ValueError, match="Invalid callback_id"):
             await webhook_handler.handle_message_action(invalid_payload)
 
+    def test_validate_description_checks_word_count(self, webhook_handler):
+        """Test description validation checks word count."""
+        # Too few words
+        is_valid, error = webhook_handler._validate_description("two words")
+        assert not is_valid
+        assert "at least 3 words" in error
+
+        # Valid word count
+        is_valid, error = webhook_handler._validate_description("this is a valid description")
+        assert is_valid
+        assert error == ""
+
+    def test_validate_description_checks_prohibited_keywords(self, webhook_handler):
+        """Test description validation rejects text/number requests."""
+        prohibited_descriptions = [
+            "text saying hello world",
+            "write the word awesome",
+            "letters ABC in bold",
+            "numbers 1 2 3",
+            "writing that says cool",
+        ]
+        
+        for desc in prohibited_descriptions:
+            is_valid, error = webhook_handler._validate_description(desc)
+            assert not is_valid
+            assert "cannot contain readable text or numbers" in error
+
+    def test_validate_description_checks_length(self, webhook_handler):
+        """Test description validation checks character length."""
+        # Too short
+        is_valid, error = webhook_handler._validate_description("short")
+        assert not is_valid
+        assert "too short" in error
+
+        # Too long
+        long_desc = "a" * 101
+        is_valid, error = webhook_handler._validate_description(long_desc)
+        assert not is_valid
+        assert "too long" in error
+
+        # Valid length
+        is_valid, error = webhook_handler._validate_description("a happy smiling sun with sunglasses")
+        assert is_valid
+        assert error == ""
+
+    async def test_modal_submission_validates_description(self, webhook_handler, mock_job_queue):
+        """Test modal submission validates description content."""
+        # Arrange - payload with invalid description (contains text request)
+        modal_payload = {
+            "type": "view_submission",
+            "view": {
+                "callback_id": "emoji_creation_modal",
+                "state": {
+                    "values": {
+                        "emoji_name": {"name": {"value": "invalid"}},
+                        "emoji_description": {
+                            "description": {"value": "text saying hello"}
+                        },
+                        "style_preferences": {
+                            "style_select": {"selected_option": {"value": "cartoon"}},
+                            "detail_select": {"selected_option": {"value": "simple"}},
+                        },
+                    }
+                },
+                "private_metadata": (
+                    '{"message_text": "test", "user_id": "U123", '
+                    '"channel_id": "C123", "timestamp": "123.456", '
+                    '"team_id": "T123"}'
+                ),
+            },
+        }
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="cannot contain readable text or numbers"):
+            await webhook_handler.handle_modal_submission(modal_payload)
+
+    def test_get_style_hint_returns_correct_hints(self, webhook_handler):
+        """Test style hints are returned for each style."""
+        assert "cartoon" in webhook_handler._get_style_hint("cartoon")
+        assert "realistic" in webhook_handler._get_style_hint("realistic")
+        assert "minimalist" in webhook_handler._get_style_hint("minimalist")
+        assert "pixel" in webhook_handler._get_style_hint("pixel")
+        # Default hint for unknown style
+        assert "Describe visual elements" in webhook_handler._get_style_hint("unknown")
+
     async def test_handles_slack_api_error_gracefully(
         self, webhook_handler, mock_slack_repo
     ):
