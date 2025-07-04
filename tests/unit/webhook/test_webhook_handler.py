@@ -50,10 +50,10 @@ class TestWebhookHandler:
         mock_slack_repo.open_modal.assert_called_once()
         view = mock_slack_repo.open_modal.call_args.kwargs["view"]
         block_ids = [b.get("block_id") for b in view["blocks"]]
+        assert "preview_section" in block_ids
         assert "style_type" in block_ids
-        assert "color_scheme" in block_ids
         assert "detail_level" in block_ids
-        assert "tone" in block_ids
+        assert "toggle_advanced" in block_ids
 
     async def test_message_action_accepts_extra_team_fields(
         self, webhook_handler, mock_slack_repo
@@ -193,3 +193,100 @@ class TestWebhookHandler:
 
         assert result == {"status": "ok"}
         mock_slack_repo.open_modal.assert_called_once()
+
+    async def test_handles_block_actions_toggle_advanced(
+        self, webhook_handler, mock_slack_repo
+    ):
+        """Test toggle advanced options button updates modal."""
+        # Arrange
+        payload = {
+            "type": "block_actions",
+            "actions": [
+                {
+                    "action_id": "toggle_advanced",
+                    "value": "show",
+                }
+            ],
+            "view": {
+                "id": "V123456",
+                "private_metadata": (
+                    '{"message_text": "test emoji", "user_id": "U123", '
+                    '"channel_id": "C123", "timestamp": "123.456", '
+                    '"team_id": "T123"}'
+                ),
+            },
+        }
+
+        # Act
+        result = await webhook_handler.handle_block_actions(payload)
+
+        # Assert
+        assert result == {}
+        mock_slack_repo.update_modal.assert_called_once()
+        view = mock_slack_repo.update_modal.call_args.kwargs["view"]
+
+        # Check that advanced blocks are present
+        block_ids = [b.get("block_id") for b in view["blocks"]]
+        assert "color_scheme" in block_ids
+        assert "tone" in block_ids
+        assert "share_location" in block_ids
+        assert "instruction_visibility" in block_ids
+        assert "image_size" in block_ids
+
+        # Check toggle button changed to "Hide"
+        toggle_block = next(
+            b for b in view["blocks"] if b.get("block_id") == "toggle_advanced"
+        )
+        assert "Hide Advanced Options" in toggle_block["elements"][0]["text"]["text"]
+        assert toggle_block["elements"][0]["value"] == "hide"
+
+    async def test_modal_submission_with_optional_advanced_fields(
+        self, webhook_handler, mock_job_queue
+    ):
+        """Test modal submission works without advanced fields (using defaults)."""
+        # Arrange - minimal payload without advanced fields
+        modal_payload = {
+            "type": "view_submission",
+            "view": {
+                "callback_id": "emoji_creation_modal",
+                "state": {
+                    "values": {
+                        "emoji_name": {"name": {"value": "thumbsup"}},
+                        "emoji_description": {
+                            "description": {"value": "thumbs up gesture"}
+                        },
+                        "style_type": {
+                            "style_select": {"selected_option": {"value": "cartoon"}}
+                        },
+                        "detail_level": {
+                            "detail_select": {"selected_option": {"value": "simple"}}
+                        },
+                        # Advanced fields not present - should use defaults
+                    }
+                },
+                "private_metadata": (
+                    '{"message_text": "great job!", "user_id": "U456", '
+                    '"channel_id": "C456", "timestamp": "456.789", '
+                    '"team_id": "T456"}'
+                ),
+            },
+        }
+
+        # Act
+        result = await webhook_handler.handle_modal_submission(modal_payload)
+
+        # Assert
+        assert result == {"response_action": "clear"}
+        mock_job_queue.enqueue_job.assert_called_once()
+
+        # Verify defaults were used
+        job = mock_job_queue.enqueue_job.call_args[0][0]
+        assert job.sharing_preferences.share_location.value == "channel"  # default
+        assert (
+            job.sharing_preferences.instruction_visibility.value == "EVERYONE"
+        )  # default show -> EVERYONE
+        assert (
+            job.sharing_preferences.image_size.value == "EMOJI_SIZE"
+        )  # default 512 -> EMOJI_SIZE
+        assert job.style_preferences.color_scheme.value == "auto"  # default
+        assert job.style_preferences.tone.value == "fun"  # default

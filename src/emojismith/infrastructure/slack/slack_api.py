@@ -20,6 +20,10 @@ class SlackAPIRepository(SlackRepository):
         """Open modal dialog in Slack."""
         await self._client.views_open(trigger_id=trigger_id, view=view)
 
+    async def update_modal(self, view_id: str, view: dict[str, Any]) -> None:
+        """Update an existing modal dialog in Slack."""
+        await self._client.views_update(view_id=view_id, view=view)
+
     async def upload_emoji(self, name: str, image_data: bytes) -> bool:
         """Upload custom emoji to Slack workspace."""
         # TODO: Implement proper image hosting service for production
