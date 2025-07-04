@@ -50,10 +50,11 @@ class TestWebhookHandler:
         mock_slack_repo.open_modal.assert_called_once()
         view = mock_slack_repo.open_modal.call_args.kwargs["view"]
         block_ids = [b.get("block_id") for b in view["blocks"]]
-        assert "style_type" in block_ids
-        assert "color_scheme" in block_ids
-        assert "detail_level" in block_ids
-        assert "tone" in block_ids
+        assert "preview_section" in block_ids
+        assert "emoji_name" in block_ids
+        assert "emoji_description" in block_ids
+        assert "style_selections" in block_ids
+        assert "toggle_advanced" in block_ids
 
     async def test_message_action_accepts_extra_team_fields(
         self, webhook_handler, mock_slack_repo
