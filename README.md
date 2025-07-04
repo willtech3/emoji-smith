@@ -17,16 +17,21 @@ Emoji Smith is a Slack bot that automatically generates custom emojis using Open
 ## 🏗️ Architecture
 
 ```mermaid
-graph LR
-    A[Slack Message] --> B[Right-Click Action]
-    B --> C[Modal Dialog]
-    C --> D[Webhook Lambda]
-    D --> E[SQS Queue]
-    E --> F[Worker Lambda]
-    F --> G[OpenAI DALL-E]
-    G --> H[Generated Emoji]
-    H --> I[Upload to Slack]
-    I --> J[Apply as Reaction]
+graph TB
+    subgraph "User Interaction"
+        A[Slack Message] -->|Right-click| B[Create Reaction Modal]
+    end
+    
+    subgraph "AWS Infrastructure"
+        B -->|Submit| C[Webhook Lambda<br/>FastAPI]
+        C -->|Queue| D[SQS]
+        D -->|Process| E[Worker Lambda]
+    end
+    
+    subgraph "AI Generation"
+        E -->|Generate| F[OpenAI DALL-E]
+        F -->|Upload & React| A
+    end
 ```
 
 For detailed architecture documentation, see [Dual Lambda Architecture](./docs/architecture/dual-lambda.md).
