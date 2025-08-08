@@ -148,7 +148,7 @@ pre-commit run mypy --all-files -v
 
 3. **Optimize prompt generation**
    - Reduce prompt complexity
-   - Use DALL-E 2 for faster generation
+   - If gpt-image-1 is rate limited, use DALL-E 2 as a fallback (smaller size)
 
 ---
 

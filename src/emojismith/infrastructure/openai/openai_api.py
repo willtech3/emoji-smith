@@ -77,7 +77,8 @@ class OpenAIAPIRepository(OpenAIRepository):
             "2. Highlight distinctive features visible when small.\n"
             "3. Use vibrant contrasting colors.\n"
             "4. Avoid intricate detail.\n"
-            "5. Incorporate message context when useful.\n\n"
+            "5. Incorporate message context when useful.\n"
+            "6. Return only the final prompt text.\n\n"
             "EXAMPLES:\n"
             'Context: "Just shipped new feature" / Description: "rocket"\n'
             'Prompt: "Cartoon rocket launching with bright orange flames, '
@@ -100,7 +101,9 @@ class OpenAIAPIRepository(OpenAIRepository):
                     {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
-                        "content": f"Context: {context}\nDescription: {description}",
+                        "content": (
+                            "Context:\n```" + context + "```\nDescription:\n```" + description + "```"
+                        ),
                     },
                 ],
             )
