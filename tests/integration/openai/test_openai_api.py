@@ -26,7 +26,7 @@ async def test_enhances_prompt_with_ai_assistance() -> None:
 @pytest.mark.asyncio()
 @pytest.mark.integration()
 async def test_enhance_prompt_uses_comprehensive_system_prompt() -> None:
-    """Test that enhance_prompt uses a comprehensive system prompt for DALL-E."""
+    """Test that enhance_prompt uses a comprehensive system prompt for gpt-image-1."""
     client = AsyncMock()
     client.chat.completions.create.return_value = AsyncMock(
         choices=[AsyncMock(message=AsyncMock(content="enhanced prompt"))]
@@ -47,12 +47,12 @@ async def test_enhance_prompt_uses_comprehensive_system_prompt() -> None:
     messages = call_args.kwargs["messages"]
     system_prompt = messages[0]["content"]
 
-    # Verify the system prompt contains key requirements for DALL-E emoji generation
+    # Verify the system prompt contains key gpt-image-1 requirements
     assert "transparent background" in system_prompt.lower()
     assert "128x128" in system_prompt
     assert "slack" in system_prompt.lower()
     assert "emoji" in system_prompt.lower()
-    assert "dall-e" in system_prompt.lower() or "dalle" in system_prompt.lower()
+    assert "gpt-image-1" in system_prompt.lower()
     assert (
         len(system_prompt) > 100
     )  # Should be comprehensive, not just "Enhance emoji prompt"
@@ -124,13 +124,13 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
 
 @pytest.mark.asyncio()
 @pytest.mark.integration()
-async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
-    """Test that image generation falls back to DALL-E 2 when DALL-E 3 fails."""
+async def test_falls_back_to_dalle2_when_gpt_image_1_fails() -> None:
+    """Test that image generation falls back to DALL-E 2 when gpt-image-1 fails."""
     client = AsyncMock()
 
-    # First call (DALL-E 3) fails
+    # First call (gpt-image-1) fails
     client.images.generate.side_effect = [
-        Exception("DALL-E 3 not available"),
+        Exception("gpt-image-1 not available"),
         AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # DALL-E 2 succeeds
     ]
 
@@ -140,9 +140,9 @@ async def test_falls_back_to_dalle2_when_dalle3_fails() -> None:
     # Should have called both models
     assert client.images.generate.call_count == 2
 
-    # First call should be DALL-E 3
+    # First call should be gpt-image-1
     first_call = client.images.generate.call_args_list[0]
-    assert first_call.kwargs["model"] == "dall-e-3"
+    assert first_call.kwargs["model"] == "gpt-image-1"
 
     # Second call should be DALL-E 2
     second_call = client.images.generate.call_args_list[1]

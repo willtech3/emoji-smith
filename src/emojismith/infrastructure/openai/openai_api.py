@@ -57,14 +57,16 @@ class OpenAIAPIRepository(OpenAIRepository):
     async def enhance_prompt(self, context: str, description: str) -> str:
         await self._ensure_model()
 
-        system_prompt = """You are an expert at creating prompts for DALL-E image
-generation specifically optimized for Slack emoji.
+        system_prompt = """You are an expert at crafting prompts for OpenAI's
+gpt-image-1 model specifically optimized for Slack emoji.
 
 CRITICAL REQUIREMENTS:
 - ALWAYS specify "transparent background" in every prompt
 - Optimize for 128x128 pixel display size
 - Focus on instant recognition at small sizes
 - Use bold, clear shapes with high contrast
+- Clearly describe subject, environment, key details,
+  style, lighting, color, and perspective
 
 SLACK EMOJI TECHNICAL CONSTRAINTS:
 - Display size: 128x128 pixels (though uploaded at higher resolution)
@@ -127,11 +129,11 @@ while looking great at 128x128!"""
         return response.choices[0].message.content
 
     async def generate_image(self, prompt: str) -> bytes:
-        """Generate an image using DALL-E 3 with fallback to DALL-E 2."""
-        # Try DALL-E 3 first
+        """Generate an image using gpt-image-1 with fallback to DALL-E 2."""
+        # Try gpt-image-1 first
         try:
             response = await self._client.images.generate(
-                model="dall-e-3",
+                model="gpt-image-1",
                 prompt=prompt,
                 n=1,
                 size="1024x1024",
@@ -143,7 +145,9 @@ while looking great at 128x128!"""
         ) as exc:  # pragma: no cover - network error simulated
             raise RateLimitExceededError(str(exc)) from exc
         except Exception as exc:
-            self._logger.warning("DALL-E 3 failed, falling back to DALL-E 2: %s", exc)
+            self._logger.warning(
+                "gpt-image-1 failed, falling back to DALL-E 2: %s", exc
+            )
             # Fallback to DALL-E 2
             try:
                 response = await self._client.images.generate(
@@ -159,7 +163,7 @@ while looking great at 128x128!"""
                 raise RateLimitExceededError(str(rate_exc)) from rate_exc
             except Exception as fallback_exc:
                 self._logger.error(
-                    "Both DALL-E 3 and DALL-E 2 failed: %s", fallback_exc
+                    "Both gpt-image-1 and DALL-E 2 failed: %s", fallback_exc
                 )
                 raise fallback_exc
 
