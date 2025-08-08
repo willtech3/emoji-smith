@@ -47,7 +47,7 @@ class PromptBuilderService:
             spec: The emoji specification containing description, context, and style
 
         Returns:
-            An optimized prompt string ready for DALL-E
+            An optimized prompt string ready for gpt-image-1
         """
         if not spec or not spec.description:
             raise ValueError("Specification must have a description")

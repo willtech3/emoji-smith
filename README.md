@@ -4,7 +4,7 @@
 
 > **AI-powered custom emoji generator for Slack workspaces**
 
-Emoji Smith is a Slack bot that automatically generates custom emojis using OpenAI's DALL-E, triggered by message actions. Simply right-click any Slack message, choose "Create Reaction," describe the emoji you want, and watch as AI creates the perfect custom emoji reaction.
+Emoji Smith is a Slack bot that automatically generates custom emojis using OpenAI's gpt-image-1 model, triggered by message actions. Simply right-click any Slack message, choose "Create Reaction," describe the emoji you want, and watch as AI creates the perfect custom emoji reaction.
 
 ## ✨ Features
 
@@ -29,7 +29,7 @@ graph TB
     end
     
     subgraph "AI Generation"
-        E -->|Generate| F[OpenAI DALL-E]
+        E -->|Generate| F[OpenAI gpt-image-1]
         F -->|Upload & React| A
     end
 ```
@@ -38,7 +38,7 @@ For detailed architecture documentation, see [Dual Lambda Architecture](./docs/a
 
 **Tech Stack:**
 - **Backend**: Python 3.12 + FastAPI + Slack Bolt
-- **AI Services**: OpenAI o3 with fallback to gpt-4/gpt-3.5 (prompt enhancement) + DALL-E (image generation)
+- **AI Services**: OpenAI o3 with fallback to gpt-4/gpt-3.5 (prompt enhancement) + gpt-image-1 (image generation)
 - **Infrastructure**: AWS Lambda + API Gateway + SQS + Secrets Manager
 - **Deployment**: AWS CDK + GitHub Actions
 - **Monitoring**: CloudWatch logs + health check endpoint (`/health`)
@@ -135,7 +135,7 @@ aws secretsmanager create-secret --name "emoji-smith/production" --secret-string
 |----------|-------------|---------|---------|
 | `SLACK_BOT_TOKEN` | Slack bot user OAuth token | Required | `xoxb-...` |
 | `SLACK_SIGNING_SECRET` | Slack app signing secret | Required | `...` |
-| `OPENAI_API_KEY` | OpenAI API key for DALL-E | Required | `sk-...` |
+| `OPENAI_API_KEY` | OpenAI API key for gpt-image-1 | Required | `sk-...` |
 | `OPENAI_CHAT_MODEL` | Chat model for prompt enhancement | `o3` | `o3`, `gpt-4`, `gpt-3.5-turbo` |
 | `EMOJISMITH_FORCE_ENTERPRISE` | Force Enterprise Grid mode | `false` | `true`, `false` |
 | `SQS_QUEUE_URL` | AWS SQS queue URL (production) | None | AWS SQS URL |
@@ -324,4 +324,4 @@ MIT License - see [LICENSE](./LICENSE) for details.
 
 ---
 
-**Made with ❤️ and AI** • Powered by OpenAI DALL-E • Deployed on AWS Lambda
+**Made with ❤️ and AI** • Powered by OpenAI gpt-image-1 • Deployed on AWS Lambda
