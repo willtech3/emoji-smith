@@ -143,7 +143,7 @@ pre-commit run mypy --all-files -v
    ```python
    start = time.time()
    response = await openai_client.images.generate(...)
-   logger.info(f"DALL-E took {time.time() - start}s")
+   logger.info(f"gpt-image-1 took {time.time() - start}s")
    ```
 
 3. **Optimize prompt generation**

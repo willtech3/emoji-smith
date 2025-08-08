@@ -26,7 +26,7 @@ class EmojiGenerationService:
         """Generate emoji from a ready-to-use prompt.
 
         Args:
-            prompt: The optimized and enhanced prompt for DALL-E
+            prompt: The optimized and enhanced prompt for gpt-image-1
             name: The name for the generated emoji
 
         Returns:
