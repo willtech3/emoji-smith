@@ -102,7 +102,11 @@ class OpenAIAPIRepository(OpenAIRepository):
                     {
                         "role": "user",
                         "content": (
-                            "Context:\n```" + context + "```\nDescription:\n```" + description + "```"
+                            "Context:\n```"
+                            + context
+                            + "```\nDescription:\n```"
+                            + description
+                            + "```"
                         ),
                     },
                 ],
