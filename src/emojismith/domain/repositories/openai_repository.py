@@ -11,5 +11,5 @@ class OpenAIRepository(Protocol):
         ...
 
     async def generate_image(self, prompt: str) -> bytes:
-        """Generate an emoji image using DALL-E."""
+        """Generate an emoji image using OpenAI's image model."""
         ...

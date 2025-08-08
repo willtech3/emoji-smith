@@ -143,12 +143,12 @@ pre-commit run mypy --all-files -v
    ```python
    start = time.time()
    response = await openai_client.images.generate(...)
-   logger.info(f"DALL-E took {time.time() - start}s")
+   logger.info(f"gpt-image-1 took {time.time() - start}s")
    ```
 
 3. **Optimize prompt generation**
    - Reduce prompt complexity
-   - Use DALL-E 2 for faster generation
+   - If gpt-image-1 is rate limited, use DALL-E 2 as a fallback (smaller size)
 
 ---
 

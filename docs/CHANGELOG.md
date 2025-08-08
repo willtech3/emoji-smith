@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Initial Release
 - Basic Slack app integration
-- OpenAI DALL-E 3 emoji generation
+- OpenAI gpt-image-1 emoji generation
 - Modal-based user interface
 - Single Lambda deployment
 - Core domain model implementation

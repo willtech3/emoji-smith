@@ -50,7 +50,7 @@ class BuildPromptUseCase:
             style_override: Optional style to override the specification's style
 
         Returns:
-            An optimized prompt string ready for DALL-E
+            An optimized prompt string ready for gpt-image-1
         """
         # If style override is provided, create a new spec with that style
         if style_override:

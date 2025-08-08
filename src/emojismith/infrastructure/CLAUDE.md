@@ -136,7 +136,7 @@ class OpenAIService:
         """Generate image and return URL."""
         try:
             response = await self._client.images.generate(
-                model="dall-e-3",
+                model="gpt-image-1",
                 prompt=prompt,
                 size=size,
                 quality=quality,
