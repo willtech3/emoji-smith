@@ -41,7 +41,7 @@ async def test_generate_image_fallback() -> None:
             return httpx.Response(200, json={})
         model = json.loads(request.content)["model"]
         calls.append(model)
-        if model == "dall-e-3":
+        if model == "gpt-image-1":
             return httpx.Response(500)
         b64 = base64.b64encode(b"img").decode()
         return httpx.Response(200, json={"data": [{"b64_json": b64}]})
@@ -56,7 +56,7 @@ async def test_generate_image_fallback() -> None:
     repo = OpenAIAPIRepository(client)
     result = await repo.generate_image("prompt")
     assert result == b"img"
-    assert calls[0] == "dall-e-3"
+    assert calls[0] == "gpt-image-1"
     assert calls[-1] == "dall-e-2"
 
 
