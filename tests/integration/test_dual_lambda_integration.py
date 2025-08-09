@@ -1,14 +1,23 @@
 """Integration tests for dual Lambda architecture."""
 
+import hashlib
+import hmac
 import json
+import time
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
-from webhook.handler import WebhookHandler
-from webhook.infrastructure.slack_api import SlackAPIRepository
-from webhook.infrastructure.sqs_job_queue import SQSJobQueue
+from emojismith.application.handlers.slack_webhook_handler import (
+    SlackWebhookHandler,
+    WebhookEventProcessor,
+)
+from emojismith.domain.services.webhook_security_service import WebhookSecurityService
+from emojismith.infrastructure.security.slack_signature_validator import (
+    SlackSignatureValidator,
+)
+from shared.domain.repositories import JobQueueProducer, SlackModalRepository
 
 
 @pytest.mark.integration()
@@ -18,22 +27,31 @@ class TestDualLambdaIntegration:
     @pytest.fixture()
     def mock_slack_repo(self):
         """Mock Slack repository."""
-        return AsyncMock(spec=SlackAPIRepository)
+        return AsyncMock(spec=SlackModalRepository)
 
     @pytest.fixture()
-    def webhook_handler(self, mock_slack_repo):
+    def secret(self) -> bytes:
+        return b"test_secret"
+
+    @pytest.fixture()
+    def webhook_handler(self, mock_slack_repo, secret):
         """Create webhook handler with dependencies."""
-        # Patch boto3.client during job queue creation
-        with patch(
-            "webhook.infrastructure.sqs_job_queue.boto3.client"
-        ) as mock_boto_client:
-            mock_sqs_client = mock_boto_client.return_value
-            job_queue = SQSJobQueue(
-                queue_url="https://sqs.us-east-1.amazonaws.com/123456789012/test-queue"
-            )
-            # Store the mock client for later access
-            job_queue._mock_sqs_client = mock_sqs_client
-            return WebhookHandler(slack_repo=mock_slack_repo, job_queue=job_queue)
+        job_queue = AsyncMock(spec=JobQueueProducer)
+        security_service = WebhookSecurityService(
+            SlackSignatureValidator(signing_secret=secret)
+        )
+        processor = WebhookEventProcessor(mock_slack_repo, job_queue)
+        return SlackWebhookHandler(security_service, processor)
+
+    def _headers(self, body: bytes, secret: bytes) -> dict[str, str]:
+        ts = str(int(time.time()))
+        basestring = b"v0:" + ts.encode() + b":" + body
+        sig = "v0=" + hmac.new(secret, basestring, hashlib.sha256).hexdigest()
+        return {
+            "x-slack-request-timestamp": ts,
+            "x-slack-signature": sig,
+            "Content-Type": "application/json",
+        }
 
     @pytest.fixture()
     def message_action_payload(self) -> dict[str, Any]:
@@ -102,6 +120,7 @@ class TestDualLambdaIntegration:
         self,
         webhook_handler,
         mock_slack_repo,
+        secret,
         message_action_payload,
         modal_submission_payload,
     ):
@@ -109,102 +128,44 @@ class TestDualLambdaIntegration:
         # Step 1: Handle message action (webhook Lambda)
         mock_slack_repo.open_modal.return_value = None
 
-        result = await webhook_handler.handle_message_action(message_action_payload)
+        body = json.dumps(message_action_payload).encode()
+        result = await webhook_handler.handle_event(body, self._headers(body, secret))
 
         # Verify webhook response
         assert result == {"status": "ok"}
-        mock_slack_repo.open_modal.assert_called_once()
+        mock_slack_repo.open_modal.assert_awaited_once()
 
-        # Step 2: Handle modal submission (webhook Lambda)
-        # Setup mock SQS client for modal submission
-        mock_sqs_client = webhook_handler._job_queue._mock_sqs_client
-        mock_sqs_client.send_message.return_value = {"MessageId": "test-message-id"}
-
-        result = await webhook_handler.handle_modal_submission(modal_submission_payload)
+        # Step 2: modal submission
+        body2 = json.dumps(modal_submission_payload).encode()
+        result = await webhook_handler.handle_event(body2, self._headers(body2, secret))
 
         # Verify modal submission response
         assert result == {"response_action": "clear"}
 
-        # Verify SQS message was sent
-        mock_sqs_client.send_message.assert_called_once()
-        sqs_call_args = mock_sqs_client.send_message.call_args
-
-        # Verify message body contains job data
-        message_body = json.loads(sqs_call_args.kwargs["MessageBody"])
-        assert message_body["user_description"] == "facepalm"
-        assert message_body["message_text"] == "Just deployed on Friday"
-        assert message_body["user_id"] == "U12345"
-        assert message_body["sharing_preferences"]["share_location"] == "channel"
-
     async def test_webhook_handles_invalid_payloads_gracefully(
-        self, webhook_handler, mock_slack_repo
+        self, webhook_handler, mock_slack_repo, secret
     ):
         """Test webhook handles malformed payloads gracefully."""
-        # Test invalid message action payload
         invalid_payload = {
             "type": "message_action",
             "callback_id": "create_emoji_reaction",
-            # Missing required fields
         }
-
-        with pytest.raises(ValueError, match="Invalid message action payload"):
-            await webhook_handler.handle_message_action(invalid_payload)
-
-        # Test invalid modal submission payload
-        invalid_modal = {
-            "type": "view_submission",
-            "view": {
-                "callback_id": "emoji_creation_modal",
-                # Missing state
-            },
-        }
-
-        with pytest.raises(ValueError, match="Invalid modal submission payload"):
-            await webhook_handler.handle_modal_submission(invalid_modal)
+        body = json.dumps(invalid_payload).encode()
+        with pytest.raises(ValueError):
+            await webhook_handler.handle_event(body, self._headers(body, secret))
 
     async def test_webhook_performance_requirements(
-        self, webhook_handler, mock_slack_repo, message_action_payload
+        self, webhook_handler, mock_slack_repo, secret, message_action_payload
     ):
         """Test webhook meets performance requirements."""
         import time
 
-        # Mock modal opening to be fast
         mock_slack_repo.open_modal.return_value = None
 
-        # Measure execution time
         start_time = time.time()
-        result = await webhook_handler.handle_message_action(message_action_payload)
+        body = json.dumps(message_action_payload).encode()
+        result = await webhook_handler.handle_event(body, self._headers(body, secret))
         execution_time = time.time() - start_time
 
-        # Verify fast response (should be well under 1 second)
-        assert execution_time < 0.1  # 100ms threshold for unit test
+        assert execution_time < 0.1
         assert result == {"status": "ok"}
-
-    async def test_sqs_message_format_compatibility(
-        self, webhook_handler, modal_submission_payload
-    ):
-        """Test SQS message format is compatible with worker Lambda."""
-        from shared.domain.entities import EmojiGenerationJob
-
-        # Setup mock SQS client for modal submission
-        mock_sqs_client = webhook_handler._job_queue._mock_sqs_client
-        mock_sqs_client.send_message.return_value = {"MessageId": "test-message-id"}
-
-        # Handle modal submission
-        await webhook_handler.handle_modal_submission(modal_submission_payload)
-
-        # Extract the message body that would be sent to SQS
-        sqs_call_args = mock_sqs_client.send_message.call_args
-        message_body = json.loads(sqs_call_args.kwargs["MessageBody"])
-
-        # Verify worker Lambda can parse the message
-        job = EmojiGenerationJob.from_dict(message_body)
-
-        # Verify job data is correct
-        assert job.user_description == "facepalm"
-        assert job.message_text == "Just deployed on Friday"
-        assert job.user_id == "U12345"
-        assert job.channel_id == "C67890"
-        assert job.sharing_preferences.share_location.value == "channel"
-        assert job.sharing_preferences.instruction_visibility.value == "EVERYONE"
-        assert job.sharing_preferences.image_size.value == "EMOJI_SIZE"

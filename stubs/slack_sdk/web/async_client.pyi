@@ -1,8 +1,9 @@
-from typing import Any, Optional
+from typing import Any
+
 from .async_slack_response import AsyncSlackResponse
 
 class AsyncWebClient:
-    def __init__(self, *, token: Optional[str] = ..., **kwargs: Any) -> None: ...
+    def __init__(self, *, token: str | None = ..., **kwargs: Any) -> None: ...
     async def views_open(self, *args: Any, **kwargs: Any) -> AsyncSlackResponse: ...
     async def files_upload_v2(
         self, *args: Any, **kwargs: Any

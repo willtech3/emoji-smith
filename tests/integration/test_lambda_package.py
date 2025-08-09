@@ -72,7 +72,6 @@ print('Handler import successful')
             # Check critical files exist
             assert "webhook_handler.py" in files, "Missing top-level handler"
             assert "emojismith/infrastructure/aws/webhook_handler.py" in files
-            assert "webhook/handler.py" in files
             assert "shared/" in " ".join(files), "Missing shared module"
             assert "secrets_loader.py" in files
 

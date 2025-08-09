@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,12 +11,12 @@ from emojismith.application.handlers.slack_webhook_handler import (
     SlackWebhookHandler,
     WebhookEventProcessor,
 )
+from emojismith.domain.services.webhook_security_service import WebhookSecurityService
+from emojismith.infrastructure.security.slack_signature_validator import (
+    SlackSignatureValidator,
+)
 from emojismith.presentation.web.slack_webhook_api import create_webhook_api
-from shared.domain.repositories import SlackModalRepository
-from webhook.handler import WebhookHandler
-from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
-from webhook.infrastructure.sqs_job_queue import SQSJobQueue
-from webhook.security.webhook_security_service import WebhookSecurityService
+from shared.domain.repositories import JobQueueProducer, SlackModalRepository
 
 
 def _sign(body: bytes, secret: bytes, timestamp: str) -> str:
@@ -27,24 +27,18 @@ def _sign(body: bytes, secret: bytes, timestamp: str) -> str:
 
 
 @pytest.fixture()
-def app_with_mocks() -> tuple[TestClient, AsyncMock, MagicMock, bytes]:
+def app_with_mocks() -> tuple[TestClient, AsyncMock, AsyncMock, bytes]:
     secret = b"test_secret"
     slack_repo = AsyncMock(spec=SlackModalRepository)
-    sqs_client = MagicMock()
-    sqs_client.send_message.return_value = {"MessageId": "test"}
-    with patch(
-        "webhook.infrastructure.sqs_job_queue.boto3.client", return_value=sqs_client
-    ):
-        job_queue = SQSJobQueue("https://sqs.example.com/test")
-        webhook_handler = WebhookHandler(slack_repo, job_queue)
-        security_service = WebhookSecurityService(
-            SlackSignatureValidator(signing_secret=secret)
-        )
-        processor = WebhookEventProcessor(webhook_handler)
-        handler = SlackWebhookHandler(security_service, processor)
-        app = create_webhook_api(handler)
-        client = TestClient(app, raise_server_exceptions=False)
-        yield client, slack_repo, sqs_client, secret
+    job_queue = AsyncMock(spec=JobQueueProducer)
+    security_service = WebhookSecurityService(
+        SlackSignatureValidator(signing_secret=secret)
+    )
+    processor = WebhookEventProcessor(slack_repo, job_queue)
+    handler = SlackWebhookHandler(security_service, processor)
+    app = create_webhook_api(handler)
+    client = TestClient(app, raise_server_exceptions=False)
+    return client, slack_repo, job_queue, secret
 
 
 def _message_action_payload() -> dict:
@@ -112,9 +106,9 @@ def _headers(body: bytes, secret: bytes) -> dict:
 
 
 def test_complete_webhook_flow(
-    app_with_mocks: tuple[TestClient, AsyncMock, MagicMock, bytes],
+    app_with_mocks: tuple[TestClient, AsyncMock, AsyncMock, bytes],
 ) -> None:
-    client, slack_repo, sqs_client, secret = app_with_mocks
+    client, slack_repo, job_queue, secret = app_with_mocks
     # Step 1: message action
     body = json.dumps(_message_action_payload()).encode()
     resp = client.post("/slack/events", content=body, headers=_headers(body, secret))
@@ -127,16 +121,16 @@ def test_complete_webhook_flow(
     resp2 = client.post("/slack/events", content=body2, headers=_headers(body2, secret))
     assert resp2.status_code == 200
     assert resp2.json() == {"response_action": "clear"}
-    sqs_client.send_message.assert_called_once()
-    msg = json.loads(sqs_client.send_message.call_args.kwargs["MessageBody"])
-    assert msg["user_description"] == "facepalm"
-    assert msg["channel_id"] == "C1"
+    job_queue.enqueue_job.assert_awaited_once()
+    job = job_queue.enqueue_job.call_args.args[0]
+    assert job.user_description == "facepalm"
+    assert job.channel_id == "C1"
 
 
 def test_invalid_signature_rejected(
-    app_with_mocks: tuple[TestClient, AsyncMock, MagicMock, bytes],
+    app_with_mocks: tuple[TestClient, AsyncMock, AsyncMock, bytes],
 ) -> None:
-    client, slack_repo, sqs_client, secret = app_with_mocks
+    client, slack_repo, job_queue, secret = app_with_mocks
     body = json.dumps(_message_action_payload()).encode()
     ts = str(int(time.time()))
     headers = {
@@ -147,4 +141,4 @@ def test_invalid_signature_rejected(
     resp = client.post("/slack/events", content=body, headers=headers)
     assert resp.status_code == 500
     slack_repo.open_modal.assert_not_called()
-    sqs_client.send_message.assert_not_called()
+    job_queue.enqueue_job.assert_not_called()

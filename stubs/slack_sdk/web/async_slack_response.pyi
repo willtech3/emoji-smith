@@ -1,5 +1,5 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 class AsyncSlackResponse(dict[str, Any]):
-    data: Dict[str, Any]
-    def get(self, key: str, default: Optional[Any] = None) -> Any: ...
+    data: dict[str, Any]
+    def get(self, key: str, default: Any | None = None) -> Any: ...

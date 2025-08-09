@@ -1,4 +1,5 @@
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 class FastAPI:
     def __init__(self, *args: Any, **kwargs: Any) -> None: ...
