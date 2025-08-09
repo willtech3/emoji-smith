@@ -282,7 +282,7 @@ emoji-smith/
 └── Configuration files
     ├── .pre-commit-config.yaml
     ├── pyproject.toml
-    ├── requirements-webhook.txt
+    ├── requirements-webhook.lock
     └── run_dev.sh
 ```
 
