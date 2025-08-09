@@ -14,10 +14,23 @@ async def test_enhance_prompt_recorded() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.startswith("/v1/models"):
             return httpx.Response(200, json={})
-        assert request.url.path == "/v1/chat/completions"
+        assert request.url.path == "/v1/responses"
         body = json.loads(request.content)
-        assert body["messages"][1]["content"].startswith("Context")
-        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+        # Responses API sends input list with user/system messages
+        assert body["input"][1]["content"].startswith("Context")
+        return httpx.Response(
+            200,
+            json={
+                "output": [
+                    {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [{"type": "output_text", "text": "ok"}],
+                    }
+                ],
+                "output_text": "ok",
+            },
+        )
 
     transport = httpx.MockTransport(handler)
     client = openai.AsyncOpenAI(
@@ -57,7 +70,7 @@ async def test_generate_image_fallback() -> None:
     result = await repo.generate_image("prompt")
     assert result == b"img"
     assert calls[0] == "gpt-image-1"
-    assert calls[-1] == "dall-e-2"
+    assert calls[-1] == "dall-e-3"
 
 
 @pytest.mark.asyncio()

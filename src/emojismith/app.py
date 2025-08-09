@@ -48,7 +48,7 @@ def create_worker_emoji_service() -> EmojiCreationService:
     slack_repo = SlackAPIRepository(slack_client)
 
     openai_client = AsyncOpenAI(api_key=openai_api_key)
-    chat_model = os.getenv("OPENAI_CHAT_MODEL", "o3")
+    chat_model = os.getenv("OPENAI_CHAT_MODEL", "gpt-5")
     openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
 
     image_processor = PillowImageProcessor()

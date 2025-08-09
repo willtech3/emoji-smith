@@ -56,7 +56,7 @@ aws secretsmanager update-secret \
     "SLACK_BOT_TOKEN": "xoxb-your-bot-token",
     "SLACK_SIGNING_SECRET": "your-signing-secret",
     "OPENAI_API_KEY": "sk-your-openai-key",
-    "OPENAI_CHAT_MODEL": "o3",
+    "OPENAI_CHAT_MODEL": "gpt-5",
     "LOG_LEVEL": "INFO"
   }'
 ```
