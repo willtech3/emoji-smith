@@ -129,7 +129,7 @@ class OpenAIAPIRepository(OpenAIRepository):
                 prompt=prompt,
                 n=1,
                 size="1024x1024",
-                quality="standard",
+                quality="high",
             )
         except (
             openai.RateLimitError
