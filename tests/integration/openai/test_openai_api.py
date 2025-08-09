@@ -14,13 +14,11 @@ from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 @pytest.mark.integration()
 async def test_enhances_prompt_with_ai_assistance() -> None:
     client = AsyncMock()
-    client.chat.completions.create.return_value = AsyncMock(
-        choices=[AsyncMock(message=AsyncMock(content="ok"))]
-    )
+    client.responses.create.return_value = AsyncMock(output_text="ok")
     repo = OpenAIAPIRepository(client)
     result = await repo.enhance_prompt("ctx", "desc")
     assert result == "ok"
-    client.chat.completions.create.assert_called_once()
+    client.responses.create.assert_called_once()
 
 
 @pytest.mark.asyncio()
@@ -28,9 +26,7 @@ async def test_enhances_prompt_with_ai_assistance() -> None:
 async def test_enhance_prompt_uses_comprehensive_system_prompt() -> None:
     """Test that enhance_prompt uses a comprehensive system prompt for gpt-image."""
     client = AsyncMock()
-    client.chat.completions.create.return_value = AsyncMock(
-        choices=[AsyncMock(message=AsyncMock(content="enhanced prompt"))]
-    )
+    client.responses.create.return_value = AsyncMock(output_text="enhanced prompt")
     repo = OpenAIAPIRepository(client)
 
     context = "Team celebration"
@@ -40,12 +36,12 @@ async def test_enhance_prompt_uses_comprehensive_system_prompt() -> None:
 
     # Verify the API was called
     assert result == "enhanced prompt"
-    client.chat.completions.create.assert_called_once()
+    client.responses.create.assert_called_once()
 
     # Extract the system prompt used
-    call_args = client.chat.completions.create.call_args
-    messages = call_args.kwargs["messages"]
-    system_prompt = messages[0]["content"]
+    call_args = client.responses.create.call_args
+    input_msgs = call_args.kwargs["input"]
+    system_prompt = input_msgs[0]["content"] if isinstance(input_msgs, list) else None
 
     # Verify the system prompt contains key requirements for emoji generation
     assert "transparent background" in system_prompt.lower()
@@ -63,14 +59,12 @@ async def test_enhance_prompt_uses_comprehensive_system_prompt() -> None:
 async def test_uses_fallback_model_when_preferred_model_unavailable() -> None:
     client = AsyncMock()
     client.models.retrieve = AsyncMock(side_effect=[Exception(), None])
-    client.chat.completions.create.return_value = AsyncMock(
-        choices=[AsyncMock(message=AsyncMock(content="fine"))]
-    )
+    client.responses.create.return_value = AsyncMock(output_text="fine")
     repo = OpenAIAPIRepository(client, model="o3", fallback_models=["gpt-4"])
     result = await repo.enhance_prompt("ctx", "desc")
     assert result == "fine"
-    client.chat.completions.create.assert_called_once()
-    assert client.chat.completions.create.call_args.kwargs["model"] == "gpt-4"
+    client.responses.create.assert_called_once()
+    assert client.responses.create.call_args.kwargs["model"] == "gpt-4"
 
 
 @pytest.mark.asyncio()
@@ -84,9 +78,7 @@ async def test_uses_environment_configured_model_for_chat() -> None:
 
     client = AsyncMock()
     client.models.retrieve = AsyncMock(return_value=None)
-    client.chat.completions.create.return_value = AsyncMock(
-        choices=[AsyncMock(message=AsyncMock(content="response"))]
-    )
+    client.responses.create.return_value = AsyncMock(output_text="response")
 
     # Create repository with environment model
     repo = OpenAIAPIRepository(client, model=os.getenv("OPENAI_CHAT_MODEL", "o3"))
@@ -94,8 +86,8 @@ async def test_uses_environment_configured_model_for_chat() -> None:
 
     # Verify it uses the environment-configured model
     assert result == "response"
-    client.chat.completions.create.assert_called_once()
-    assert client.chat.completions.create.call_args.kwargs["model"] == "gpt-4-turbo"
+    client.responses.create.assert_called_once()
+    assert client.responses.create.call_args.kwargs["model"] == "gpt-4-turbo"
 
     # Clean up
     del os.environ["OPENAI_CHAT_MODEL"]
@@ -124,14 +116,14 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
 
 @pytest.mark.asyncio()
 @pytest.mark.integration()
-async def test_falls_back_to_dalle2_when_gpt_image_fails() -> None:
-    """Test that image generation falls back to DALL-E 2 when gpt-image-1 fails."""
+async def test_falls_back_to_dalle3_when_gpt_image_fails() -> None:
+    """Test that image generation falls back to DALL·E 3 when gpt-image-1 fails."""
     client = AsyncMock()
 
     # First call (gpt-image-1) fails
     client.images.generate.side_effect = [
         Exception("gpt-image-1 not available"),
-        AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # DALL-E 2 succeeds
+        AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # DALL·E 3 succeeds
     ]
 
     repo = OpenAIAPIRepository(client)
@@ -144,10 +136,10 @@ async def test_falls_back_to_dalle2_when_gpt_image_fails() -> None:
     first_call = client.images.generate.call_args_list[0]
     assert first_call.kwargs["model"] == "gpt-image-1"
 
-    # Second call should be DALL-E 2
+    # Second call should be DALL·E 3
     second_call = client.images.generate.call_args_list[1]
-    assert second_call.kwargs["model"] == "dall-e-2"
-    assert second_call.kwargs["size"] == "512x512"  # DALL-E 2 max size
+    assert second_call.kwargs["model"] == "dall-e-3"
+    assert second_call.kwargs["size"] == "1024x1024"
 
     # Should return the result
     assert isinstance(result, bytes)
@@ -157,7 +149,7 @@ async def test_falls_back_to_dalle2_when_gpt_image_fails() -> None:
 @pytest.mark.integration()
 async def test_enhance_prompt_raises_rate_limit_error() -> None:
     client = AsyncMock()
-    client.chat.completions.create.side_effect = openai.RateLimitError(
+    client.responses.create.side_effect = openai.RateLimitError(
         "rate limit",
         response=httpx.Response(429, request=httpx.Request("GET", "https://api.test")),
         body=None,

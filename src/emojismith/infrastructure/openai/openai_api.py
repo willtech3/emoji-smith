@@ -21,7 +21,7 @@ class OpenAIAPIRepository(OpenAIRepository):
     def __init__(
         self,
         client: AsyncOpenAI,
-        model: str = "o3",
+        model: str = "gpt-5",
         fallback_models: Iterable[str] | None = None,
     ) -> None:
         self._client = client
@@ -78,7 +78,10 @@ class OpenAIAPIRepository(OpenAIRepository):
             "3. Use vibrant contrasting colors.\n"
             "4. Avoid intricate detail.\n"
             "5. Incorporate message context when useful.\n"
-            "6. Return only the final prompt text.\n\n"
+            "6. Return only the final prompt text, "
+            "without quotes or extra formatting.\n"
+            "7. Use clear, concise phrasing suitable for "
+            "an image generation prompt.\n\n"
             "EXAMPLES:\n"
             'Context: "Just shipped new feature" / Description: "rocket"\n'
             'Prompt: "Cartoon rocket launching with bright orange flames, '
@@ -95,9 +98,9 @@ class OpenAIAPIRepository(OpenAIRepository):
         )
 
         try:
-            response = await self._client.chat.completions.create(
+            response = await self._client.responses.create(
                 model=self._model,
-                messages=[
+                input=[
                     {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
@@ -115,10 +118,10 @@ class OpenAIAPIRepository(OpenAIRepository):
             openai.RateLimitError
         ) as exc:  # pragma: no cover - network error simulated
             raise RateLimitExceededError(str(exc)) from exc
-        return response.choices[0].message.content
+        return response.output_text
 
     async def generate_image(self, prompt: str) -> bytes:
-        """Generate an image using gpt-image-1 with fallback to DALL-E 2."""
+        """Generate an image using gpt-image-1 with fallback to DALL·E 3."""
         # Try gpt-image-1 first
         try:
             response = await self._client.images.generate(
@@ -126,7 +129,6 @@ class OpenAIAPIRepository(OpenAIRepository):
                 prompt=prompt,
                 n=1,
                 size="1024x1024",
-                response_format="b64_json",
                 quality="standard",
             )
         except (
@@ -135,15 +137,15 @@ class OpenAIAPIRepository(OpenAIRepository):
             raise RateLimitExceededError(str(exc)) from exc
         except Exception as exc:
             self._logger.warning(
-                "gpt-image-1 failed, falling back to DALL-E 2: %s", exc
+                "gpt-image-1 failed, falling back to DALL·E 3: %s", exc
             )
-            # Fallback to DALL-E 2
+            # Fallback to DALL·E 3
             try:
                 response = await self._client.images.generate(
-                    model="dall-e-2",
+                    model="dall-e-3",
                     prompt=prompt,
                     n=1,
-                    size="512x512",  # DALL-E 2 max size
+                    size="1024x1024",
                     response_format="b64_json",
                 )
             except (
@@ -152,7 +154,7 @@ class OpenAIAPIRepository(OpenAIRepository):
                 raise RateLimitExceededError(str(rate_exc)) from rate_exc
             except Exception as fallback_exc:
                 self._logger.error(
-                    "Both gpt-image-1 and DALL-E 2 failed: %s", fallback_exc
+                    "Both gpt-image-1 and DALL·E 3 failed: %s", fallback_exc
                 )
                 raise fallback_exc
 

@@ -96,7 +96,7 @@ SLACK_SIGNING_SECRET=your-signing-secret-here
 
 # OpenAI API Configuration
 OPENAI_API_KEY=your-openai-api-key         # Required for emoji generation
-OPENAI_CHAT_MODEL=o3                       # Preferred chat model (optional)
+OPENAI_CHAT_MODEL=gpt-5                    # Preferred chat model (optional)
 
 # SQS Background Job Queue (Lambda only)
 SQS_QUEUE_URL=https://sqs.<region>.amazonaws.com/<account-id>/<queue-name>
