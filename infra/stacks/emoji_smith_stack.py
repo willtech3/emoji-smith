@@ -1,14 +1,29 @@
 import os
+
 from aws_cdk import (
-    Stack,
     Duration,
-    aws_lambda as _lambda,
-    aws_lambda_event_sources as lambda_event_sources,
+    Stack,
+)
+from aws_cdk import (
     aws_apigateway as apigateway,
-    aws_sqs as sqs,
-    aws_iam as iam,
-    aws_secretsmanager as secretsmanager,
+)
+from aws_cdk import (
     aws_ecr as ecr,
+)
+from aws_cdk import (
+    aws_iam as iam,
+)
+from aws_cdk import (
+    aws_lambda as _lambda,
+)
+from aws_cdk import (
+    aws_lambda_event_sources as lambda_event_sources,
+)
+from aws_cdk import (
+    aws_secretsmanager as secretsmanager,
+)
+from aws_cdk import (
+    aws_sqs as sqs,
 )
 from constructs import Construct
 
@@ -158,10 +173,14 @@ class EmojiSmithStack(Stack):
         self.secrets = secretsmanager.Secret(
             self,
             "EmojiSmithSecrets",
-            secret_name="emoji-smith/production",
+            secret_name=os.environ.get(
+                "EMOJISMITH_SECRETS_NAME", "emoji-smith/production"
+            ),
             description="Production secrets for Emoji Smith bot",
             generate_secret_string=secretsmanager.SecretStringGenerator(
-                secret_string_template='{"LOG_LEVEL":"INFO"}',
+                secret_string_template=os.environ.get(
+                    "EMOJISMITH_SECRETS_TEMPLATE", '{"LOG_LEVEL":"INFO"}'
+                ),
                 generate_string_key="generated_password",  # nosec B106
                 exclude_characters='"@/\\',
             ),
@@ -219,6 +238,7 @@ class EmojiSmithStack(Stack):
             code=_lambda.Code.from_asset(webhook_package_path),
             handler="webhook_handler.handler",
             runtime=_lambda.Runtime.PYTHON_3_12,
+            function_name="emoji-smith-webhook",
             timeout=Duration.seconds(30),  # Fast webhook processing
             memory_size=512,  # Reduced memory for minimal package
             role=lambda_role,
@@ -277,6 +297,7 @@ class EmojiSmithStack(Stack):
             code=worker_lambda_code,
             handler=_lambda.Handler.FROM_IMAGE,  # Required for container images
             runtime=_lambda.Runtime.FROM_IMAGE,  # Required for container images
+            function_name="emoji-smith-worker",
             timeout=Duration.minutes(15),
             memory_size=1024,  # More memory for image processing
             role=worker_lambda_role,

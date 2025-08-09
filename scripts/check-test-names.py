@@ -8,6 +8,7 @@ Examples of valid names:
 - test_emoji_generator_with_empty_prompt_returns_default
 - test_generated_emoji_empty_name_raises_error
 """
+
 from __future__ import annotations
 
 import ast
@@ -27,7 +28,7 @@ def validate_file(path: Path) -> list[str]:
         return errors
 
     for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             name = node.name
             if name.startswith("test_") and not PATTERN.fullmatch(name):
                 errors.append(f"{path}:{node.lineno} invalid test name '{name}'")

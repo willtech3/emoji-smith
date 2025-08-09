@@ -23,7 +23,7 @@ class SlackSignatureValidator(SignatureValidator):
 
     def __init__(
         self,
-        signing_secret: str | None = None,
+        signing_secret: str | bytes | None = None,
         replay_window_seconds: int = DEFAULT_REPLAY_WINDOW,
     ) -> None:
         """Initialize Slack signature validator.
@@ -34,7 +34,20 @@ class SlackSignatureValidator(SignatureValidator):
             replay_window_seconds: Time window in seconds for replay attack
                 prevention.
         """
-        self._signing_secret = signing_secret or os.getenv("SLACK_SIGNING_SECRET")
+        # Normalize signing secret to string
+        normalized_secret: str | None
+        if isinstance(signing_secret, bytes | bytearray):
+            normalized_secret = signing_secret.decode("utf-8")
+        else:
+            normalized_secret = signing_secret
+        env_secret = os.getenv("SLACK_SIGNING_SECRET")
+        resolved_secret: str | None
+        if normalized_secret is not None:
+            resolved_secret = normalized_secret
+        else:
+            resolved_secret = env_secret
+        # Type: ensure internal attribute is always str
+        self._signing_secret: str = resolved_secret or ""
         self._replay_window = replay_window_seconds
         self._logger = logging.getLogger(__name__)
 

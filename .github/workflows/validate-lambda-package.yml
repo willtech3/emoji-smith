@@ -5,9 +5,7 @@ on:
     paths:
       - 'src/webhook_handler.py'
       - 'src/emojismith/infrastructure/aws/webhook_handler.py'
-      - 'src/webhook/**'
       - 'scripts/build_webhook_package.sh'
-      - 'requirements-webhook.txt'
       - 'requirements-webhook.lock'
       - 'infra/stacks/emoji_smith_stack.py'
 

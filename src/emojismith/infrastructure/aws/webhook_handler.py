@@ -2,26 +2,29 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
-import urllib.parse
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+import aioboto3
+from fastapi import FastAPI, Request
 from mangum import Mangum
 from slack_sdk.web.async_client import AsyncWebClient
 
-from webhook.domain.webhook_request import WebhookRequest
-from webhook.handler import WebhookHandler
-from webhook.infrastructure.slack_api import SlackAPIRepository
-from webhook.infrastructure.slack_signature_validator import SlackSignatureValidator
-from webhook.infrastructure.sqs_job_queue import SQSJobQueue
-from webhook.security.webhook_security_service import WebhookSecurityService
+from emojismith.application.handlers.slack_webhook_handler import (
+    SlackWebhookHandler,
+    WebhookEventProcessor,
+)
+from emojismith.domain.services.webhook_security_service import WebhookSecurityService
+from emojismith.infrastructure.jobs.sqs_job_queue import SQSJobQueue
+from emojismith.infrastructure.security.slack_signature_validator import (
+    SlackSignatureValidator,
+)
+from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 
 try:
     # When deployed as Lambda package, secrets_loader is at root
-    from secrets_loader import AWSSecretsLoader  # type: ignore[import-not-found]
+    from secrets_loader import AWSSecretsLoader
 except ImportError:
     # When running locally or in tests, use relative import
     from .secrets_loader import AWSSecretsLoader
@@ -38,7 +41,7 @@ logging.getLogger().setLevel(logging.INFO)
 _secrets_loader = AWSSecretsLoader()
 
 
-def create_webhook_handler() -> tuple[WebhookHandler, WebhookSecurityService]:
+def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityService]:
     """Create webhook handler with minimal dependencies."""
     slack_token = os.getenv("SLACK_BOT_TOKEN")
     slack_signing_secret = os.getenv("SLACK_SIGNING_SECRET")
@@ -53,15 +56,17 @@ def create_webhook_handler() -> tuple[WebhookHandler, WebhookSecurityService]:
 
     slack_client = AsyncWebClient(token=slack_token)
     slack_repo = SlackAPIRepository(slack_client)
-    job_queue = SQSJobQueue(queue_url=queue_url)
+    # Use aioboto3-based SQS job queue from emojismith infrastructure
+    session = aioboto3.Session()
+    job_queue = SQSJobQueue(session=session, queue_url=queue_url)
 
-    signature_validator = SlackSignatureValidator(
-        signing_secret=slack_signing_secret.encode("utf-8")
-    )
+    signature_validator = SlackSignatureValidator(signing_secret=slack_signing_secret)
     security_service = WebhookSecurityService(signature_validator)
-
-    webhook_handler = WebhookHandler(slack_repo=slack_repo, job_queue=job_queue)
-    return webhook_handler, security_service
+    processor = WebhookEventProcessor(slack_repo=slack_repo, job_queue=job_queue)
+    slack_handler = SlackWebhookHandler(
+        security_service=security_service, event_processor=processor
+    )
+    return slack_handler, security_service
 
 
 if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
@@ -94,63 +99,14 @@ def _create_app() -> Any:
         logger.info("Received request to /slack/events")
         body = await request.body()
         headers = dict(request.headers)
-        logger.info(f"Request headers: {headers}")
-        logger.info(f"Request body length: {len(body)}")
-
-        # Verify Slack signature
-        timestamp = headers.get("x-slack-request-timestamp", "")
-        signature = headers.get("x-slack-signature", "")
-
-        webhook_request = WebhookRequest(
-            body=body, timestamp=timestamp, signature=signature
-        )
-
-        if not security_service.is_authentic_webhook(webhook_request):
-            raise HTTPException(status_code=401, detail="Invalid signature")
-
-        # Parse payload
-        try:
-            payload = json.loads(body.decode("utf-8"))
-            logger.info("Received JSON payload: %s", payload.get("type", "unknown"))
-        except Exception:
-            # Handle URL-encoded form data
-            form_data = urllib.parse.parse_qs(body.decode("utf-8"))
-            payload_str = form_data.get("payload", ["{}"])[0]
-            payload = json.loads(payload_str)
-            logger.info(
-                "Received form-encoded payload: %s", payload.get("type", "unknown")
-            )
-
-        # Log full payload structure for debugging
-        logger.info("Full payload keys: %s", list(payload.keys()))
-
-        # Handle URL verification
-        if payload.get("type") == "url_verification":
-            logger.info("Handling URL verification challenge")
-            return {"challenge": payload.get("challenge")}
-
-        # Route to appropriate handler
-        event_type = payload.get("type")
-        logger.info("Processing event type: %s", event_type)
-
-        if event_type == "message_action":
-            logger.info("Handling message action")
-            return await webhook_handler.handle_message_action(payload)
-        elif event_type == "view_submission":
-            logger.info("Handling view submission")
-            return await webhook_handler.handle_modal_submission(payload)
-        elif event_type == "block_actions":
-            logger.info("Handling block actions")
-            return await webhook_handler.handle_block_actions(payload)
-
-        logger.warning("Unhandled event type: %s", event_type)
-        return {"status": "ignored"}
+        return await webhook_handler.handle_event(body, headers)
 
     @app.post("/slack/interactive")
     async def slack_interactive(request: Request) -> dict:
         logger.info("Received request to /slack/interactive")
-        # Same as events endpoint for interactive components
-        return await slack_events(request)
+        body = await request.body()
+        headers = dict(request.headers)
+        return await webhook_handler.handle_event(body, headers)
 
     @app.post("/webhook")
     async def webhook_legacy(request: Request) -> dict:
