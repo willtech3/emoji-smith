@@ -86,7 +86,7 @@ pre-commit run mypy --all-files -v
 2. **Missing dependencies in webhook package**
    ```bash
    # Check webhook-specific requirements
-   cat requirements-webhook.txt
+  cat requirements-webhook.lock
 
    # Rebuild webhook package
    ./scripts/build_webhook_package.sh
@@ -94,7 +94,7 @@ pre-commit run mypy --all-files -v
 
 3. **Import errors in Lambda**
    - Check CloudWatch logs for specific import error
-   - Ensure all required packages are in requirements-webhook.txt
+  - Ensure all required packages are in requirements-webhook.lock
 
 ---
 
