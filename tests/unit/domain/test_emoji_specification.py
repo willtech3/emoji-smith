@@ -26,8 +26,21 @@ class TestEmojiSpecification:
         prompt = spec.to_prompt()
         assert "cartoon" in prompt
 
-    def test_emoji_specification_missing_fields_raise_error(self) -> None:
-        with pytest.raises(ValidationError):
-            EmojiSpecification(context="", description="desc")
+    def test_emoji_specification_missing_description_raises_error(self) -> None:
+        """Test that empty description still raises a validation error."""
         with pytest.raises(ValidationError):
             EmojiSpecification(context="ctx", description="")
+
+    def test_emoji_specification_empty_context_allowed(self) -> None:
+        """Test that empty context is allowed for messages without text."""
+        spec = EmojiSpecification(context="", description="thumbs up emoji")
+        assert spec.to_prompt().startswith("thumbs up emoji")
+
+    def test_emoji_specification_to_prompt_with_empty_context(self) -> None:
+        """Test prompt construction with empty context uses only description."""
+        style = EmojiStylePreferences(style_type=StyleType.PIXEL_ART)
+        spec = EmojiSpecification(context="", description="facepalm", style=style)
+        prompt = spec.to_prompt()
+        assert prompt.startswith("facepalm")
+        assert "pixel_art" in prompt
+
