@@ -117,13 +117,13 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
 @pytest.mark.asyncio()
 @pytest.mark.integration()
 async def test_falls_back_to_dalle3_when_gpt_image_fails() -> None:
-    """Test that image generation falls back to DALL·E 3 when gpt-image-1 fails."""
+    """Test fallback to gpt-image-1-mini when primary model fails."""
     client = AsyncMock()
 
     # First call (gpt-image-1) fails
     client.images.generate.side_effect = [
         Exception("gpt-image-1 not available"),
-        AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # DALL·E 3 succeeds
+        AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # gpt-image-1-mini succeeds
     ]
 
     repo = OpenAIAPIRepository(client)
@@ -136,9 +136,9 @@ async def test_falls_back_to_dalle3_when_gpt_image_fails() -> None:
     first_call = client.images.generate.call_args_list[0]
     assert first_call.kwargs["model"] == "gpt-image-1"
 
-    # Second call should be DALL·E 3
+    # Second call should be gpt-image-1-mini
     second_call = client.images.generate.call_args_list[1]
-    assert second_call.kwargs["model"] == "dall-e-3"
+    assert second_call.kwargs["model"] == "gpt-image-1-mini"
     assert second_call.kwargs["size"] == "1024x1024"
 
     # Should return the result

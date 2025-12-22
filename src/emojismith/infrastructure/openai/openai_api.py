@@ -12,10 +12,13 @@ import openai
 from openai import AsyncOpenAI
 
 from emojismith.domain.errors import RateLimitExceededError
+from emojismith.domain.repositories.image_generation_repository import (
+    ImageGenerationRepository,
+)
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
 
 
-class OpenAIAPIRepository(OpenAIRepository):
+class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
     """Concrete OpenAI repository using openai package."""
 
     def __init__(
@@ -121,7 +124,7 @@ class OpenAIAPIRepository(OpenAIRepository):
         return response.output_text
 
     async def generate_image(self, prompt: str) -> bytes:
-        """Generate an image using gpt-image-1 with fallback to DALL·E 3."""
+        """Generate an image using gpt-image-1 with fallback to gpt-image-1-mini."""
         # Try gpt-image-1 first
         try:
             response = await self._client.images.generate(
@@ -130,6 +133,7 @@ class OpenAIAPIRepository(OpenAIRepository):
                 n=1,
                 size="1024x1024",
                 quality="high",
+                background="transparent",  # Better for emojis
             )
         except (
             openai.RateLimitError
@@ -137,16 +141,16 @@ class OpenAIAPIRepository(OpenAIRepository):
             raise RateLimitExceededError(str(exc)) from exc
         except Exception as exc:
             self._logger.warning(
-                "gpt-image-1 failed, falling back to DALL·E 3: %s", exc
+                "gpt-image-1 failed, falling back to gpt-image-1-mini: %s", exc
             )
-            # Fallback to DALL·E 3
+            # Fallback to gpt-image-1-mini (fast, cost-effective)
             try:
                 response = await self._client.images.generate(
-                    model="dall-e-3",
+                    model="gpt-image-1-mini",
                     prompt=prompt,
                     n=1,
                     size="1024x1024",
-                    response_format="b64_json",
+                    background="transparent",
                 )
             except (
                 openai.RateLimitError
@@ -154,7 +158,7 @@ class OpenAIAPIRepository(OpenAIRepository):
                 raise RateLimitExceededError(str(rate_exc)) from rate_exc
             except Exception as fallback_exc:
                 self._logger.error(
-                    "Both gpt-image-1 and DALL·E 3 failed: %s", fallback_exc
+                    "Both gpt-image-1 and gpt-image-1-mini failed: %s", fallback_exc
                 )
                 raise fallback_exc
 

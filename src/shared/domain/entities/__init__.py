@@ -33,6 +33,7 @@ class EmojiGenerationJob:
     style_preferences: EmojiStylePreferences = field(
         default_factory=EmojiStylePreferences
     )
+    image_provider: str = "openai"  # Default for backward compatibility
 
     @classmethod
     def create_new(
@@ -48,6 +49,7 @@ class EmojiGenerationJob:
         sharing_preferences: EmojiSharingPreferences,
         style_preferences: EmojiStylePreferences | None = None,
         thread_ts: str | None = None,
+        image_provider: str = "openai",
     ) -> "EmojiGenerationJob":
         """Create a new emoji generation job."""
         return cls(
@@ -64,6 +66,7 @@ class EmojiGenerationJob:
             thread_ts=thread_ts,
             created_at=datetime.now(UTC),
             style_preferences=style_preferences or EmojiStylePreferences(),
+            image_provider=image_provider,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -82,6 +85,7 @@ class EmojiGenerationJob:
             "style_preferences": self.style_preferences.to_dict(),
             "thread_ts": self.thread_ts,
             "created_at": self.created_at.isoformat(),
+            "image_provider": self.image_provider,
         }
 
     @classmethod
@@ -105,6 +109,7 @@ class EmojiGenerationJob:
             ),
             thread_ts=data.get("thread_ts"),
             created_at=datetime.fromisoformat(data["created_at"]),
+            image_provider=data.get("image_provider", "openai"),
         )
 
     def mark_as_processing(self) -> None:

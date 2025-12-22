@@ -317,6 +317,9 @@ class EmojiSmithStack(Stack):
                 "OPENAI_CHAT_MODEL": self.secrets.secret_value_from_json(
                     "OPENAI_CHAT_MODEL"
                 ).unsafe_unwrap(),
+                "GOOGLE_API_KEY": self.secrets.secret_value_from_json(
+                    "GOOGLE_API_KEY"
+                ).unsafe_unwrap(),
             },
         )
 
