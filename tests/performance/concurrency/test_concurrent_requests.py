@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

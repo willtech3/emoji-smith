@@ -100,19 +100,10 @@ async def test_background_worker_processes_job_end_to_end():
     # Create stubbed OpenAI client at HTTP boundary
     mock_openai_client = AsyncMock()
     mock_openai_client.models = SimpleNamespace(retrieve=AsyncMock(return_value=None))
-    mock_openai_client.chat = SimpleNamespace(
-        completions=SimpleNamespace(
-            create=AsyncMock(
-                return_value=SimpleNamespace(
-                    choices=[
-                        SimpleNamespace(
-                            message=SimpleNamespace(
-                                content="Fire emoji based on urgency"
-                            )
-                        )
-                    ]
-                )
-            )
+    # Mock the responses.create method (used by enhance_prompt)
+    mock_openai_client.responses = SimpleNamespace(
+        create=AsyncMock(
+            return_value=SimpleNamespace(output_text="Fire emoji based on urgency")
         )
     )
     mock_openai_client.images = SimpleNamespace(
@@ -122,67 +113,73 @@ async def test_background_worker_processes_job_end_to_end():
     )
 
     # Create real emoji service with stubbed external clients
+    # Must patch AsyncOpenAI in both app.py AND the factory module
+    # Keep patches active during entire job processing (factory creates clients lazily)
     with (
         patch("emojismith.app.AsyncWebClient", return_value=mock_slack_client),
         patch("emojismith.app.AsyncOpenAI", return_value=mock_openai_client),
+        patch(
+            "emojismith.infrastructure.factories.image_generator_factory.AsyncOpenAI",
+            return_value=mock_openai_client,
+        ),
     ):
         emoji_service = create_worker_emoji_service()
 
-    # Create in-memory queue
-    job_queue = InMemoryJobQueue()
+        # Create in-memory queue
+        job_queue = InMemoryJobQueue()
 
-    # Create worker with real service
-    worker = BackgroundWorker(
-        job_queue=job_queue,
-        emoji_service=emoji_service,
-        max_concurrent_jobs=1,
-        poll_interval=0,  # No delay for testing
-    )
+        # Create worker with real service
+        worker = BackgroundWorker(
+            job_queue=job_queue,
+            emoji_service=emoji_service,
+            max_concurrent_jobs=1,
+            poll_interval=0,  # No delay for testing
+        )
 
-    # Create test job
-    job = EmojiGenerationJob.create_new(
-        message_text="Deploy on Friday? Are you crazy?",
-        user_description="fire emoji for urgency",
-        emoji_name="fire_emoji",
-        user_id="U123456",
-        channel_id="C789012",
-        timestamp="1234567890.123456",
-        team_id="T999999",
-        sharing_preferences=EmojiSharingPreferences.default_for_context(),
-        style_preferences=EmojiStylePreferences(),
-    )
+        # Create test job
+        job = EmojiGenerationJob.create_new(
+            message_text="Deploy on Friday? Are you crazy?",
+            user_description="fire emoji for urgency",
+            emoji_name="fire_emoji",
+            user_id="U123456",
+            channel_id="C789012",
+            timestamp="1234567890.123456",
+            team_id="T999999",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            style_preferences=EmojiStylePreferences(),
+        )
 
-    # Enqueue job
-    await job_queue.enqueue_job(job)
-    assert job_queue.get_pending_jobs() == 1
+        # Enqueue job
+        await job_queue.enqueue_job(job)
+        assert job_queue.get_pending_jobs() == 1
 
-    # Start worker and let it process the job
-    worker_task = asyncio.create_task(worker.start())
+        # Start worker and let it process the job
+        worker_task = asyncio.create_task(worker.start())
 
-    # Wait for job to be processed using deterministic signal
-    job_completed = await job_queue.wait_for_job(job.job_id, timeout=2.0)
-    assert job_completed, "Job did not complete within timeout"
+        # Wait for job to be processed using deterministic signal
+        job_completed = await job_queue.wait_for_job(job.job_id, timeout=2.0)
+        assert job_completed, "Job did not complete within timeout"
 
-    # Stop worker
-    await worker.stop()
+        # Stop worker
+        await worker.stop()
 
-    # Cancel the worker task
-    worker_task.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await worker_task
+        # Cancel the worker task
+        worker_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await worker_task
 
-    # Verify job was processed using public API
-    assert job_queue.get_pending_jobs() == 0
-    assert job_queue.get_job_status(job.job_id) == "completed"
+        # Verify job was processed using public API
+        assert job_queue.get_pending_jobs() == 0
+        assert job_queue.get_job_status(job.job_id) == "completed"
 
-    # Verify Slack file upload was called
-    mock_slack_client.files_upload_v2.assert_called_once()
-    upload_call = mock_slack_client.files_upload_v2.call_args
-    assert upload_call.kwargs["filename"] == "fire_emoji.png"
-    assert upload_call.kwargs["channels"] == ["C789012"]
+        # Verify Slack file upload was called
+        mock_slack_client.files_upload_v2.assert_called_once()
+        upload_call = mock_slack_client.files_upload_v2.call_args
+        assert upload_call.kwargs["filename"] == "fire_emoji.png"
+        assert upload_call.kwargs["channels"] == ["C789012"]
 
-    # Verify OpenAI was called for generation
-    mock_openai_client.images.generate.assert_called_once()
+        # Verify OpenAI was called for generation
+        mock_openai_client.images.generate.assert_called_once()
 
     # Log test execution time for performance monitoring
     elapsed = time.time() - start_time
@@ -221,14 +218,9 @@ async def test_worker_handles_multiple_jobs_concurrently():
 
     mock_openai_client = AsyncMock()
     mock_openai_client.models = SimpleNamespace(retrieve=AsyncMock(return_value=None))
-    mock_openai_client.chat = SimpleNamespace(
-        completions=SimpleNamespace(
-            create=AsyncMock(
-                return_value=SimpleNamespace(
-                    choices=[SimpleNamespace(message=SimpleNamespace(content="emoji"))]
-                )
-            )
-        )
+    # Mock the responses.create method (used by enhance_prompt)
+    mock_openai_client.responses = SimpleNamespace(
+        create=AsyncMock(return_value=SimpleNamespace(output_text="emoji"))
     )
     mock_openai_client.images = SimpleNamespace(
         generate=AsyncMock(
@@ -236,58 +228,64 @@ async def test_worker_handles_multiple_jobs_concurrently():
         )
     )
 
+    # Must patch AsyncOpenAI in both app.py AND the factory module
+    # Keep patches active during entire job processing (factory creates clients lazily)
     with (
         patch("emojismith.app.AsyncWebClient", return_value=mock_slack_client),
         patch("emojismith.app.AsyncOpenAI", return_value=mock_openai_client),
+        patch(
+            "emojismith.infrastructure.factories.image_generator_factory.AsyncOpenAI",
+            return_value=mock_openai_client,
+        ),
     ):
         emoji_service = create_worker_emoji_service()
 
-    job_queue = InMemoryJobQueue()
-    worker = BackgroundWorker(
-        job_queue=job_queue,
-        emoji_service=emoji_service,
-        max_concurrent_jobs=3,
-        poll_interval=0,
-    )
-
-    # Create multiple jobs
-    jobs = []
-    for i in range(3):
-        job = EmojiGenerationJob.create_new(
-            message_text=f"Test message {i}",
-            user_description=f"test emoji {i}",
-            emoji_name=f"test_emoji_{i}",
-            user_id="U123456",
-            channel_id="C789012",
-            timestamp=f"123456789{i}.123456",
-            team_id="T999999",
-            sharing_preferences=EmojiSharingPreferences.default_for_context(),
-            style_preferences=EmojiStylePreferences(),
+        job_queue = InMemoryJobQueue()
+        worker = BackgroundWorker(
+            job_queue=job_queue,
+            emoji_service=emoji_service,
+            max_concurrent_jobs=3,
+            poll_interval=0,
         )
-        await job_queue.enqueue_job(job)
-        jobs.append(job)
 
-    # Start worker
-    worker_task = asyncio.create_task(worker.start())
+        # Create multiple jobs
+        jobs = []
+        for i in range(3):
+            job = EmojiGenerationJob.create_new(
+                message_text=f"Test message {i}",
+                user_description=f"test emoji {i}",
+                emoji_name=f"test_emoji_{i}",
+                user_id="U123456",
+                channel_id="C789012",
+                timestamp=f"123456789{i}.123456",
+                team_id="T999999",
+                sharing_preferences=EmojiSharingPreferences.default_for_context(),
+                style_preferences=EmojiStylePreferences(),
+            )
+            await job_queue.enqueue_job(job)
+            jobs.append(job)
 
-    # Wait for all jobs to be processed using deterministic signals
-    wait_tasks = [job_queue.wait_for_job(job.job_id, timeout=2.0) for job in jobs]
-    results = await asyncio.gather(*wait_tasks)
-    assert all(results), "Not all jobs completed within timeout"
+        # Start worker
+        worker_task = asyncio.create_task(worker.start())
 
-    # Stop worker
-    await worker.stop()
-    worker_task.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await worker_task
+        # Wait for all jobs to be processed using deterministic signals
+        wait_tasks = [job_queue.wait_for_job(job.job_id, timeout=2.0) for job in jobs]
+        results = await asyncio.gather(*wait_tasks)
+        assert all(results), "Not all jobs completed within timeout"
 
-    # Verify all jobs were processed using public API
-    assert job_queue.get_pending_jobs() == 0
-    for job in jobs:
-        assert job_queue.get_job_status(job.job_id) == "completed"
+        # Stop worker
+        await worker.stop()
+        worker_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await worker_task
 
-    # Verify Slack was called for each job
-    assert mock_slack_client.files_upload_v2.call_count == 3
+        # Verify all jobs were processed using public API
+        assert job_queue.get_pending_jobs() == 0
+        for job in jobs:
+            assert job_queue.get_job_status(job.job_id) == "completed"
+
+        # Verify Slack was called for each job
+        assert mock_slack_client.files_upload_v2.call_count == 3
 
     # Log test execution time for performance monitoring
     elapsed = time.time() - start_time
