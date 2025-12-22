@@ -42,8 +42,34 @@ Both lambdas require:
 SLACK_BOT_TOKEN=xoxb-your-token
 SLACK_SIGNING_SECRET=your-secret
 OPENAI_API_KEY=sk-your-key
+GOOGLE_API_KEY=your-google-key     # Optional: enables Gemini provider
 SQS_QUEUE_URL=https://sqs.region.amazonaws.com/account/queue-name
 ```
+
+## Multi-Provider Image Generation
+
+The worker Lambda supports multiple image generation providers:
+
+### Provider Selection Flow
+```
+Slack Modal → User selects provider → Job queued with provider field
+    ↓
+Worker Lambda → ImageGeneratorFactory.create(provider)
+    ↓
+Provider-specific repository (OpenAI or Gemini) generates image
+```
+
+### Supported Providers
+
+| Provider | Models | Fallback |
+|----------|--------|----------|
+| OpenAI | gpt-image-1 | gpt-image-1-mini |
+| Google Gemini | gemini-3-pro-image-preview | gemini-2.5-flash-image |
+
+### Architecture Benefits
+- **Factory Pattern**: `ImageGeneratorFactory` creates provider instances on-demand
+- **Per-Job Selection**: Each job specifies its provider (stored in `image_provider` field)
+- **Backward Compatibility**: Jobs without `image_provider` default to OpenAI
 
 ## Deployment
 

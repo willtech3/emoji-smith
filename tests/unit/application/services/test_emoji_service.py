@@ -1,14 +1,13 @@
 """Tests for emoji creation service."""
 
 from io import BytesIO
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from PIL import Image
 
 from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.domain.entities.generated_emoji import GeneratedEmoji
-from emojismith.domain.services.generation_service import EmojiGenerationService
 
 
 @pytest.mark.unit()
@@ -21,8 +20,39 @@ class TestEmojiCreationService:
         return AsyncMock()
 
     @pytest.fixture()
-    def mock_emoji_generator(self):
-        return AsyncMock(spec=EmojiGenerationService)
+    def mock_image_generator(self):
+        """Mock image generator (created by factory)."""
+        return AsyncMock()
+
+    @pytest.fixture()
+    def mock_image_generator_factory(self, mock_image_generator):
+        """Mock factory that creates image generators."""
+        factory = MagicMock()
+        factory.create.return_value = mock_image_generator
+        return factory
+
+    @pytest.fixture()
+    def mock_image_processor(self):
+        """Mock image processor."""
+        processor = MagicMock()
+        # Return the same data (no-op processing)
+        processor.resize_for_emoji.side_effect = lambda data: data
+        return processor
+
+    @pytest.fixture()
+    def mock_emoji_validator(self):
+        """Mock emoji validator."""
+        validator = MagicMock()
+        # Validator returns the emoji as-is
+        validator.validate_and_create.side_effect = lambda data, name: GeneratedEmoji(
+            image_data=data, name=name
+        )
+        return validator
+
+    @pytest.fixture()
+    def mock_style_template_manager(self):
+        """Mock style template manager."""
+        return MagicMock()
 
     @pytest.fixture()
     def mock_job_queue(self):
@@ -45,33 +75,21 @@ class TestEmojiCreationService:
     def emoji_service(
         self,
         mock_slack_repo,
-        mock_emoji_generator,
+        mock_image_generator_factory,
+        mock_image_processor,
+        mock_emoji_validator,
+        mock_style_template_manager,
         mock_build_prompt_use_case,
         mock_file_sharing_repo,
     ):
         """Emoji creation service with mocked dependencies."""
         return EmojiCreationService(
             slack_repo=mock_slack_repo,
-            emoji_generator=mock_emoji_generator,
             build_prompt_use_case=mock_build_prompt_use_case,
-            file_sharing_repo=mock_file_sharing_repo,
-        )
-
-    @pytest.fixture()
-    def emoji_service_with_queue(
-        self,
-        mock_slack_repo,
-        mock_emoji_generator,
-        mock_build_prompt_use_case,
-        mock_job_queue,
-        mock_file_sharing_repo,
-    ):
-        """Emoji creation service with job queue enabled."""
-        return EmojiCreationService(
-            slack_repo=mock_slack_repo,
-            emoji_generator=mock_emoji_generator,
-            build_prompt_use_case=mock_build_prompt_use_case,
-            job_queue=mock_job_queue,
+            image_generator_factory=mock_image_generator_factory,
+            image_processor=mock_image_processor,
+            emoji_validator=mock_emoji_validator,
+            style_template_manager=mock_style_template_manager,
             file_sharing_repo=mock_file_sharing_repo,
         )
 
@@ -79,7 +97,7 @@ class TestEmojiCreationService:
         self,
         emoji_service,
         mock_slack_repo,
-        mock_emoji_generator,
+        mock_image_generator,
         mock_file_sharing_repo,
     ):
         """Test complete emoji generation job processing."""
@@ -105,13 +123,11 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_emoji_generator.generate_from_prompt.return_value = GeneratedEmoji(
-            image_data=buf.getvalue(), name="facepalm"
-        )
+        mock_image_generator.generate_image.return_value = buf.getvalue()
 
         await emoji_service.process_emoji_generation_job_dict(job_data)
 
-        mock_emoji_generator.generate_from_prompt.assert_called_once()
+        mock_image_generator.generate_image.assert_called_once()
         # For standard workspace, should use file sharing instead of direct upload
         mock_file_sharing_repo.share_emoji_file.assert_called_once()
         mock_slack_repo.upload_emoji.assert_not_called()
@@ -120,7 +136,7 @@ class TestEmojiCreationService:
         self,
         emoji_service,
         mock_slack_repo,
-        mock_emoji_generator,
+        mock_image_generator,
         mock_file_sharing_repo,
     ):
         """Test processing emoji generation job from job entity."""
@@ -129,7 +145,6 @@ class TestEmojiCreationService:
 
         from PIL import Image
 
-        from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from shared.domain.entities import EmojiGenerationJob
         from shared.domain.value_objects import EmojiSharingPreferences
@@ -155,31 +170,22 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_emoji_generator.generate_from_prompt.return_value = GeneratedEmoji(
-            image_data=buf.getvalue(), name="facepalm_reaction"
-        )
+        mock_image_generator.generate_image.return_value = buf.getvalue()
 
         # Act
         await emoji_service.process_emoji_generation_job(job)
 
         # Assert
-        mock_emoji_generator.generate_from_prompt.assert_called_once()
+        mock_image_generator.generate_image.assert_called_once()
         # For standard workspace, should use file sharing instead of direct upload
         mock_file_sharing_repo.share_emoji_file.assert_called_once()
         mock_slack_repo.upload_emoji.assert_not_called()
-
-        # Verify the call arguments
-        generate_call = mock_emoji_generator.generate_from_prompt.call_args
-        # First argument should be the enhanced prompt
-        assert generate_call[0][0] == "a happy face emoji in cartoon style"
-        # Second argument should be the emoji name
-        assert generate_call[0][1] == "facepalm_reaction"
 
     async def test_process_emoji_generation_job_upload_failure(
         self,
         emoji_service,
         mock_slack_repo,
-        mock_emoji_generator,
+        mock_image_generator,
         mock_file_sharing_repo,
         caplog,
     ):
@@ -189,7 +195,6 @@ class TestEmojiCreationService:
 
         from PIL import Image
 
-        from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from shared.domain.entities import EmojiGenerationJob
         from shared.domain.value_objects import EmojiSharingPreferences
@@ -213,9 +218,7 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_emoji_generator.generate_from_prompt.return_value = GeneratedEmoji(
-            image_data=buf.getvalue(), name="test_emoji"
-        )
+        mock_image_generator.generate_image.return_value = buf.getvalue()
 
         # Act - should complete gracefully, not raise exception
         await emoji_service.process_emoji_generation_job(job)
@@ -230,7 +233,7 @@ class TestEmojiCreationService:
         self,
         emoji_service,
         mock_slack_repo,
-        mock_emoji_generator,
+        mock_image_generator,
         mock_file_sharing_repo,
         caplog,
     ):
@@ -240,7 +243,6 @@ class TestEmojiCreationService:
 
         from PIL import Image
 
-        from emojismith.domain.entities.generated_emoji import GeneratedEmoji
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
 
         job_data = {
@@ -261,9 +263,7 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_emoji_generator.generate_from_prompt.return_value = GeneratedEmoji(
-            image_data=buf.getvalue(), name="test_emoji"
-        )
+        mock_image_generator.generate_image.return_value = buf.getvalue()
 
         # Act - should complete gracefully, not raise exception
         await emoji_service.process_emoji_generation_job_dict(job_data)

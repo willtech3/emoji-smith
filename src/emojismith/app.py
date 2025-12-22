@@ -14,8 +14,8 @@ from emojismith.domain.services.emoji_sharing_service import (
     WorkspaceType,
 )
 from emojismith.domain.services.emoji_validation_service import EmojiValidationService
-from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.services.style_template_manager import StyleTemplateManager
+from emojismith.infrastructure.factories import ImageGeneratorFactory
 from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
 from emojismith.infrastructure.image.processing import PillowImageProcessor
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
@@ -38,18 +38,27 @@ def create_worker_emoji_service() -> EmojiCreationService:
 
     slack_token = os.getenv("SLACK_BOT_TOKEN")
     openai_api_key = os.getenv("OPENAI_API_KEY")
+    google_api_key = os.getenv("GOOGLE_API_KEY")
 
     if not slack_token:
         raise ValueError("SLACK_BOT_TOKEN environment variable is required")
     if not openai_api_key:
         raise ValueError("OPENAI_API_KEY environment variable is required")
+    # GOOGLE_API_KEY is optional - Gemini provider won't work without it
 
     slack_client = AsyncWebClient(token=slack_token)
     slack_repo = SlackAPIRepository(slack_client)
 
+    # OpenAI client for prompt enhancement (chat completion)
     openai_client = AsyncOpenAI(api_key=openai_api_key)
     chat_model = os.getenv("OPENAI_CHAT_MODEL", "gpt-5")
     openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
+
+    # Create image generator factory with both API keys
+    image_generator_factory = ImageGeneratorFactory(
+        openai_api_key=openai_api_key,
+        google_api_key=google_api_key,
+    )
 
     image_processor = PillowImageProcessor()
     image_validator = PILImageValidator()
@@ -59,16 +68,9 @@ def create_worker_emoji_service() -> EmojiCreationService:
     style_template_repository = StyleTemplateConfigRepository()
     style_template_manager = StyleTemplateManager(style_template_repository)
 
-    generator = EmojiGenerationService(
-        openai_repo=openai_repo,
-        image_processor=image_processor,
-        emoji_validator=emoji_validation_service,
-        style_template_manager=style_template_manager,
-    )
-
-    # Create the build prompt use case
+    # Create the build prompt use case (uses OpenAI for prompt enhancement)
     build_prompt_use_case = BuildPromptUseCase(
-        openai_repository=openai_repo,
+        prompt_enhancer=openai_repo,
         prompt_builder_service=None,  # Will use default PromptBuilderService
     )
 
@@ -94,8 +96,11 @@ def create_worker_emoji_service() -> EmojiCreationService:
 
     return EmojiCreationService(
         slack_repo=slack_repo,
-        emoji_generator=generator,
         build_prompt_use_case=build_prompt_use_case,
+        image_generator_factory=image_generator_factory,
+        image_processor=image_processor,
+        emoji_validator=emoji_validation_service,
+        style_template_manager=style_template_manager,
         job_queue=None,
         file_sharing_repo=file_sharing_repo,
         sharing_service=sharing_service,

@@ -11,7 +11,8 @@ RUN pip install --no-cache-dir \
     pillow==11.2.1 \
     mangum==0.19.0 \
     python-dotenv==1.1.0 \
-    pydantic==2.11.7 && \
+    pydantic==2.11.7 \
+    google-genai>=1.0.0 && \
     # Optimize container size
     rm -rf /root/.cache/pip/* && \
     find /var/lang -name "*.pyc" -delete && \

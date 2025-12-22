@@ -70,7 +70,7 @@ async def test_generate_image_fallback() -> None:
     result = await repo.generate_image("prompt")
     assert result == b"img"
     assert calls[0] == "gpt-image-1"
-    assert calls[-1] == "dall-e-3"
+    assert calls[-1] == "gpt-image-1-mini"
 
 
 @pytest.mark.asyncio()

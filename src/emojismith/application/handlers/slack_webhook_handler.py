@@ -84,6 +84,39 @@ class WebhookEventProcessor:
                     },
                     "label": {"type": "plain_text", "text": "Description"},
                 },
+                {
+                    "type": "input",
+                    "block_id": "image_provider_block",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "image_provider_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select image model",
+                        },
+                        "options": [
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "OpenAI GPT-Image",
+                                },
+                                "value": "openai",
+                            },
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Google Gemini",
+                                },
+                                "value": "google_gemini",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "OpenAI GPT-Image"},
+                            "value": "openai",
+                        },
+                    },
+                    "label": {"type": "plain_text", "text": "Image Model"},
+                },
             ],
             "submit": {"type": "plain_text", "text": "✨ Generate"},
             "private_metadata": json.dumps(
@@ -106,6 +139,13 @@ class WebhookEventProcessor:
         try:
             description = state["emoji_description"]["description"]["value"]
             emoji_name = state["emoji_name"]["name"]["value"]
+            # Extract image provider selection (default to openai for backwards compat)
+            image_provider = (
+                state.get("image_provider_block", {})
+                .get("image_provider_select", {})
+                .get("selected_option", {})
+                .get("value", "openai")
+            )
         except Exception as exc:
             self._logger.error("Malformed modal submission: %s", exc)
             raise ValueError("Invalid modal submission payload") from exc
@@ -128,6 +168,7 @@ class WebhookEventProcessor:
             team_id=metadata.get("team_id", ""),
             sharing_preferences=sharing_preferences,
             emoji_name=emoji_name,
+            image_provider=image_provider,
         )
 
         await self._job_queue.enqueue_job(job)

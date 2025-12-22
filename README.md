@@ -10,6 +10,7 @@ Emoji Smith is a Slack bot that automatically generates custom emojis using Open
 
 - **🎯 Context-Aware Generation**: Analyzes the original message for relevant emoji creation
 - **🎨 Style Customization**: Choose from cartoon, realistic, minimalist, or pixel art styles
+- **🔄 Multi-Provider Support**: Choose between OpenAI GPT-Image or Google Gemini for image generation
 - **⚡ Instant Application**: Generated emoji is automatically added as a reaction
 - **🔒 Secure Deployment**: AWS Lambda with proper secrets management
 - **🚀 Zero Downtime**: Serverless architecture scales automatically
@@ -29,8 +30,11 @@ graph TB
     end
 
     subgraph "AI Generation"
-        E -->|Generate| F[OpenAI gpt-image-1]
-        F -->|Upload & React| A
+        E -->|Provider Selection| F{Image Provider}
+        F -->|OpenAI| G[OpenAI gpt-image-1]
+        F -->|Gemini| H[Google Gemini]
+        G -->|Upload & React| A
+        H -->|Upload & React| A
     end
 ```
 
@@ -38,7 +42,10 @@ For detailed architecture documentation, see [Dual Lambda Architecture](./docs/a
 
 **Tech Stack:**
 - **Backend**: Python 3.12 + FastAPI + Slack Bolt
-- **AI Services**: OpenAI GPT-5 with fallback to gpt-4/gpt-3.5 (prompt enhancement) + gpt-image-1 (image generation, with fallback to DALL·E 3)
+- **AI Services**:
+  - OpenAI GPT-5 with fallback to gpt-4/gpt-3.5 (prompt enhancement)
+  - OpenAI gpt-image-1 with fallback to gpt-image-1-mini (image generation)
+  - Google Gemini with fallback models (alternative image generation)
 - **Infrastructure**: AWS Lambda + API Gateway + SQS + Secrets Manager
 - **Deployment**: AWS CDK + GitHub Actions
 - **Monitoring**: CloudWatch logs + health check endpoint (`/health`)
@@ -137,12 +144,15 @@ aws secretsmanager create-secret --name "emoji-smith/production" --secret-string
 | `SLACK_SIGNING_SECRET` | Slack app signing secret | Required | `...` |
 | `OPENAI_API_KEY` | OpenAI API key for gpt-image-1 | Required | `sk-...` |
 | `OPENAI_CHAT_MODEL` | Chat model for prompt enhancement | `gpt-5` | `gpt-5`, `gpt-4`, `gpt-3.5-turbo` |
+| `GOOGLE_API_KEY` | Google API key for Gemini image generation | Optional | `...` |
 | `EMOJISMITH_FORCE_ENTERPRISE` | Force Enterprise Grid mode | `false` | `true`, `false` |
 | `SQS_QUEUE_URL` | AWS SQS queue URL (production) | None | AWS SQS URL |
 | `AWS_SECRETS_NAME` | AWS Secrets Manager name | None | `emoji-smith/production` |
 | `SLACK_TEST_BOT_TOKEN` | Bot token for Slack integration tests | None | `xoxb-...` |
 | `SLACK_TEST_CHANNEL_ID` | Channel ID for Slack integration tests | None | `CXXXXXX` |
 | `SLACK_TEST_USER_ID` | User ID for Slack integration tests | None | `UXXXXXX` |
+
+**Note on `GOOGLE_API_KEY`**: This environment variable is optional. When set, users can select Google Gemini as an alternative image generation provider in the Slack modal. Get your API key from [Google AI Studio](https://aistudio.google.com/).
 
 **Note on `EMOJISMITH_FORCE_ENTERPRISE`**: This environment variable allows you to simulate Enterprise Grid workspace behavior in development/testing. When set to `true`, the bot will attempt direct emoji uploads. Invalid values (anything other than `true` or `false`) will log a warning and default to `false`.
 

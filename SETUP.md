@@ -98,6 +98,9 @@ SLACK_SIGNING_SECRET=your-signing-secret-here
 OPENAI_API_KEY=your-openai-api-key         # Required for emoji generation
 OPENAI_CHAT_MODEL=gpt-5                    # Preferred chat model (optional)
 
+# Google API Configuration (Optional)
+GOOGLE_API_KEY=your-google-api-key         # Optional: enables Gemini image generation
+
 # SQS Background Job Queue (Lambda only)
 SQS_QUEUE_URL=https://sqs.<region>.amazonaws.com/<account-id>/<queue-name>
 
@@ -306,8 +309,12 @@ aws secretsmanager create-secret \
     "SLACK_BOT_TOKEN": "xoxb-your-production-token",
     "SLACK_SIGNING_SECRET": "your-production-signing-secret",
     "OPENAI_API_KEY": "your-production-openai-key",
+    "GOOGLE_API_KEY": "your-production-google-key",
     "LOG_LEVEL": "INFO"
   }'
+
+# Note: GOOGLE_API_KEY is optional. If not provided, Gemini image generation
+# will not be available, but OpenAI will still work.
 ```
 
 ## Project Structure
