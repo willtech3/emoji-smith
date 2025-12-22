@@ -50,16 +50,15 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
             return True
 
         # Fallback: check for 429 status code in the error
-        if hasattr(exc, "code") and exc.code == 429:  # type: ignore[attr-defined]
+        if hasattr(exc, "code") and getattr(exc, "code", None) == 429:
             return True
 
         # Check for quota exceeded (different from rate limit but similar handling)
-        if (
-            isinstance(exc, google_exceptions.GoogleAPICallError)
-            and exc.grpc_status_code is not None
-        ):
-            # RESOURCE_EXHAUSTED = 8 in gRPC
-            return exc.grpc_status_code.value[0] == 8
+        if isinstance(exc, google_exceptions.GoogleAPICallError):
+            if exc.grpc_status_code is not None:
+                # RESOURCE_EXHAUSTED = 8 in gRPC
+                if exc.grpc_status_code.value[0] == 8:
+                    return True
 
         return False
 

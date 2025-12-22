@@ -70,7 +70,7 @@ def create_worker_emoji_service() -> EmojiCreationService:
 
     # Create the build prompt use case (uses OpenAI for prompt enhancement)
     build_prompt_use_case = BuildPromptUseCase(
-        openai_repository=openai_repo,
+        prompt_enhancer=openai_repo,
         prompt_builder_service=None,  # Will use default PromptBuilderService
     )
 
