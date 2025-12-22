@@ -54,13 +54,12 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
             return True
 
         # Check for quota exceeded (different from rate limit but similar handling)
-        if isinstance(exc, google_exceptions.GoogleAPICallError):
-            if exc.grpc_status_code is not None:
-                # RESOURCE_EXHAUSTED = 8 in gRPC
-                if exc.grpc_status_code.value[0] == 8:
-                    return True
-
-        return False
+        # RESOURCE_EXHAUSTED = 8 in gRPC
+        return (
+            isinstance(exc, google_exceptions.GoogleAPICallError)
+            and exc.grpc_status_code is not None
+            and exc.grpc_status_code.value[0] == 8
+        )
 
     async def _generate_with_model(self, prompt: str, model: str) -> bytes:
         """Generate image with specified model using native async."""
