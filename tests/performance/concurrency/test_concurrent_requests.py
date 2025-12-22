@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -16,16 +16,23 @@ class TestConcurrentRequests:
     """Test concurrent request handling capabilities."""
 
     @pytest.fixture()
-    def mock_generation_service(self):
-        """Mock generation service that simulates processing time."""
-        service = AsyncMock()
+    def mock_image_generator(self):
+        """Mock image generator that simulates processing time."""
+        generator = AsyncMock()
 
-        async def generate_with_delay(prompt, name):
+        async def generate_with_delay(prompt):
             await asyncio.sleep(0.1)  # Simulate processing time
-            return Mock(image_data=b"fake_image", name=name)
+            return b"fake_image"
 
-        service.generate_from_prompt = generate_with_delay
-        return service
+        generator.generate_image = generate_with_delay
+        return generator
+
+    @pytest.fixture()
+    def mock_image_generator_factory(self, mock_image_generator):
+        """Mock factory that creates image generators."""
+        factory = MagicMock()
+        factory.create.return_value = mock_image_generator
+        return factory
 
     @pytest.fixture()
     def mock_build_prompt_use_case(self):
@@ -35,13 +42,22 @@ class TestConcurrentRequests:
         return mock
 
     @pytest.fixture()
-    def emoji_service(self, mock_generation_service, mock_build_prompt_use_case):
+    def emoji_service(self, mock_image_generator_factory, mock_build_prompt_use_case):
         """Create emoji service with mocked dependencies."""
+        mock_image_processor = MagicMock()
+        mock_image_processor.process_for_slack.return_value = b"processed_image"
+
+        mock_emoji_validator = MagicMock()
+        mock_emoji_validator.validate_name.return_value = True
+
         return EmojiCreationService(
             slack_repo=AsyncMock(),
-            emoji_generator=mock_generation_service,
             build_prompt_use_case=mock_build_prompt_use_case,
-            job_queue=AsyncMock(),
+            image_generator_factory=mock_image_generator_factory,
+            image_processor=mock_image_processor,
+            emoji_validator=mock_emoji_validator,
+            style_template_manager=MagicMock(),
+            file_sharing_repo=AsyncMock(),
         )
 
     async def test_multiple_concurrent_emoji_generations(self, emoji_service):
