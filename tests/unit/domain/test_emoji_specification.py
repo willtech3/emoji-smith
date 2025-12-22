@@ -43,4 +43,3 @@ class TestEmojiSpecification:
         prompt = spec.to_prompt()
         assert prompt.startswith("facepalm")
         assert "pixel_art" in prompt
-
