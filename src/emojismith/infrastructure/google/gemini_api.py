@@ -41,25 +41,17 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
         """Check if an exception represents a rate limit error.
 
         Uses proper exception type checking rather than string matching.
-        Google's API raises ResourceExhausted (HTTP 429) for rate limits.
+        Google's API raises ResourceExhausted (HTTP 429/gRPC 8) for rate limits.
         """
         # Check for Google API rate limit exceptions
-        if isinstance(exc, google_exceptions.ResourceExhausted):
-            return True
-        if isinstance(exc, google_exceptions.TooManyRequests):
+        if isinstance(
+            exc,
+            google_exceptions.ResourceExhausted | google_exceptions.TooManyRequests,
+        ):
             return True
 
         # Fallback: check for 429 status code in the error
-        if hasattr(exc, "code") and getattr(exc, "code", None) == 429:
-            return True
-
-        # Check for quota exceeded (different from rate limit but similar handling)
-        # RESOURCE_EXHAUSTED = 8 in gRPC
-        return (
-            isinstance(exc, google_exceptions.GoogleAPICallError)
-            and exc.grpc_status_code is not None
-            and exc.grpc_status_code.value[0] == 8
-        )
+        return getattr(exc, "code", None) == 429
 
     async def _generate_with_model(self, prompt: str, model: str) -> bytes:
         """Generate image with specified model using native async."""
