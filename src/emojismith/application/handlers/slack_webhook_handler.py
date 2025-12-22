@@ -105,7 +105,7 @@ class WebhookEventProcessor:
                             {
                                 "text": {
                                     "type": "plain_text",
-                                    "text": "Google Gemini",
+                                    "text": "Nano Banana Pro",
                                 },
                                 "value": "google_gemini",
                             },
