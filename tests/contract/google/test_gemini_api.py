@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from google.api_core import exceptions as google_exceptions
 
 from emojismith.domain.errors import RateLimitExceededError
 from emojismith.infrastructure.google.gemini_api import GeminiAPIRepository
@@ -89,9 +90,9 @@ class TestGeminiAPIRepositoryGenerateImage:
         self, repository, mock_gemini_client
     ):
         """Test rate limit error is raised when quota is exceeded."""
-        # Arrange
-        mock_gemini_client.aio.models.generate_content.side_effect = Exception(
-            "Rate limit exceeded: quota exhausted"
+        # Arrange - use proper Google API exception type
+        mock_gemini_client.aio.models.generate_content.side_effect = (
+            google_exceptions.ResourceExhausted("Quota exceeded")
         )
 
         # Act & Assert
@@ -103,10 +104,10 @@ class TestGeminiAPIRepositoryGenerateImage:
         self, repository, mock_gemini_client
     ):
         """Test rate limit error is raised when fallback quota is exceeded."""
-        # Arrange
+        # Arrange - use proper Google API exception type for fallback
         mock_gemini_client.aio.models.generate_content.side_effect = [
             Exception("Primary model error"),
-            Exception("Quota exceeded for fallback"),
+            google_exceptions.ResourceExhausted("Quota exceeded for fallback"),
         ]
 
         # Act & Assert

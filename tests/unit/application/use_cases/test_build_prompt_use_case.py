@@ -5,7 +5,9 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
-from emojismith.domain.repositories.openai_repository import OpenAIRepository
+from emojismith.domain.repositories.prompt_enhancer_repository import (
+    PromptEnhancerRepository,
+)
 from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from shared.domain.value_objects import EmojiStylePreferences, StyleType
@@ -15,9 +17,9 @@ class TestBuildPromptUseCase:
     """Test suite for BuildPromptUseCase."""
 
     @pytest.fixture()
-    def mock_openai_repo(self) -> Mock:
-        """Create a mock OpenAI repository."""
-        repo = Mock(spec=OpenAIRepository)
+    def mock_prompt_enhancer(self) -> Mock:
+        """Create a mock prompt enhancer repository."""
+        repo = Mock(spec=PromptEnhancerRepository)
         repo.enhance_prompt = AsyncMock(return_value="enhanced prompt")
         return repo
 
@@ -28,11 +30,11 @@ class TestBuildPromptUseCase:
 
     @pytest.fixture()
     def use_case(
-        self, mock_openai_repo: Mock, prompt_builder_service: PromptBuilderService
+        self, mock_prompt_enhancer: Mock, prompt_builder_service: PromptBuilderService
     ) -> BuildPromptUseCase:
         """Create a BuildPromptUseCase instance."""
         return BuildPromptUseCase(
-            openai_repository=mock_openai_repo,
+            prompt_enhancer=mock_prompt_enhancer,
             prompt_builder_service=prompt_builder_service,
         )
 
@@ -54,18 +56,18 @@ class TestBuildPromptUseCase:
         assert "emoji" in result.lower() or "icon" in result.lower()
         assert len(result) <= 150
 
-        # Should not call OpenAI
-        use_case._openai_repository.enhance_prompt.assert_not_called()
+        # Should not call the prompt enhancer
+        use_case._prompt_enhancer.enhance_prompt.assert_not_called()
 
     async def test_build_prompt_with_enhancement(
         self,
         use_case: BuildPromptUseCase,
         basic_spec: EmojiSpecification,
-        mock_openai_repo: Mock,
+        mock_prompt_enhancer: Mock,
     ):
-        """Should enhance prompt using OpenAI when enhance=True."""
+        """Should enhance prompt using the configured AI provider when enhance=True."""
         # Set up the mock to return a specific enhanced prompt
-        mock_openai_repo.enhance_prompt.return_value = (
+        mock_prompt_enhancer.enhance_prompt.return_value = (
             "An amazing celebration emoji showing team success and joy"
         )
 
@@ -73,9 +75,9 @@ class TestBuildPromptUseCase:
 
         assert result == "An amazing celebration emoji showing team success and joy"
 
-        # Should call OpenAI with the built prompt
-        mock_openai_repo.enhance_prompt.assert_called_once()
-        call_args = mock_openai_repo.enhance_prompt.call_args[0]
+        # Should call the prompt enhancer with the built prompt
+        mock_prompt_enhancer.enhance_prompt.assert_called_once()
+        call_args = mock_prompt_enhancer.enhance_prompt.call_args[0]
         assert "celebration" in call_args[0] or "celebration" in call_args[1]
 
     async def test_build_prompt_with_style(self, use_case: BuildPromptUseCase):
@@ -97,11 +99,11 @@ class TestBuildPromptUseCase:
         self,
         use_case: BuildPromptUseCase,
         basic_spec: EmojiSpecification,
-        mock_openai_repo: Mock,
+        mock_prompt_enhancer: Mock,
     ):
         """Should fall back to basic prompt if enhancement fails."""
         # Make enhance_prompt raise an exception
-        mock_openai_repo.enhance_prompt.side_effect = Exception("OpenAI API error")
+        mock_prompt_enhancer.enhance_prompt.side_effect = Exception("AI provider error")
 
         result = await use_case.build_prompt(basic_spec, enhance=True)
 
@@ -132,7 +134,7 @@ class TestBuildPromptUseCase:
         """Should respect custom max length configuration."""
         prompt_builder = PromptBuilderService(max_prompt_length=80)
         use_case = BuildPromptUseCase(
-            openai_repository=Mock(spec=OpenAIRepository),
+            prompt_enhancer=Mock(spec=PromptEnhancerRepository),
             prompt_builder_service=prompt_builder,
         )
 
@@ -174,14 +176,14 @@ class TestBuildPromptUseCase:
         self,
         use_case: BuildPromptUseCase,
         basic_spec: EmojiSpecification,
-        mock_openai_repo: Mock,
+        mock_prompt_enhancer: Mock,
     ):
         """Should pass both context and description to enhance_prompt."""
         await use_case.build_prompt(basic_spec, enhance=True)
 
         # Check that enhance_prompt was called with both context and description
-        mock_openai_repo.enhance_prompt.assert_called_once()
-        call_args = mock_openai_repo.enhance_prompt.call_args[0]
+        mock_prompt_enhancer.enhance_prompt.assert_called_once()
+        call_args = mock_prompt_enhancer.enhance_prompt.call_args[0]
 
         # The method takes (context, description) as parameters
         assert len(call_args) == 2

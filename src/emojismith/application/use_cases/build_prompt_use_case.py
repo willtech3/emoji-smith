@@ -2,7 +2,9 @@
 
 import logging
 
-from emojismith.domain.repositories.openai_repository import OpenAIRepository
+from emojismith.domain.repositories.prompt_enhancer_repository import (
+    PromptEnhancerRepository,
+)
 from emojismith.domain.services.description_quality_analyzer import (
     DescriptionQualityAnalyzer,
 )
@@ -17,20 +19,21 @@ class BuildPromptUseCase:
 
     def __init__(
         self,
-        openai_repository: OpenAIRepository,
+        prompt_enhancer: PromptEnhancerRepository,
         prompt_builder_service: PromptBuilderService | None = None,
         description_quality_analyzer: DescriptionQualityAnalyzer | None = None,
     ) -> None:
         """Initialize the use case.
 
         Args:
-            openai_repository: Repository for OpenAI operations
+            prompt_enhancer: Repository for AI prompt enhancement
+                (can be OpenAI, Gemini, or any provider implementing the protocol)
             prompt_builder_service: Service for building prompts
                 (creates default if not provided)
             description_quality_analyzer: Service for analyzing description quality
                 (creates default if not provided)
         """
-        self._openai_repository = openai_repository
+        self._prompt_enhancer = prompt_enhancer
         self._prompt_builder_service = prompt_builder_service or PromptBuilderService()
         self._description_quality_analyzer = (
             description_quality_analyzer or DescriptionQualityAnalyzer()
@@ -107,13 +110,13 @@ class BuildPromptUseCase:
             # Description is good enough, use it as-is
             base_prompt = self._prompt_builder_service.build_prompt(spec)
 
-        # If enhancement is requested, use OpenAI to enhance the prompt
+        # If enhancement is requested, use the configured AI provider to enhance
         if enhance:
             try:
                 # The enhance_prompt method expects (context, description)
                 # We'll pass the full built prompt as the description
                 # since it already includes context
-                enhanced_prompt = await self._openai_repository.enhance_prompt(
+                enhanced_prompt = await self._prompt_enhancer.enhance_prompt(
                     spec.context, base_prompt
                 )
                 return enhanced_prompt
