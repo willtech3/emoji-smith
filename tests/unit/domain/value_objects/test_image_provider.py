@@ -1,6 +1,5 @@
 """Tests for ImageProvider value object."""
 
-
 from emojismith.domain.value_objects.image_provider import ImageProvider
 
 
