@@ -126,5 +126,24 @@ def _create_app() -> Any:
     return app
 
 
-app = _create_app()
-handler = Mangum(app, lifespan="off", api_gateway_base_path="/")
+# Lazy initialization pattern for Lambda
+# This allows the module to be imported without requiring AWS credentials,
+# which is needed for CI validation and testing
+_app = None
+_handler = None
+
+
+def _get_app() -> Any:
+    """Lazily create the FastAPI app on first use."""
+    global _app
+    if _app is None:
+        _app = _create_app()
+    return _app
+
+
+def handler(event: dict, context: Any) -> dict:
+    """Lambda handler with lazy initialization."""
+    global _handler
+    if _handler is None:
+        _handler = Mangum(_get_app(), lifespan="off", api_gateway_base_path="/")
+    return _handler(event, context)
