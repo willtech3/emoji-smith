@@ -1,4 +1,4 @@
-"""Application layer factory for Slack webhook handling."""
+"""Infrastructure wiring for Slack webhook handling."""
 
 from emojismith.application.handlers.slack_webhook_handler import SlackWebhookHandler
 from emojismith.infrastructure.aws.webhook_handler import create_webhook_handler

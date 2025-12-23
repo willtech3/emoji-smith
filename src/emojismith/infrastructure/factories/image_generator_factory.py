@@ -7,6 +7,9 @@ from typing import TYPE_CHECKING
 from google import genai
 from openai import AsyncOpenAI
 
+from emojismith.domain.factories.image_generator_factory import (
+    ImageGeneratorFactory as ImageGeneratorFactoryProtocol,
+)
 from emojismith.domain.value_objects.image_provider import ImageProvider
 from emojismith.infrastructure.google.gemini_api import GeminiAPIRepository
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
@@ -17,7 +20,7 @@ if TYPE_CHECKING:
     )
 
 
-class ImageGeneratorFactory:
+class ImageGeneratorFactory(ImageGeneratorFactoryProtocol):
     """Factory to create the appropriate image generator based on provider.
 
     API keys are injected via constructor following DDD principles

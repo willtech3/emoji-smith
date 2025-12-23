@@ -1,9 +1,10 @@
 """Emoji creation service for orchestrating the workflow."""
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
+from emojismith.domain.factories.image_generator_factory import ImageGeneratorFactory
 from emojismith.domain.repositories.file_sharing_repository import FileSharingRepository
 from emojismith.domain.repositories.image_processor import ImageProcessor
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
@@ -24,11 +25,6 @@ from shared.domain.value_objects import (
     EmojiStylePreferences,
 )
 
-if TYPE_CHECKING:
-    from emojismith.infrastructure.factories.image_generator_factory import (
-        ImageGeneratorFactory,
-    )
-
 
 class EmojiCreationService:
     """Service for orchestrating emoji creation workflow."""
@@ -39,7 +35,7 @@ class EmojiCreationService:
         self,
         slack_repo: SlackRepository,
         build_prompt_use_case: BuildPromptUseCase,
-        image_generator_factory: "ImageGeneratorFactory",
+        image_generator_factory: ImageGeneratorFactory,
         image_processor: ImageProcessor,
         emoji_validator: EmojiValidationService,
         style_template_manager: StyleTemplateManager,

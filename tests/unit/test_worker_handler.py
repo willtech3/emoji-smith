@@ -277,6 +277,6 @@ class TestWorkerHandler:
         AWSSecretsLoader._instance = None
         AWSSecretsLoader._loaded = False
 
-        with patch.dict("os.environ", {}, clear=True):
+        with patch.dict("os.environ", {}):
             # Should not raise an exception
             AWSSecretsLoader().load_secrets()
