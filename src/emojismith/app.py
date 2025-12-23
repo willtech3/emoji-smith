@@ -44,17 +44,14 @@ def create_worker_emoji_service() -> EmojiCreationService:
         raise ValueError("SLACK_BOT_TOKEN environment variable is required")
     if not openai_api_key:
         raise ValueError("OPENAI_API_KEY environment variable is required")
-    # GOOGLE_API_KEY is optional - Gemini provider won't work without it
 
     slack_client = AsyncWebClient(token=slack_token)
     slack_repo = SlackAPIRepository(slack_client)
 
-    # OpenAI client for prompt enhancement (chat completion)
     openai_client = AsyncOpenAI(api_key=openai_api_key)
     chat_model = os.getenv("OPENAI_CHAT_MODEL", "gpt-5")
     openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
 
-    # Create image generator factory with both API keys
     image_generator_factory = ImageGeneratorFactory(
         openai_api_key=openai_api_key,
         google_api_key=google_api_key,
@@ -64,11 +61,9 @@ def create_worker_emoji_service() -> EmojiCreationService:
     image_validator = PILImageValidator()
     emoji_validation_service = EmojiValidationService(image_validator)
 
-    # Create style template dependencies
     style_template_repository = StyleTemplateConfigRepository()
     style_template_manager = StyleTemplateManager(style_template_repository)
 
-    # Create the build prompt use case (uses OpenAI for prompt enhancement)
     build_prompt_use_case = BuildPromptUseCase(
         prompt_enhancer=openai_repo,
         prompt_builder_service=None,  # Will use default PromptBuilderService
@@ -76,11 +71,9 @@ def create_worker_emoji_service() -> EmojiCreationService:
 
     file_sharing_repo = SlackFileSharingRepository(slack_client)
 
-    # Determine workspace type from environment
     workspace_type = WorkspaceType.STANDARD
     force_enterprise = os.getenv("EMOJISMITH_FORCE_ENTERPRISE", "false")
 
-    # Validate environment variable value
     if force_enterprise.lower() not in ("true", "false"):
         logger.warning(
             f"Invalid value for EMOJISMITH_FORCE_ENTERPRISE: '{force_enterprise}'. "
@@ -91,7 +84,6 @@ def create_worker_emoji_service() -> EmojiCreationService:
     if force_enterprise.lower() == "true":
         workspace_type = WorkspaceType.ENTERPRISE_GRID
 
-    # Create sharing service with injected workspace type
     sharing_service = EmojiSharingService(workspace_type=workspace_type)
 
     return EmojiCreationService(

@@ -1,5 +1,5 @@
 """Application services for orchestrating use cases."""
 
-from .ai_prompt_service import AIPromptService
+from .emoji_service import EmojiCreationService
 
-__all__ = ["AIPromptService"]
+__all__ = ["EmojiCreationService"]

@@ -7,10 +7,10 @@ setup:
 
 # Formatting
 format:
-	uv run black src/ tests/
+	uv run ruff format src/ tests/
 
 format-check:
-	uv run black --check src/ tests/
+	uv run ruff format --check src/ tests/
 
 # Linting (ruff-based)
 lint:
@@ -25,7 +25,7 @@ typecheck:
 
 # Security scanning
 security:
-	uv run bandit -r src/
+	uv run ruff check --select S src/ tests/
 
 # Tests
 test:
@@ -50,3 +50,10 @@ pre-commit-all:
 # Local dev server
 dev:
 	uv run python -m src.emojismith.dev_server
+
+# Clean up caches and temporary artifacts
+clean:
+	rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov build dist *.egg-info
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.py[co]" -delete
+	find . -type f -name '*$py.class' -delete
