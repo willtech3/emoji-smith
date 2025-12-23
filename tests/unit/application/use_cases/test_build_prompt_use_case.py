@@ -1,5 +1,6 @@
 """Tests for BuildPromptUseCase."""
 
+import logging
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -7,6 +8,9 @@ import pytest
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
 from emojismith.domain.repositories.prompt_enhancer_repository import (
     PromptEnhancerRepository,
+)
+from emojismith.domain.services.description_quality_analyzer import (
+    DescriptionQualityAnalyzer,
 )
 from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
@@ -29,13 +33,22 @@ class TestBuildPromptUseCase:
         return PromptBuilderService()
 
     @pytest.fixture()
+    def description_quality_analyzer(self) -> DescriptionQualityAnalyzer:
+        """Create a real description quality analyzer."""
+        return DescriptionQualityAnalyzer(quality_threshold=0.5)
+
+    @pytest.fixture()
     def use_case(
-        self, mock_prompt_enhancer: Mock, prompt_builder_service: PromptBuilderService
+        self,
+        mock_prompt_enhancer: Mock,
+        prompt_builder_service: PromptBuilderService,
+        description_quality_analyzer: DescriptionQualityAnalyzer,
     ) -> BuildPromptUseCase:
         """Create a BuildPromptUseCase instance."""
         return BuildPromptUseCase(
             prompt_enhancer=mock_prompt_enhancer,
             prompt_builder_service=prompt_builder_service,
+            description_quality_analyzer=description_quality_analyzer,
         )
 
     @pytest.fixture()
@@ -46,6 +59,7 @@ class TestBuildPromptUseCase:
             context="team just shipped a major feature",
         )
 
+    @pytest.mark.asyncio()
     async def test_build_prompt_without_enhancement(
         self, use_case: BuildPromptUseCase, basic_spec: EmojiSpecification
     ):
@@ -59,6 +73,7 @@ class TestBuildPromptUseCase:
         # Should not call the prompt enhancer
         use_case._prompt_enhancer.enhance_prompt.assert_not_called()
 
+    @pytest.mark.asyncio()
     async def test_build_prompt_with_enhancement(
         self,
         use_case: BuildPromptUseCase,
@@ -80,6 +95,7 @@ class TestBuildPromptUseCase:
         call_args = mock_prompt_enhancer.enhance_prompt.call_args[0]
         assert "celebration" in call_args[0] or "celebration" in call_args[1]
 
+    @pytest.mark.asyncio()
     async def test_build_prompt_with_style(self, use_case: BuildPromptUseCase):
         """Should include style preferences in the prompt."""
         style_prefs = EmojiStylePreferences(style_type=StyleType.PIXEL_ART)
@@ -95,6 +111,7 @@ class TestBuildPromptUseCase:
         assert "game" in result.lower()
         assert "emoji" in result.lower() or "icon" in result.lower()
 
+    @pytest.mark.asyncio()
     async def test_build_prompt_handles_enhancement_failure(
         self,
         use_case: BuildPromptUseCase,
@@ -112,6 +129,7 @@ class TestBuildPromptUseCase:
         assert "emoji" in result.lower() or "icon" in result.lower()
         assert len(result) <= 150
 
+    @pytest.mark.asyncio()
     async def test_build_prompt_preserves_context_themes(
         self, use_case: BuildPromptUseCase
     ):
@@ -130,6 +148,7 @@ class TestBuildPromptUseCase:
         assert "success" in result.lower() or "achievement" in result.lower()
         assert "victory" in result.lower()
 
+    @pytest.mark.asyncio()
     async def test_build_prompt_respects_max_length_config(self):
         """Should respect custom max length configuration."""
         prompt_builder = PromptBuilderService(max_prompt_length=80)
@@ -153,6 +172,7 @@ class TestBuildPromptUseCase:
 
         assert len(result) <= 80
 
+    @pytest.mark.asyncio()
     async def test_build_prompt_uses_custom_style_when_provided(
         self, use_case: BuildPromptUseCase
     ):
@@ -172,6 +192,7 @@ class TestBuildPromptUseCase:
             or "clean" in result.lower()
         )
 
+    @pytest.mark.asyncio()
     async def test_build_prompt_enhancement_includes_context_and_description(
         self,
         use_case: BuildPromptUseCase,
@@ -194,3 +215,149 @@ class TestBuildPromptUseCase:
             "team just shipped" in context_arg or "team just shipped" in description_arg
         )
         assert "celebration" in context_arg or "celebration" in description_arg
+
+    @pytest.mark.asyncio()
+    async def test_build_prompt_with_poor_description_uses_fallback(
+        self,
+        use_case: BuildPromptUseCase,
+        mock_prompt_enhancer: Mock,
+    ):
+        """Test that poor descriptions trigger fallback generation."""
+        # Create spec with poor description but good context
+        spec = EmojiSpecification(
+            description="nice",  # Very vague
+            context="Team successfully deployed the payment processing system to production",
+            style=None,
+        )
+
+        # Mock the enhance_prompt to return enhanced version
+        mock_prompt_enhancer.enhance_prompt.return_value = "Enhanced emoji prompt"
+
+        # Build prompt
+        await use_case.build_prompt(spec, enhance=True)
+
+        # Should have called enhance_prompt with a fallback prompt
+        mock_prompt_enhancer.enhance_prompt.assert_called_once()
+        context_arg, prompt_arg = mock_prompt_enhancer.enhance_prompt.call_args[0]
+
+        # The prompt should contain concepts from context, not just "nice"
+        assert "nice" not in prompt_arg
+        assert any(
+            word in prompt_arg.lower()
+            for word in ["deployed", "payment", "system", "team"]
+        )
+
+    @pytest.mark.asyncio()
+    async def test_build_prompt_with_good_description_no_fallback(
+        self,
+        use_case: BuildPromptUseCase,
+        mock_prompt_enhancer: Mock,
+    ):
+        """Test that good descriptions don't trigger fallback generation."""
+        # Create spec with good description
+        spec = EmojiSpecification(
+            description="happy robot dancing with blue lights",
+            context="Celebrating successful automation deployment",
+            style=None,
+        )
+
+        # Mock the enhance_prompt to return enhanced version
+        mock_prompt_enhancer.enhance_prompt.return_value = "Enhanced emoji prompt"
+
+        # Build prompt
+        await use_case.build_prompt(spec, enhance=True)
+
+        # Should have called enhance_prompt with the original good description
+        mock_prompt_enhancer.enhance_prompt.assert_called_once()
+        context_arg, prompt_arg = mock_prompt_enhancer.enhance_prompt.call_args[0]
+
+        # The prompt should contain the original description
+        assert "robot" in prompt_arg.lower()
+        assert "dancing" in prompt_arg.lower()
+
+    @pytest.mark.asyncio()
+    async def test_build_prompt_logs_fallback_usage(
+        self, use_case: BuildPromptUseCase, mock_prompt_enhancer: Mock, caplog
+    ):
+        """Test that fallback usage is properly logged."""
+        # Set log level to capture info messages
+        caplog.set_level(logging.INFO)
+
+        # Create spec with poor description
+        spec = EmojiSpecification(
+            description="emoji", context="Sprint planning meeting", style=None
+        )
+
+        # Mock the enhance_prompt to return enhanced version
+        mock_prompt_enhancer.enhance_prompt.return_value = "Enhanced emoji prompt"
+
+        # Build prompt
+        await use_case.build_prompt(spec, enhance=True)
+
+        # Check logs for fallback notification
+        assert any(
+            "Using fallback prompt generation" in record.message
+            for record in caplog.records
+        )
+        assert any("score:" in record.message.lower() for record in caplog.records)
+
+    @pytest.mark.asyncio()
+    async def test_build_prompt_without_enhancement_still_uses_fallback(
+        self, use_case: BuildPromptUseCase, mock_prompt_enhancer: Mock
+    ):
+        """Test that quality analysis and fallback still happens even without AI enhancement."""
+        # Create spec with poor description
+        spec = EmojiSpecification(
+            description="nice", context="Team meeting", style=None
+        )
+
+        # Build prompt without enhancement
+        result = await use_case.build_prompt(spec, enhance=False)
+
+        # Should not have called enhance_prompt
+        mock_prompt_enhancer.enhance_prompt.assert_not_called()
+
+        # Result should contain fallback content based on context
+        assert "team" in result.lower() or "meeting" in result.lower()
+        # The vague word "nice" should not appear in the fallback
+        assert "nice" not in result.lower()
+
+    @pytest.mark.asyncio()
+    async def test_configurable_quality_threshold(
+        self,
+        mock_prompt_enhancer: Mock,
+        prompt_builder_service: PromptBuilderService,
+    ):
+        """Test that quality threshold can be configured."""
+        # Create analyzer with high threshold
+        strict_analyzer = DescriptionQualityAnalyzer(quality_threshold=0.8)
+
+        # Create use case with strict analyzer
+        use_case = BuildPromptUseCase(
+            prompt_enhancer=mock_prompt_enhancer,
+            prompt_builder_service=prompt_builder_service,
+            description_quality_analyzer=strict_analyzer,
+        )
+
+        # Create spec with medium quality description
+        spec = EmojiSpecification(
+            description="good icon",  # Medium quality - will be below 0.8 threshold
+            context="User completed onboarding",
+            style=None,
+        )
+
+        # Mock the enhance_prompt
+        mock_prompt_enhancer.enhance_prompt.return_value = "Enhanced emoji prompt"
+
+        # Build prompt - should trigger fallback due to high threshold
+        await use_case.build_prompt(spec, enhance=True)
+
+        # Check that enhance was called with fallback
+        context_arg, prompt_arg = mock_prompt_enhancer.enhance_prompt.call_args[0]
+
+        # Should include context concepts due to strict threshold
+        assert any(
+            word in prompt_arg.lower() for word in ["completed", "onboarding", "user"]
+        )
+        # Should not include the vague terms from original description
+        assert "good" not in prompt_arg.lower()
