@@ -2,7 +2,7 @@
 
 import uvicorn
 
-from emojismith.application.create_webhook_app import create_webhook_app
+from emojismith.infrastructure.wiring import create_webhook_app
 from emojismith.presentation.web.slack_webhook_api import create_webhook_api
 
 

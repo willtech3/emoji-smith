@@ -39,7 +39,7 @@ async def test_build_prompt_with_poor_description_uses_fallback(
     """Test that poor descriptions trigger fallback generation."""
     # Create use case with analyzer
     use_case = BuildPromptUseCase(
-        openai_repository=mock_openai_repository,
+        prompt_enhancer=mock_openai_repository,
         prompt_builder_service=prompt_builder_service,
         description_quality_analyzer=description_quality_analyzer,
     )
@@ -76,7 +76,7 @@ async def test_build_prompt_with_good_description_no_fallback(
     """Test that good descriptions don't trigger fallback generation."""
     # Create use case with analyzer
     use_case = BuildPromptUseCase(
-        openai_repository=mock_openai_repository,
+        prompt_enhancer=mock_openai_repository,
         prompt_builder_service=prompt_builder_service,
         description_quality_analyzer=description_quality_analyzer,
     )
@@ -115,7 +115,7 @@ async def test_build_prompt_logs_fallback_usage(
 
     # Create use case with analyzer
     use_case = BuildPromptUseCase(
-        openai_repository=mock_openai_repository,
+        prompt_enhancer=mock_openai_repository,
         prompt_builder_service=prompt_builder_service,
         description_quality_analyzer=description_quality_analyzer,
     )
@@ -147,7 +147,7 @@ async def test_build_prompt_without_enhancement_still_uses_fallback(
     AI enhancement."""
     # Create use case with analyzer
     use_case = BuildPromptUseCase(
-        openai_repository=mock_openai_repository,
+        prompt_enhancer=mock_openai_repository,
         prompt_builder_service=prompt_builder_service,
         description_quality_analyzer=description_quality_analyzer,
     )
@@ -177,7 +177,7 @@ async def test_configurable_quality_threshold(
 
     # Create use case with strict analyzer
     use_case = BuildPromptUseCase(
-        openai_repository=mock_openai_repository,
+        prompt_enhancer=mock_openai_repository,
         prompt_builder_service=prompt_builder_service,
         description_quality_analyzer=strict_analyzer,
     )

@@ -34,7 +34,7 @@ class TestAWSSecretsLoader:
     def test_skips_when_secrets_name_not_set(self, caplog):
         """Should skip loading when SECRETS_NAME is not set."""
         loader = AWSSecretsLoader()
-        with patch.dict(os.environ, {}, clear=True), caplog.at_level("INFO"):
+        with patch.dict(os.environ, {}), caplog.at_level("INFO"):
             loader.load_secrets()
 
         assert "SECRETS_NAME not set, skipping secrets loading" in caplog.text
@@ -58,7 +58,7 @@ class TestAWSSecretsLoader:
                 "SECRETS_NAME": "test-secret",
                 "AWS_DEFAULT_REGION": "us-east-1",
             }
-            with patch.dict(os.environ, test_env, clear=True):
+            with patch.dict(os.environ, test_env):
                 loader = AWSSecretsLoader()
                 with caplog.at_level("INFO"):
                     loader.load_secrets()
