@@ -57,10 +57,11 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
         """Generate image with specified model using native async."""
         response = await self._client.aio.models.generate_content(
             model=model,
+            contents=prompt,
             config=types.GenerateContentConfig(
-                response_modalities=["IMAGE"],  
+                response_modalities=["IMAGE"],
                 image_config=types.ImageConfig(
-                    aspect_ratio="1:1",  
+                    aspect_ratio="1:1",
                 ),
             ),
         )

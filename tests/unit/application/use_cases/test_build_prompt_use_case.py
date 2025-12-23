@@ -226,7 +226,9 @@ class TestBuildPromptUseCase:
         # Create spec with poor description but good context
         spec = EmojiSpecification(
             description="nice",  # Very vague
-            context="Team successfully deployed the payment processing system to production",
+            context=(
+                "Team successfully deployed the payment processing system to production"
+            ),
             style=None,
         )
 
@@ -305,7 +307,7 @@ class TestBuildPromptUseCase:
     async def test_build_prompt_without_enhancement_still_uses_fallback(
         self, use_case: BuildPromptUseCase, mock_prompt_enhancer: Mock
     ):
-        """Test that quality analysis and fallback still happens even without AI enhancement."""
+        """Test quality analysis and fallback still happens without AI enhancement."""
         # Create spec with poor description
         spec = EmojiSpecification(
             description="nice", context="Team meeting", style=None

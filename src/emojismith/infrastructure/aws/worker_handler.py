@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 _secrets_loader = AWSSecretsLoader()
 
+
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     AWS Lambda handler for processing SQS emoji generation jobs.
