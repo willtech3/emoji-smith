@@ -318,20 +318,9 @@ For AI agents: Always start by reading root CLAUDE.md, then follow the hierarchy
 4. **Use feature branches**: All changes via pull request
 5. **Run quality checks**: Ensure all tools pass before committing
 
-## 📄 License
-
-MIT License - see [LICENSE](./LICENSE) for details.
-
 ## 🆘 Support
 
-- **Setup Issues**: See [SETUP.md](./SETUP.md) for detailed instructions
-- **Troubleshooting**: See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues
 - **Development**: See [CLAUDE.md](./CLAUDE.md) for coding guidelines
 - **Architecture**: See [docs/architecture/](./docs/architecture/) for design documentation
 - **Testing**: See [docs/testing/testing-guidelines.md](./docs/testing/testing-guidelines.md) for test standards
 - **Bug Reports**: [Open an issue](https://github.com/willtech3/emoji-smith/issues)
-- **Feature Requests**: [Start a discussion](https://github.com/willtech3/emoji-smith/discussions)
-
----
-
-**Made with ❤️ and AI** • Powered by OpenAI gpt-image-1 • Deployed on AWS Lambda

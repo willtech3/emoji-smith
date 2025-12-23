@@ -114,15 +114,6 @@ def _create_app() -> Any:
         # Forward to events endpoint
         return await slack_events(request)
 
-    # Temporarily remove catch-all route - it's causing 422 errors
-    # The catch-all route with path parameter is interfering with other routes
-    # @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-    # async def catch_all(request: Request, path: str) -> dict:
-    #     logger.warning(f"Unhandled request to: /{path}")
-    #     logger.warning(f"Method: {request.method}")
-    #     logger.warning(f"Headers: {dict(request.headers)}")
-    #     return {"error": f"Unhandled path: /{path}", "method": request.method}
-
     return app
 
 
