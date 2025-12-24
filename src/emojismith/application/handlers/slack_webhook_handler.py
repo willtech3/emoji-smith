@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import urllib.parse
 from typing import Any, Protocol
 
@@ -40,7 +39,8 @@ class WebhookEventProcessor:
 
         # Configure modal builder based on available providers
         # Default to OpenAI unless Google is configured
-        google_available = bool(google_api_key or os.environ.get("GOOGLE_API_KEY"))
+        # google_api_key must be wired from infrastructure layer
+        google_available = bool(google_api_key)
         default_provider = "google_gemini" if google_available else "openai"
 
         self._modal_builder = EmojiCreationModalBuilder(
@@ -149,7 +149,7 @@ class WebhookEventProcessor:
             state.get(self._modal_builder.IMAGE_PROVIDER_BLOCK, {})
             .get(self._modal_builder.PROVIDER_ACTION, {})
             .get("selected_option", {})
-            .get("value", self._modal_builder._default_provider)
+            .get("value", self._modal_builder.default_provider)
         )
 
         # Extract advanced options

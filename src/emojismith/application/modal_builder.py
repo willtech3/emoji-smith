@@ -56,6 +56,11 @@ class EmojiCreationModalBuilder:
         self._default_provider = default_provider
         self._google_available = google_available
 
+    @property
+    def default_provider(self) -> str:
+        """Get the default image provider."""
+        return self._default_provider
+
     def _get_provider_options(self) -> list[dict[str, Any]]:
         """Get available provider options based on configuration."""
         options = [
