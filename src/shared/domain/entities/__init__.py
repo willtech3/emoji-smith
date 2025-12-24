@@ -37,7 +37,9 @@ class EmojiGenerationJob:
     generation_preferences: EmojiGenerationPreferences = field(
         default_factory=EmojiGenerationPreferences
     )
-    image_provider: str = "google_gemini"  # Updated default - best quality
+    image_provider: str = (
+        "google_gemini"  # Default - best quality (requires GOOGLE_API_KEY)
+    )
 
     @classmethod
     def create_new(

@@ -123,7 +123,8 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_image_generator.generate_image.return_value = buf.getvalue()
+        # Return a list of images for multi-image support
+        mock_image_generator.generate_image.return_value = [buf.getvalue()]
 
         await emoji_service.process_emoji_generation_job_dict(job_data)
 
@@ -170,7 +171,8 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_image_generator.generate_image.return_value = buf.getvalue()
+        # Return a list of images for multi-image support
+        mock_image_generator.generate_image.return_value = [buf.getvalue()]
 
         # Act
         await emoji_service.process_emoji_generation_job(job)
@@ -218,7 +220,8 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_image_generator.generate_image.return_value = buf.getvalue()
+        # Return a list of images for multi-image support
+        mock_image_generator.generate_image.return_value = [buf.getvalue()]
 
         # Act - should complete gracefully, not raise exception
         await emoji_service.process_emoji_generation_job(job)
@@ -263,7 +266,8 @@ class TestEmojiCreationService:
         img = Image.new("RGBA", (128, 128), "red")
         buf = BytesIO()
         img.save(buf, format="PNG")
-        mock_image_generator.generate_image.return_value = buf.getvalue()
+        # Return a list of images for multi-image support
+        mock_image_generator.generate_image.return_value = [buf.getvalue()]
 
         # Act - should complete gracefully, not raise exception
         await emoji_service.process_emoji_generation_job_dict(job_data)

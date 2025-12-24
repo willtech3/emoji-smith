@@ -1,6 +1,10 @@
 """Slack modal builder for emoji creation.
 
 Implements progressive disclosure for maximum capability with minimal friction.
+
+NOTE: This module is in the application layer rather than presentation layer
+because it defines the view-model structure used by the application handler.
+The modal builder is tightly coupled to the webhook handler's form extraction logic.
 """
 
 from __future__ import annotations
@@ -37,6 +41,58 @@ class EmojiCreationModalBuilder:
     STYLE_TOGGLE_ACTION = "toggle_style_options"
 
     MODAL_CALLBACK_ID = "emoji_creation_modal"
+
+    def __init__(
+        self,
+        default_provider: str = "openai",
+        google_available: bool = False,
+    ) -> None:
+        """Initialize modal builder with provider configuration.
+
+        Args:
+            default_provider: Default image provider ("openai" or "google_gemini")
+            google_available: Whether Google API is configured and available
+        """
+        self._default_provider = default_provider
+        self._google_available = google_available
+
+    def _get_provider_options(self) -> list[dict[str, Any]]:
+        """Get available provider options based on configuration."""
+        options = [
+            {
+                "text": {
+                    "type": "plain_text",
+                    "text": "🤖 OpenAI GPT-Image",
+                },
+                "value": "openai",
+            },
+        ]
+
+        if self._google_available:
+            options.insert(
+                0,
+                {
+                    "text": {
+                        "type": "plain_text",
+                        "text": "🍌 Nano Banana Pro",
+                    },
+                    "value": "google_gemini",
+                },
+            )
+
+        return options
+
+    def _get_default_provider_option(self) -> dict[str, Any]:
+        """Get the default provider option for the select."""
+        if self._google_available and self._default_provider == "google_gemini":
+            return {
+                "text": {"type": "plain_text", "text": "🍌 Nano Banana Pro"},
+                "value": "google_gemini",
+            }
+        return {
+            "text": {"type": "plain_text", "text": "🤖 OpenAI GPT-Image"},
+            "value": "openai",
+        }
 
     def build_collapsed_view(self, metadata: dict[str, Any]) -> dict[str, Any]:
         """Build simple mode modal (description only)."""
@@ -139,26 +195,8 @@ class EmojiCreationModalBuilder:
                 "element": {
                     "type": "static_select",
                     "action_id": self.PROVIDER_ACTION,
-                    "initial_option": {
-                        "text": {"type": "plain_text", "text": "🍌 Nano Banana Pro"},
-                        "value": "google_gemini",
-                    },
-                    "options": [
-                        {
-                            "text": {
-                                "type": "plain_text",
-                                "text": "🍌 Nano Banana Pro",
-                            },
-                            "value": "google_gemini",
-                        },
-                        {
-                            "text": {
-                                "type": "plain_text",
-                                "text": "🤖 OpenAI GPT-Image",
-                            },
-                            "value": "openai",
-                        },
-                    ],
+                    "initial_option": self._get_default_provider_option(),
+                    "options": self._get_provider_options(),
                 },
                 "label": {"type": "plain_text", "text": "Image Model"},
             },

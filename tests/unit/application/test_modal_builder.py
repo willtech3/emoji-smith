@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from emojismith.presentation.modal_builder import EmojiCreationModalBuilder
+from emojismith.application.modal_builder import EmojiCreationModalBuilder
 
 
 @pytest.mark.unit()
@@ -13,7 +13,17 @@ class TestEmojiCreationModalBuilder:
 
     @pytest.fixture()
     def builder(self):
-        return EmojiCreationModalBuilder()
+        """Default builder with Google not available (defaults to OpenAI)."""
+        return EmojiCreationModalBuilder(
+            default_provider="openai", google_available=False
+        )
+
+    @pytest.fixture()
+    def builder_with_google(self):
+        """Builder with Google available."""
+        return EmojiCreationModalBuilder(
+            default_provider="google_gemini", google_available=True
+        )
 
     @pytest.fixture()
     def sample_metadata(self):
@@ -118,9 +128,10 @@ class TestEmojiCreationModalBuilder:
         assert name_block is not None
         assert name_block.get("optional") is True
 
-    def test_build_expanded_view_provider_default_is_google(
+    def test_build_expanded_view_provider_default_is_openai_without_google(
         self, builder, sample_metadata
     ):
+        """Provider should default to OpenAI when Google is not available."""
         view = builder.build_expanded_view(sample_metadata)
         blocks = view["blocks"]
 
@@ -130,7 +141,58 @@ class TestEmojiCreationModalBuilder:
         )
         assert provider_block is not None
         initial_option = provider_block["element"]["initial_option"]
+        assert initial_option["value"] == "openai"
+
+    def test_build_expanded_view_provider_default_is_google_when_available(
+        self, builder_with_google, sample_metadata
+    ):
+        """Provider should default to Google when available."""
+        view = builder_with_google.build_expanded_view(sample_metadata)
+        blocks = view["blocks"]
+
+        provider_block = next(
+            (
+                b
+                for b in blocks
+                if b.get("block_id") == builder_with_google.IMAGE_PROVIDER_BLOCK
+            ),
+            None,
+        )
+        assert provider_block is not None
+        initial_option = provider_block["element"]["initial_option"]
         assert initial_option["value"] == "google_gemini"
+
+    def test_provider_options_without_google(self, builder, sample_metadata):
+        """Only OpenAI option should be available when Google is not configured."""
+        view = builder.build_expanded_view(sample_metadata)
+        blocks = view["blocks"]
+
+        provider_block = next(
+            (b for b in blocks if b.get("block_id") == builder.IMAGE_PROVIDER_BLOCK),
+            None,
+        )
+        options = provider_block["element"]["options"]
+        assert len(options) == 1
+        assert options[0]["value"] == "openai"
+
+    def test_provider_options_with_google(self, builder_with_google, sample_metadata):
+        """Both Google and OpenAI should be available when Google is configured."""
+        view = builder_with_google.build_expanded_view(sample_metadata)
+        blocks = view["blocks"]
+
+        provider_block = next(
+            (
+                b
+                for b in blocks
+                if b.get("block_id") == builder_with_google.IMAGE_PROVIDER_BLOCK
+            ),
+            None,
+        )
+        options = provider_block["element"]["options"]
+        assert len(options) == 2
+        option_values = [o["value"] for o in options]
+        assert "google_gemini" in option_values
+        assert "openai" in option_values
 
     def test_build_expanded_view_quality_default_is_high(
         self, builder, sample_metadata

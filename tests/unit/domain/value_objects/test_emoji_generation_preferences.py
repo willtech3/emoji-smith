@@ -15,7 +15,9 @@ class TestBackgroundType:
     """Tests for BackgroundType enum."""
 
     def test_from_form_value_transparent(self):
-        assert BackgroundType.from_form_value("transparent") == BackgroundType.TRANSPARENT
+        assert (
+            BackgroundType.from_form_value("transparent") == BackgroundType.TRANSPARENT
+        )
 
     def test_from_form_value_opaque(self):
         assert BackgroundType.from_form_value("opaque") == BackgroundType.OPAQUE

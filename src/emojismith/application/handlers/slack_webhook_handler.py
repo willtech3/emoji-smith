@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import urllib.parse
 from typing import Any, Protocol
 
+from emojismith.application.modal_builder import EmojiCreationModalBuilder
 from emojismith.domain.services.webhook_security_service import WebhookSecurityService
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
-from emojismith.presentation.modal_builder import EmojiCreationModalBuilder
 from shared.domain.entities import EmojiGenerationJob, SlackMessage
 from shared.domain.repositories import JobQueueProducer, SlackModalRepository
 from shared.domain.value_objects import (
@@ -28,12 +29,24 @@ class WebhookEventProcessor:
     """Default Slack event processor using application/infrastructure components."""
 
     def __init__(
-        self, slack_repo: SlackModalRepository, job_queue: JobQueueProducer
+        self,
+        slack_repo: SlackModalRepository,
+        job_queue: JobQueueProducer,
+        google_api_key: str | None = None,
     ) -> None:
         self._slack_repo = slack_repo
         self._job_queue = job_queue
         self._logger = logging.getLogger(__name__)
-        self._modal_builder = EmojiCreationModalBuilder()
+
+        # Configure modal builder based on available providers
+        # Default to OpenAI unless Google is configured
+        google_available = bool(google_api_key or os.environ.get("GOOGLE_API_KEY"))
+        default_provider = "google_gemini" if google_available else "openai"
+
+        self._modal_builder = EmojiCreationModalBuilder(
+            default_provider=default_provider,
+            google_available=google_available,
+        )
 
     async def process(self, body: bytes) -> dict[str, Any]:
         try:
@@ -131,12 +144,12 @@ class WebhookEventProcessor:
             .get("value", "")
         )
 
-        # Extract image provider (default to google_gemini for best quality)
+        # Extract image provider (default based on availability)
         image_provider = (
             state.get(self._modal_builder.IMAGE_PROVIDER_BLOCK, {})
             .get(self._modal_builder.PROVIDER_ACTION, {})
             .get("selected_option", {})
-            .get("value", "google_gemini")
+            .get("value", self._modal_builder._default_provider)
         )
 
         # Extract advanced options
