@@ -143,7 +143,7 @@ class EmojiCreationService:
         shared_count = 0
         thread_ts_for_replies: str | None = None
 
-        for emoji in emojis:
+        for idx, emoji in enumerate(emojis):
             context = EmojiSharingContext(
                 emoji=emoji,
                 original_message=original_message,
@@ -189,7 +189,7 @@ class EmojiCreationService:
                                 "emoji_name": emoji.name,
                                 "thread_ts": result.thread_ts,
                                 "file_url": result.file_url,
-                                "image_index": emojis.index(emoji) + 1,
+                                "image_index": idx + 1,
                                 "total_images": len(emojis),
                             },
                         )

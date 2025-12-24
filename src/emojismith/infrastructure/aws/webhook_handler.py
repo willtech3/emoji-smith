@@ -62,7 +62,15 @@ def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityServic
 
     signature_validator = SlackSignatureValidator(signing_secret=slack_signing_secret)
     security_service = WebhookSecurityService(signature_validator)
-    processor = WebhookEventProcessor(slack_repo=slack_repo, job_queue=job_queue)
+
+    # Optional: Google API key for Gemini/Imagen provider
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+
+    processor = WebhookEventProcessor(
+        slack_repo=slack_repo,
+        job_queue=job_queue,
+        google_api_key=google_api_key,
+    )
     slack_handler = SlackWebhookHandler(
         security_service=security_service, event_processor=processor
     )

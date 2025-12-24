@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import re
 import urllib.parse
 from typing import Any, Protocol
 
@@ -47,6 +49,34 @@ class WebhookEventProcessor:
             default_provider=default_provider,
             google_available=google_available,
         )
+
+    @staticmethod
+    def _generate_emoji_name(description: str) -> str:
+        """Generate a valid Slack emoji name from description.
+
+        Creates a slugified name from the description with a short hash suffix
+        for uniqueness. Result is lowercase, underscores only, max 32 chars.
+
+        Example: "A happy dancing banana" -> "a_happy_dancing_banan_x7k2m"
+        """
+        # Keep only alphanumeric and spaces
+        cleaned = re.sub(r"[^a-zA-Z0-9\s]", "", description)
+        # Convert to lowercase and replace spaces with underscores
+        slugified = cleaned.lower().strip().replace(" ", "_")
+        # Remove consecutive underscores
+        slugified = re.sub(r"_+", "_", slugified)
+        # Strip leading/trailing underscores
+        slugified = slugified.strip("_")
+
+        # Generate short hash suffix for uniqueness (5 chars)
+        hash_suffix = hashlib.sha256(description.encode()).hexdigest()[:5]
+
+        # Truncate to leave room for underscore + 5-char suffix (max 32 total)
+        max_base_len = 32 - 1 - len(hash_suffix)  # 26 chars
+        if len(slugified) > max_base_len:
+            slugified = slugified[:max_base_len].rstrip("_")
+
+        return f"{slugified}_{hash_suffix}"
 
     async def process(self, body: bytes) -> dict[str, Any]:
         try:
@@ -137,12 +167,14 @@ class WebhookEventProcessor:
                 },
             }
 
-        # Extract emoji name (optional, will be auto-generated if empty)
+        # Extract emoji name (optional, auto-generate from description if empty)
         emoji_name = (
             state.get(self._modal_builder.EMOJI_NAME_BLOCK, {})
             .get(self._modal_builder.NAME_ACTION, {})
             .get("value", "")
         )
+        if not emoji_name:
+            emoji_name = self._generate_emoji_name(description)
 
         # Extract image provider (default based on availability)
         image_provider = (
