@@ -20,9 +20,14 @@ class TestConcurrentRequests:
         """Mock image generator that simulates processing time."""
         generator = AsyncMock()
 
-        async def generate_with_delay(prompt):
+        async def generate_with_delay(
+            prompt: str,
+            num_images: int = 1,
+            quality: str = "high",
+            background: str = "transparent",
+        ) -> list[bytes]:
             await asyncio.sleep(0.1)  # Simulate processing time
-            return b"fake_image"
+            return [b"fake_image"] * num_images
 
         generator.generate_image = generate_with_delay
         return generator

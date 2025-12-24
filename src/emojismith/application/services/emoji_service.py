@@ -78,6 +78,16 @@ class EmojiCreationService:
             enhance=True,  # Enable AI enhancement
         )
 
+        # Apply generation preferences to prompt (for Google providers)
+        gen_prefs = job.generation_preferences
+        if provider == ImageProvider.GOOGLE_GEMINI:
+            # Add Slack emoji optimization hints for Google's prompt-based approach
+            enhanced_prompt += gen_prefs.get_background_prompt_suffix()
+
+        # Add user's custom style text if provided
+        if gen_prefs.style_text:
+            enhanced_prompt += f", {gen_prefs.style_text}"
+
         # Use provided emoji name, sanitize for Slack (max 32 chars)
         name = job.emoji_name.replace(" ", "_").lower()[:32]
 
@@ -92,15 +102,19 @@ class EmojiCreationService:
             style_template_manager=self._style_template_manager,
         )
 
-        # Generate emoji using the enhanced prompt
-        emoji = await emoji_generation_service.generate_from_prompt(
-            enhanced_prompt, name
+        # Generate emoji(s) using the enhanced prompt with preferences
+        emojis = await emoji_generation_service.generate_multiple_from_prompt(
+            prompt=enhanced_prompt,
+            name=name,
+            num_images=gen_prefs.num_images.value,
+            quality=gen_prefs.quality.value,
+            background=gen_prefs.background.value,
         )
 
         # Get workspace type from sharing service
         workspace_type = self._sharing_service.workspace_type
 
-        # Create sharing context
+        # Create sharing context for all emojis
         from shared.domain.entities.slack_message import SlackMessage
 
         original_message = SlackMessage(
@@ -111,10 +125,8 @@ class EmojiCreationService:
             team_id=job.team_id,
         )
 
-        context = EmojiSharingContext(
-            emoji=emoji,
-            original_message=original_message,
-            preferences=job.sharing_preferences
+        sharing_preferences = (
+            job.sharing_preferences
             or EmojiSharingPreferences.default_for_context(
                 is_in_thread=bool(
                     job.sharing_preferences and job.sharing_preferences.thread_ts
@@ -124,50 +136,77 @@ class EmojiCreationService:
                     if job.sharing_preferences
                     else None
                 ),
-            ),
-            workspace_type=workspace_type,
+            )
         )
 
-        if workspace_type == WorkspaceType.ENTERPRISE_GRID:
-            # Try direct upload for Enterprise Grid
-            uploaded = await self._slack_repo.upload_emoji(
-                name=name, image_data=emoji.image_data
+        # Share all generated emojis (spec 5.2: multi-image posting)
+        shared_count = 0
+        thread_ts_for_replies: str | None = None
+
+        for idx, emoji in enumerate(emojis):
+            context = EmojiSharingContext(
+                emoji=emoji,
+                original_message=original_message,
+                preferences=sharing_preferences,
+                workspace_type=workspace_type,
             )
-            if uploaded:
-                # Add reaction if upload succeeded
-                try:
-                    await self._slack_repo.add_emoji_reaction(
-                        emoji_name=name,
-                        channel_id=job.channel_id,
-                        timestamp=job.timestamp,
-                    )
-                except Exception as e:
-                    self._logger.error(f"Failed to add emoji reaction: {e}")
-        else:
-            # Use file sharing for non-Enterprise workspaces
-            if self._file_sharing_repo:
-                result = await self._file_sharing_repo.share_emoji_file(
-                    emoji=emoji,
-                    channel_id=job.channel_id,
-                    preferences=context.preferences,
-                    requester_user_id=job.user_id,
-                    original_message_ts=job.timestamp,
+
+            if workspace_type == WorkspaceType.ENTERPRISE_GRID:
+                # Try direct upload for Enterprise Grid
+                uploaded = await self._slack_repo.upload_emoji(
+                    name=emoji.name, image_data=emoji.image_data
                 )
-                if result.success:
-                    self._logger.info(
-                        "Successfully shared emoji file",
-                        extra={
-                            "emoji_name": name,
-                            "thread_ts": result.thread_ts,
-                            "file_url": result.file_url,
-                        },
+                if uploaded:
+                    shared_count += 1
+                    # Add reaction only for first emoji
+                    if shared_count == 1:
+                        try:
+                            await self._slack_repo.add_emoji_reaction(
+                                emoji_name=emoji.name,
+                                channel_id=job.channel_id,
+                                timestamp=job.timestamp,
+                            )
+                        except Exception as e:
+                            self._logger.error(f"Failed to add emoji reaction: {e}")
+            else:
+                # Use file sharing for non-Enterprise workspaces
+                if self._file_sharing_repo:
+                    result = await self._file_sharing_repo.share_emoji_file(
+                        emoji=emoji,
+                        channel_id=job.channel_id,
+                        preferences=context.preferences,
+                        requester_user_id=job.user_id,
+                        original_message_ts=thread_ts_for_replies or job.timestamp,
                     )
-                else:
-                    self._logger.error(f"Failed to share emoji file: {result.error}")
+                    if result.success:
+                        shared_count += 1
+                        # Use the first message's thread_ts for subsequent replies
+                        if thread_ts_for_replies is None and result.thread_ts:
+                            thread_ts_for_replies = result.thread_ts
+                        self._logger.info(
+                            "Successfully shared emoji file",
+                            extra={
+                                "emoji_name": emoji.name,
+                                "thread_ts": result.thread_ts,
+                                "file_url": result.file_url,
+                                "image_index": idx + 1,
+                                "total_images": len(emojis),
+                            },
+                        )
+                    else:
+                        self._logger.error(
+                            f"Failed to share emoji file: {result.error}",
+                            extra={"emoji_name": emoji.name},
+                        )
 
         self._logger.info(
             "Successfully processed emoji generation job",
-            extra={"job_id": job.job_id, "emoji_name": name},
+            extra={
+                "job_id": job.job_id,
+                "emoji_name": name,
+                "images_generated": len(emojis),
+                "images_shared": shared_count,
+            },
         )
 
     async def process_emoji_generation_job_dict(self, job_data: dict[str, Any]) -> None:

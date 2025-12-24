@@ -106,23 +106,24 @@ async def test_rejects_image_generation_when_no_data_returned() -> None:
 @pytest.mark.asyncio()
 @pytest.mark.integration()
 async def test_rejects_image_generation_when_b64_json_is_none() -> None:
-    """Test that None b64_json is handled gracefully."""
+    """Test that None b64_json is handled gracefully by returning empty list."""
     client = AsyncMock()
     client.images.generate.return_value = AsyncMock(data=[AsyncMock(b64_json=None)])
     repo = OpenAIAPIRepository(client)
-    with pytest.raises(ValueError, match="OpenAI did not return valid image data"):
-        await repo.generate_image("prompt")
+    # With new API, None b64_json results in empty list since we skip None values
+    result = await repo.generate_image("prompt")
+    assert result == []  # Empty list when no valid images
 
 
 @pytest.mark.asyncio()
 @pytest.mark.integration()
-async def test_falls_back_to_dalle3_when_gpt_image_fails() -> None:
+async def test_falls_back_to_mini_when_gpt_image_fails() -> None:
     """Test fallback to gpt-image-1-mini when primary model fails."""
     client = AsyncMock()
 
-    # First call (gpt-image-1) fails
+    # First call (gpt-image-1.5) fails
     client.images.generate.side_effect = [
-        Exception("gpt-image-1 not available"),
+        Exception("gpt-image-1.5 not available"),
         AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # gpt-image-1-mini succeeds
     ]
 
@@ -132,17 +133,19 @@ async def test_falls_back_to_dalle3_when_gpt_image_fails() -> None:
     # Should have called both models
     assert client.images.generate.call_count == 2
 
-    # First call should be gpt-image-1
+    # First call should be gpt-image-1.5
     first_call = client.images.generate.call_args_list[0]
-    assert first_call.kwargs["model"] == "gpt-image-1"
+    assert first_call.kwargs["model"] == "gpt-image-1.5"
 
     # Second call should be gpt-image-1-mini
     second_call = client.images.generate.call_args_list[1]
     assert second_call.kwargs["model"] == "gpt-image-1-mini"
     assert second_call.kwargs["size"] == "1024x1024"
 
-    # Should return the result
-    assert isinstance(result, bytes)
+    # Should return list of bytes
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert isinstance(result[0], bytes)
 
 
 @pytest.mark.asyncio()

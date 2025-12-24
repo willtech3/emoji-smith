@@ -136,7 +136,7 @@ async def test_background_worker_processes_job_end_to_end():
             poll_interval=0,  # No delay for testing
         )
 
-        # Create test job
+        # Create test job (explicitly set openai since we're mocking OpenAI)
         job = EmojiGenerationJob.create_new(
             message_text="Deploy on Friday? Are you crazy?",
             user_description="fire emoji for urgency",
@@ -147,6 +147,7 @@ async def test_background_worker_processes_job_end_to_end():
             team_id="T999999",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
             style_preferences=EmojiStylePreferences(),
+            image_provider="openai",
         )
 
         # Enqueue job
@@ -248,7 +249,7 @@ async def test_worker_handles_multiple_jobs_concurrently():
             poll_interval=0,
         )
 
-        # Create multiple jobs
+        # Create multiple jobs (explicitly set openai since we're mocking OpenAI)
         jobs = []
         for i in range(3):
             job = EmojiGenerationJob.create_new(
@@ -261,6 +262,7 @@ async def test_worker_handles_multiple_jobs_concurrently():
                 team_id="T999999",
                 sharing_preferences=EmojiSharingPreferences.default_for_context(),
                 style_preferences=EmojiStylePreferences(),
+                image_provider="openai",
             )
             await job_queue.enqueue_job(job)
             jobs.append(job)

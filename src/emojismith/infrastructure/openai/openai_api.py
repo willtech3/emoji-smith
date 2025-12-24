@@ -123,51 +123,60 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
             raise RateLimitExceededError(str(exc)) from exc
         return response.output_text
 
-    async def generate_image(self, prompt: str) -> bytes:
-        """Generate an image using gpt-image-1 with fallback to gpt-image-1-mini."""
-        # Try gpt-image-1 first
+    async def generate_image(
+        self,
+        prompt: str,
+        num_images: int = 1,
+        quality: str = "high",
+        background: str = "transparent",
+    ) -> list[bytes]:
+        """Generate images using gpt-image-1.5 with fallback to gpt-image-1-mini.
+
+        Args:
+            prompt: Text description of the image to generate
+            num_images: Number of images to generate (1-10, we cap at 4 for UX)
+            quality: Rendering quality - "auto", "high", "medium", "low"
+            background: Background type - "transparent", "opaque", "auto"
+
+        Returns:
+            List of image bytes (PNG format with alpha channel if transparent)
+        """
+        # Cap at 4 images for reasonable UX
+        n = min(num_images, 4)
+
         try:
             response = await self._client.images.generate(
-                model="gpt-image-1",
+                model="gpt-image-1.5",
                 prompt=prompt,
-                n=1,
+                n=n,
                 size="1024x1024",
-                quality="high",
-                background="transparent",  # Better for emojis
+                quality=quality,
+                background=background,
+                response_format="b64_json",
             )
-        except (
-            openai.RateLimitError
-        ) as exc:  # pragma: no cover - network error simulated
+        except openai.RateLimitError as exc:
             raise RateLimitExceededError(str(exc)) from exc
         except Exception as exc:
             self._logger.warning(
-                "gpt-image-1 failed, falling back to gpt-image-1-mini: %s", exc
+                "gpt-image-1.5 failed, falling back to gpt-image-1-mini: %s", exc
             )
-            # Fallback to gpt-image-1-mini (fast, cost-effective)
             try:
                 response = await self._client.images.generate(
                     model="gpt-image-1-mini",
                     prompt=prompt,
-                    n=1,
+                    n=n,
                     size="1024x1024",
-                    background="transparent",
+                    background=background,
+                    response_format="b64_json",
                 )
-            except (
-                openai.RateLimitError
-            ) as rate_exc:  # pragma: no cover - network error simulated
+            except openai.RateLimitError as rate_exc:
                 raise RateLimitExceededError(str(rate_exc)) from rate_exc
-            except Exception as fallback_exc:
-                self._logger.error(
-                    "Both gpt-image-1 and gpt-image-1-mini failed: %s", fallback_exc
-                )
-                raise fallback_exc
 
         if not response.data:
             raise ValueError("OpenAI did not return image data")
 
-        b64 = response.data[0].b64_json
-        if b64 is None:
-            raise ValueError("OpenAI did not return valid image data")
-        if isinstance(b64, str):
-            return base64.b64decode(b64)
-        return b64
+        images = []
+        for item in response.data:
+            if item.b64_json:
+                images.append(base64.b64decode(item.b64_json))
+        return images
