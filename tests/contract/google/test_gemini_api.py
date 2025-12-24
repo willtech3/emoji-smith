@@ -17,6 +17,7 @@ def mock_gemini_client():
     # Set up the async model interface
     async_models = MagicMock()
     async_models.generate_content = AsyncMock()
+    async_models.generate_images = AsyncMock()  # Add Imagen API mock
     client.aio.models = async_models
 
     return client
@@ -28,7 +29,7 @@ def repository(mock_gemini_client):
     return GeminiAPIRepository(
         client=mock_gemini_client,
         model="gemini-3-pro-image-preview",
-        fallback_model="gemini-2.5-flash-image",
+        fallback_model="imagen-4.0-ultra-generate-001",
     )
 
 
@@ -36,10 +37,10 @@ class TestGeminiAPIRepositoryGenerateImage:
     """Tests for GeminiAPIRepository.generate_image method."""
 
     @pytest.mark.asyncio()
-    async def test_generate_image_when_successful_returns_bytes(
+    async def test_generate_image_when_successful_returns_list_of_bytes(
         self, repository, mock_gemini_client
     ):
-        """Test successful image generation returns image bytes."""
+        """Test successful image generation returns list of image bytes."""
         # Arrange
         expected_image_data = b"fake_image_bytes"
         mock_part = MagicMock()
@@ -55,35 +56,40 @@ class TestGeminiAPIRepositoryGenerateImage:
         result = await repository.generate_image("Test prompt")
 
         # Assert
-        assert result == expected_image_data
+        assert result == [expected_image_data]
         mock_gemini_client.aio.models.generate_content.assert_called_once()
 
     @pytest.mark.asyncio()
-    async def test_generate_image_when_primary_fails_uses_fallback(
+    async def test_generate_image_when_primary_fails_uses_imagen_fallback(
         self, repository, mock_gemini_client
     ):
-        """Test fallback model is used when primary model fails."""
+        """Test Imagen fallback is used when primary Gemini model fails."""
         # Arrange
         expected_image_data = b"fallback_image_bytes"
-        mock_part = MagicMock()
-        mock_part.inline_data = MagicMock()
-        mock_part.inline_data.data = expected_image_data
 
-        mock_response = MagicMock()
-        mock_response.parts = [mock_part]
+        # Mock Imagen response
+        mock_image = MagicMock()
+        mock_image.image = MagicMock()
+        mock_image.image.image_bytes = expected_image_data
 
-        # First call fails, second call succeeds
-        mock_gemini_client.aio.models.generate_content.side_effect = [
-            Exception("Primary model error"),
-            mock_response,
-        ]
+        mock_imagen_response = MagicMock()
+        mock_imagen_response.generated_images = [mock_image]
+
+        # Primary fails, fallback succeeds
+        mock_gemini_client.aio.models.generate_content.side_effect = Exception(
+            "Primary model error"
+        )
+        mock_gemini_client.aio.models.generate_images.return_value = (
+            mock_imagen_response
+        )
 
         # Act
         result = await repository.generate_image("Test prompt")
 
         # Assert
-        assert result == expected_image_data
-        assert mock_gemini_client.aio.models.generate_content.call_count == 2
+        assert result == [expected_image_data]
+        mock_gemini_client.aio.models.generate_content.assert_called_once()
+        mock_gemini_client.aio.models.generate_images.assert_called_once()
 
     @pytest.mark.asyncio()
     async def test_generate_image_when_quota_exceeded_raises_rate_limit_error(
@@ -104,11 +110,13 @@ class TestGeminiAPIRepositoryGenerateImage:
         self, repository, mock_gemini_client
     ):
         """Test rate limit error is raised when fallback quota is exceeded."""
-        # Arrange - use proper Google API exception type for fallback
-        mock_gemini_client.aio.models.generate_content.side_effect = [
-            Exception("Primary model error"),
-            google_exceptions.ResourceExhausted("Quota exceeded for fallback"),
-        ]
+        # Arrange - primary fails, fallback hits rate limit
+        mock_gemini_client.aio.models.generate_content.side_effect = Exception(
+            "Primary model error"
+        )
+        mock_gemini_client.aio.models.generate_images.side_effect = (
+            google_exceptions.ResourceExhausted("Quota exceeded for fallback")
+        )
 
         # Act & Assert
         with pytest.raises(RateLimitExceededError):
@@ -143,15 +151,22 @@ class TestGeminiAPIRepositoryGenerateImage:
     async def test_generate_image_when_no_image_data_raises_value_error(
         self, repository, mock_gemini_client
     ):
-        """Test ValueError is raised when Gemini returns no image data."""
-        # Arrange
+        """Test ValueError is raised when both models return no image data."""
+        # Arrange - primary returns empty, fallback also fails
         mock_response = MagicMock()
         mock_response.parts = []  # No parts returned
 
         mock_gemini_client.aio.models.generate_content.return_value = mock_response
 
+        # Mock empty Imagen response after primary fails
+        mock_imagen_response = MagicMock()
+        mock_imagen_response.generated_images = []
+        mock_gemini_client.aio.models.generate_images.return_value = (
+            mock_imagen_response
+        )
+
         # Act & Assert
-        with pytest.raises(ValueError, match="Gemini did not return image data"):
+        with pytest.raises(ValueError, match="(Gemini|Imagen) did not return"):
             await repository.generate_image("Test prompt")
 
     @pytest.mark.asyncio()
@@ -159,12 +174,14 @@ class TestGeminiAPIRepositoryGenerateImage:
         self, repository, mock_gemini_client
     ):
         """Test that when both models fail, the fallback error is raised."""
-        # Arrange
-        mock_gemini_client.aio.models.generate_content.side_effect = [
-            Exception("Primary model unavailable"),
-            Exception("Fallback model unavailable"),
-        ]
+        # Arrange - both primary and Imagen fallback fail
+        mock_gemini_client.aio.models.generate_content.side_effect = Exception(
+            "Primary model unavailable"
+        )
+        mock_gemini_client.aio.models.generate_images.side_effect = Exception(
+            "Imagen fallback unavailable"
+        )
 
         # Act & Assert
-        with pytest.raises(Exception, match="Fallback model unavailable"):
+        with pytest.raises(Exception, match="Imagen fallback unavailable"):
             await repository.generate_image("Test prompt")

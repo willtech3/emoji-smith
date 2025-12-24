@@ -28,7 +28,7 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
         self,
         client: genai.Client,
         model: str = "gemini-3-pro-image-preview",
-        fallback_model: str = "gemini-2.5-flash-image",
+        fallback_model: str = "imagen-4.0-ultra-generate-001",
         text_model: str = "gemini-3-flash-preview",
     ) -> None:
         self._client = client
@@ -153,24 +153,75 @@ Output:"""
                 raise RateLimitExceededError(str(exc)) from exc
             raise
 
-    async def generate_image(self, prompt: str) -> bytes:
-        """Generate image using Gemini with fallback."""
-        try:
-            return await self._generate_with_model(prompt, self._model)
-        except Exception as exc:
-            if self._is_rate_limit_error(exc):
-                raise RateLimitExceededError(str(exc)) from exc
+    async def _generate_with_imagen(self, prompt: str) -> bytes:
+        """Generate image with Imagen 4 Ultra fallback.
 
-            self._logger.warning(
-                "%s failed, falling back to %s: %s",
-                self._model,
-                self._fallback_model,
-                exc,
-            )
+        Uses the Imagen API which has a different method signature than Gemini.
+        """
+        response = await self._client.aio.models.generate_images(
+            model=self._fallback_model,  # "imagen-4.0-ultra-generate-001"
+            prompt=prompt,
+            config=types.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio="1:1",
+            ),
+        )
 
+        if response.generated_images:
+            first_image = response.generated_images[0]
+            if first_image.image and first_image.image.image_bytes is not None:
+                return bytes(first_image.image.image_bytes)
+
+        raise ValueError("Imagen did not return image data")
+
+    async def generate_image(
+        self,
+        prompt: str,
+        num_images: int = 1,
+        quality: str = "high",  # Unused - for protocol compatibility
+        background: str = "transparent",  # Unused - handled via prompt text
+    ) -> list[bytes]:
+        """Generate images using Gemini with Imagen Ultra fallback.
+
+        Note: Google APIs don't have quality/background parameters. These must be
+        specified in the prompt text using get_background_prompt_suffix().
+
+        Args:
+            prompt: Text description (should include "transparent background" if needed)
+            num_images: Number of images to generate (1-4)
+            quality: Unused - for protocol compatibility with OpenAI
+            background: Unused - for protocol compatibility with OpenAI
+
+        Returns:
+            List of image bytes
+        """
+        # Unused parameters kept for protocol compatibility
+        _ = quality, background
+        images = []
+        n = min(num_images, 4)
+
+        for _ in range(n):
             try:
-                return await self._generate_with_model(prompt, self._fallback_model)
-            except Exception as fallback_exc:
-                if self._is_rate_limit_error(fallback_exc):
-                    raise RateLimitExceededError(str(fallback_exc)) from fallback_exc
-                raise fallback_exc
+                image_bytes = await self._generate_with_model(prompt, self._model)
+                images.append(image_bytes)
+            except Exception as exc:
+                if self._is_rate_limit_error(exc):
+                    raise RateLimitExceededError(str(exc)) from exc
+
+                self._logger.warning(
+                    "%s failed, falling back to %s: %s",
+                    self._model,
+                    self._fallback_model,
+                    exc,
+                )
+                try:
+                    image_bytes = await self._generate_with_imagen(prompt)
+                    images.append(image_bytes)
+                except Exception as fallback_exc:
+                    if self._is_rate_limit_error(fallback_exc):
+                        raise RateLimitExceededError(
+                            str(fallback_exc)
+                        ) from fallback_exc
+                    raise fallback_exc
+
+        return images

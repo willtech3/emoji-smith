@@ -270,3 +270,121 @@ class EmojiStylePreferences:
         except (ValueError, KeyError) as e:
             logging.getLogger(__name__).warning(f"Invalid style preferences: {e}")
             return cls()  # Return safe defaults
+
+
+class BackgroundType(Enum):
+    """Background transparency for generated emoji."""
+
+    TRANSPARENT = "transparent"
+    OPAQUE = "opaque"
+    AUTO = "auto"
+
+    @classmethod
+    def from_form_value(cls, value: str) -> "BackgroundType":
+        mapping = {
+            "transparent": cls.TRANSPARENT,
+            "opaque": cls.OPAQUE,
+            "auto": cls.AUTO,
+        }
+        return mapping.get(value, cls.TRANSPARENT)
+
+
+class QualityLevel(Enum):
+    """Quality level for image generation."""
+
+    AUTO = "auto"  # Model decides
+    LOW = "low"  # Fastest, ~2s
+    MEDIUM = "medium"  # Balanced
+    HIGH = "high"  # Best quality, ~5s
+
+    @classmethod
+    def from_form_value(cls, value: str) -> "QualityLevel":
+        mapping = {
+            "auto": cls.AUTO,
+            "low": cls.LOW,
+            "medium": cls.MEDIUM,
+            "high": cls.HIGH,
+        }
+        return mapping.get(value, cls.HIGH)
+
+
+class NumberOfImages(Enum):
+    """Number of image variations to generate."""
+
+    ONE = 1
+    TWO = 2
+    FOUR = 4
+
+    @classmethod
+    def from_form_value(cls, value: str) -> "NumberOfImages":
+        mapping = {"1": cls.ONE, "2": cls.TWO, "4": cls.FOUR}
+        return mapping.get(value, cls.ONE)
+
+
+@dataclass(frozen=True)
+class EmojiGenerationPreferences:
+    """User preferences for emoji generation with advanced options."""
+
+    background: BackgroundType = BackgroundType.TRANSPARENT
+    quality: QualityLevel = QualityLevel.HIGH
+    num_images: NumberOfImages = NumberOfImages.ONE
+    style_text: str = ""  # Free-form style input (e.g., "cartoon", "pixel art")
+
+    def to_prompt_fragment(self) -> str:
+        """Generate prompt fragment for style."""
+        parts = []
+        if self.style_text:
+            parts.append(self.style_text.strip())
+        return ", ".join(parts) if parts else ""
+
+    def get_background_prompt_suffix(self) -> str:
+        """Get prompt suffix for Slack emoji optimization (for Google APIs).
+
+        Includes transparency and small-size readability guidance
+        per Slack requirements.
+        """
+        base = (
+            ", bold shapes, high contrast, "
+            "optimized for 128x128 Slack emoji display at 20-32px"
+        )
+        if self.background == BackgroundType.TRANSPARENT:
+            return f", transparent background{base}"
+        return base
+
+    @classmethod
+    def from_form_values(
+        cls,
+        background: str = "transparent",
+        quality: str = "high",
+        num_images: str = "1",
+        style_text: str = "",
+    ) -> "EmojiGenerationPreferences":
+        return cls(
+            background=BackgroundType.from_form_value(background),
+            quality=QualityLevel.from_form_value(quality),
+            num_images=NumberOfImages.from_form_value(num_images),
+            style_text=style_text,
+        )
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "background": self.background.value,
+            "quality": self.quality.value,
+            "num_images": str(self.num_images.value),
+            "style_text": self.style_text,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, str]) -> "EmojiGenerationPreferences":
+        import logging
+
+        try:
+            return cls(
+                background=BackgroundType(data.get("background", "transparent")),
+                quality=QualityLevel(data.get("quality", "high")),
+                num_images=NumberOfImages(int(data.get("num_images", "1"))),
+                style_text=data.get("style_text", ""),
+            )
+        except (ValueError, KeyError) as e:
+            logging.getLogger(__name__).warning(f"Invalid generation preferences: {e}")
+            return cls()

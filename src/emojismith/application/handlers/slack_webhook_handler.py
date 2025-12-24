@@ -7,9 +7,13 @@ from typing import Any, Protocol
 
 from emojismith.domain.services.webhook_security_service import WebhookSecurityService
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
+from emojismith.presentation.modal_builder import EmojiCreationModalBuilder
 from shared.domain.entities import EmojiGenerationJob, SlackMessage
 from shared.domain.repositories import JobQueueProducer, SlackModalRepository
-from shared.domain.value_objects import EmojiSharingPreferences
+from shared.domain.value_objects import (
+    EmojiGenerationPreferences,
+    EmojiSharingPreferences,
+)
 
 
 class SlackEventProcessor(Protocol):
@@ -29,6 +33,7 @@ class WebhookEventProcessor:
         self._slack_repo = slack_repo
         self._job_queue = job_queue
         self._logger = logging.getLogger(__name__)
+        self._modal_builder = EmojiCreationModalBuilder()
 
     async def process(self, body: bytes) -> dict[str, Any]:
         try:
@@ -47,7 +52,7 @@ class WebhookEventProcessor:
         if event_type == "view_submission":
             return await self._handle_modal_submission(payload)
         if event_type == "block_actions":
-            return {}
+            return await self._handle_block_action(payload)
         return {"status": "ignored"}
 
     async def _handle_message_action(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -63,92 +68,109 @@ class WebhookEventProcessor:
         )
         trigger_id = payload.get("trigger_id", "")
 
-        modal_view = {
-            "type": "modal",
-            "callback_id": "emoji_creation_modal",
-            "title": {"type": "plain_text", "text": "Create Emoji"},
-            "blocks": [
-                {
-                    "type": "input",
-                    "block_id": "emoji_name",
-                    "element": {"type": "plain_text_input", "action_id": "name"},
-                    "label": {"type": "plain_text", "text": "Emoji Name"},
-                },
-                {
-                    "type": "input",
-                    "block_id": "emoji_description",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "description",
-                        "multiline": True,
-                    },
-                    "label": {"type": "plain_text", "text": "Description"},
-                },
-                {
-                    "type": "input",
-                    "block_id": "image_provider_block",
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "image_provider_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select image model",
-                        },
-                        "options": [
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "OpenAI GPT-Image",
-                                },
-                                "value": "openai",
-                            },
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "Nano Banana Pro",
-                                },
-                                "value": "google_gemini",
-                            },
-                        ],
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "OpenAI GPT-Image"},
-                            "value": "openai",
-                        },
-                    },
-                    "label": {"type": "plain_text", "text": "Image Model"},
-                },
-            ],
-            "submit": {"type": "plain_text", "text": "✨ Generate"},
-            "private_metadata": json.dumps(
-                {
-                    "message_text": slack_message.text,
-                    "user_id": slack_message.user_id,
-                    "channel_id": slack_message.channel_id,
-                    "timestamp": slack_message.timestamp,
-                    "team_id": slack_message.team_id,
-                }
-            ),
+        # Build metadata for the modal
+        metadata = {
+            "message_text": slack_message.text,
+            "user_id": slack_message.user_id,
+            "channel_id": slack_message.channel_id,
+            "timestamp": slack_message.timestamp,
+            "team_id": slack_message.team_id,
         }
+
+        # Use ModalBuilder for progressive disclosure - start with simple mode
+        modal_view = self._modal_builder.build_collapsed_view(metadata)
 
         await self._slack_repo.open_modal(trigger_id=trigger_id, view=modal_view)
         return {"status": "ok"}
 
+    async def _handle_block_action(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Handle interactive block actions (e.g., toggle button clicks)."""
+        actions = payload.get("actions", [])
+        view = payload.get("view", {})
+
+        for action in actions:
+            if action.get("action_id") == self._modal_builder.STYLE_TOGGLE_ACTION:
+                # Get current metadata
+                metadata = json.loads(view.get("private_metadata", "{}"))
+
+                # Toggle between collapsed and expanded views
+                if action.get("value") == "expand":
+                    new_view = self._modal_builder.build_expanded_view(metadata)
+                else:
+                    new_view = self._modal_builder.build_collapsed_view(metadata)
+
+                await self._slack_repo.update_modal(
+                    view_id=view.get("id", ""), view=new_view
+                )
+
+        return {}
+
     async def _handle_modal_submission(self, payload: dict[str, Any]) -> dict[str, Any]:
         view = payload.get("view", {})
         state = view.get("state", {}).get("values", {})
-        try:
-            description = state["emoji_description"]["description"]["value"]
-            emoji_name = state["emoji_name"]["name"]["value"]
-            # Extract image provider selection (default to openai for backwards compat)
-            image_provider = (
-                state.get("image_provider_block", {})
-                .get("image_provider_select", {})
-                .get("selected_option", {})
-                .get("value", "openai")
-            )
-        except Exception as exc:
-            self._logger.error("Malformed modal submission: %s", exc)
-            raise ValueError("Invalid modal submission payload") from exc
+
+        # Extract description (required)
+        description = (
+            state.get(self._modal_builder.DESCRIPTION_BLOCK, {})
+            .get(self._modal_builder.DESCRIPTION_ACTION, {})
+            .get("value", "")
+        )
+
+        if not description:
+            return {
+                "response_action": "errors",
+                "errors": {
+                    self._modal_builder.DESCRIPTION_BLOCK: "Please describe your emoji"
+                },
+            }
+
+        # Extract emoji name (optional, will be auto-generated if empty)
+        emoji_name = (
+            state.get(self._modal_builder.EMOJI_NAME_BLOCK, {})
+            .get(self._modal_builder.NAME_ACTION, {})
+            .get("value", "")
+        )
+
+        # Extract image provider (default to google_gemini for best quality)
+        image_provider = (
+            state.get(self._modal_builder.IMAGE_PROVIDER_BLOCK, {})
+            .get(self._modal_builder.PROVIDER_ACTION, {})
+            .get("selected_option", {})
+            .get("value", "google_gemini")
+        )
+
+        # Extract advanced options
+        background = (
+            state.get(self._modal_builder.BACKGROUND_BLOCK, {})
+            .get(self._modal_builder.BACKGROUND_ACTION, {})
+            .get("selected_option", {})
+            .get("value", "transparent")
+        )
+        quality = (
+            state.get(self._modal_builder.QUALITY_BLOCK, {})
+            .get(self._modal_builder.QUALITY_ACTION, {})
+            .get("selected_option", {})
+            .get("value", "high")
+        )
+        num_images = (
+            state.get(self._modal_builder.NUM_IMAGES_BLOCK, {})
+            .get(self._modal_builder.NUM_IMAGES_ACTION, {})
+            .get("selected_option", {})
+            .get("value", "1")
+        )
+        style_text = (
+            state.get(self._modal_builder.STYLE_TEXT_BLOCK, {})
+            .get(self._modal_builder.STYLE_TEXT_ACTION, {})
+            .get("value", "")
+        )
+
+        # Create generation preferences from form values
+        generation_preferences = EmojiGenerationPreferences.from_form_values(
+            background=background,
+            quality=quality,
+            num_images=num_images,
+            style_text=style_text,
+        )
 
         metadata = json.loads(view.get("private_metadata", "{}"))
 
@@ -169,6 +191,7 @@ class WebhookEventProcessor:
             sharing_preferences=sharing_preferences,
             emoji_name=emoji_name,
             image_provider=image_provider,
+            generation_preferences=generation_preferences,
         )
 
         await self._job_queue.enqueue_job(job)

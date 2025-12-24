@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from shared.domain.value_objects import (
+    EmojiGenerationPreferences,
     EmojiSharingPreferences,
     EmojiStylePreferences,
     JobStatus,
@@ -33,7 +34,10 @@ class EmojiGenerationJob:
     style_preferences: EmojiStylePreferences = field(
         default_factory=EmojiStylePreferences
     )
-    image_provider: str = "openai"  # Default for backward compatibility
+    generation_preferences: EmojiGenerationPreferences = field(
+        default_factory=EmojiGenerationPreferences
+    )
+    image_provider: str = "google_gemini"  # Updated default - best quality
 
     @classmethod
     def create_new(
@@ -48,8 +52,9 @@ class EmojiGenerationJob:
         team_id: str,
         sharing_preferences: EmojiSharingPreferences,
         style_preferences: EmojiStylePreferences | None = None,
+        generation_preferences: EmojiGenerationPreferences | None = None,
         thread_ts: str | None = None,
-        image_provider: str = "openai",
+        image_provider: str = "google_gemini",
     ) -> "EmojiGenerationJob":
         """Create a new emoji generation job."""
         return cls(
@@ -66,6 +71,8 @@ class EmojiGenerationJob:
             thread_ts=thread_ts,
             created_at=datetime.now(UTC),
             style_preferences=style_preferences or EmojiStylePreferences(),
+            generation_preferences=generation_preferences
+            or EmojiGenerationPreferences(),
             image_provider=image_provider,
         )
 
@@ -83,6 +90,7 @@ class EmojiGenerationJob:
             "status": self.status.value,
             "sharing_preferences": self.sharing_preferences.to_dict(),
             "style_preferences": self.style_preferences.to_dict(),
+            "generation_preferences": self.generation_preferences.to_dict(),
             "thread_ts": self.thread_ts,
             "created_at": self.created_at.isoformat(),
             "image_provider": self.image_provider,
@@ -107,9 +115,12 @@ class EmojiGenerationJob:
             style_preferences=EmojiStylePreferences.from_dict(
                 data.get("style_preferences", {})
             ),
+            generation_preferences=EmojiGenerationPreferences.from_dict(
+                data.get("generation_preferences", {})
+            ),
             thread_ts=data.get("thread_ts"),
             created_at=datetime.fromisoformat(data["created_at"]),
-            image_provider=data.get("image_provider", "openai"),
+            image_provider=data.get("image_provider", "google_gemini"),
         )
 
     def mark_as_processing(self) -> None:

@@ -47,7 +47,7 @@ class TestEmojiGenerationJob:
         job.mark_as_failed()
         assert job.status == JobStatus.FAILED
 
-    def test_to_dict_when_default_provider_includes_openai(self):
+    def test_to_dict_when_default_provider_includes_google_gemini(self):
         """Test that default image_provider is included in to_dict."""
         job = EmojiGenerationJob.create_new(
             message_text="hello",
@@ -60,10 +60,10 @@ class TestEmojiGenerationJob:
             emoji_name="smile",
         )
         data = job.to_dict()
-        assert data["image_provider"] == "openai"
+        assert data["image_provider"] == "google_gemini"
 
-    def test_from_dict_when_provider_missing_defaults_to_openai(self):
-        """Test backward compatibility: missing image_provider defaults to openai."""
+    def test_from_dict_when_provider_missing_defaults_to_google_gemini(self):
+        """Test backward compat: missing image_provider defaults to google_gemini."""
         # Create a valid job and get its dict representation
         original_job = EmojiGenerationJob.create_new(
             message_text="hello",
@@ -80,7 +80,7 @@ class TestEmojiGenerationJob:
         del data["image_provider"]
 
         job = EmojiGenerationJob.from_dict(data)
-        assert job.image_provider == "openai"
+        assert job.image_provider == "google_gemini"
 
     def test_from_dict_when_provider_present_preserves_value(self):
         """Test that image_provider value is preserved through serialization."""

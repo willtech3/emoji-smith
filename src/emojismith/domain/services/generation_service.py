@@ -34,6 +34,9 @@ class EmojiGenerationService:
         Returns:
             The generated and validated emoji
         """
-        raw_image = await self._image_generator.generate_image(prompt)
+        images = await self._image_generator.generate_image(prompt)
+        if not images:
+            raise ValueError("Image generation returned no images")
+        raw_image = images[0]  # Use first generated image
         processed = self._image_processor.process(raw_image)
         return self._emoji_validator.validate_and_create_emoji(processed, name)
