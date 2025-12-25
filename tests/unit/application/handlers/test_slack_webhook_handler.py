@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from emojismith.application.handlers.slack_webhook_handler import WebhookEventProcessor
+from emojismith.application.modal_builder import EmojiCreationModalBuilder
 from shared.domain.repositories import JobQueueProducer, SlackModalRepository
 
 
@@ -86,7 +87,7 @@ class TestModalSubmissionAutoGeneratesName:
         return WebhookEventProcessor(
             slack_repo=mock_slack_repo,
             job_queue=mock_job_queue,
-            google_api_key=None,
+            google_enabled=True,
         )
 
     def _make_submission_payload(
@@ -172,3 +173,62 @@ class TestModalSubmissionAutoGeneratesName:
         job = mock_job_queue.enqueue_job.call_args.args[0]
         # Should use provided name
         assert job.emoji_name == "custom_banana"
+
+
+@pytest.mark.unit()
+class TestMessageActionModalDefaultsToNanoBananaPro:
+    """Tests that the Slack modal defaults to Nano Banana Pro in production-like config.
+
+    The webhook Lambda does not have AI provider API keys injected, but the worker does.
+    The modal should still default to the best available model (Nano Banana Pro).
+    """
+
+    @pytest.fixture()
+    def mock_slack_repo(self):
+        return AsyncMock(spec=SlackModalRepository)
+
+    @pytest.fixture()
+    def mock_job_queue(self):
+        return AsyncMock(spec=JobQueueProducer)
+
+    @pytest.fixture()
+    def processor(self, mock_slack_repo, mock_job_queue):
+        # Webhook Lambda does not receive provider API keys.
+        return WebhookEventProcessor(
+            slack_repo=mock_slack_repo,
+            job_queue=mock_job_queue,
+            google_enabled=True,
+        )
+
+    @pytest.mark.asyncio()
+    async def test_message_action_modal_shows_nano_banana_pro_selected_by_default(
+        self, processor, mock_slack_repo
+    ):
+        payload = {
+            "type": "message_action",
+            "trigger_id": "TRIGGER",
+            "message": {"text": "hello", "ts": "111.222", "user": "U999"},
+            "channel": {"id": "C1"},
+            "team": {"id": "T1"},
+        }
+
+        await processor.process(json.dumps(payload).encode())
+
+        mock_slack_repo.open_modal.assert_awaited_once()
+        view = mock_slack_repo.open_modal.call_args.kwargs["view"]
+        provider_block = next(
+            (
+                b
+                for b in view["blocks"]
+                if b.get("block_id") == EmojiCreationModalBuilder.IMAGE_PROVIDER_BLOCK
+            ),
+            None,
+        )
+        assert provider_block is not None
+
+        element = provider_block["element"]
+        option_values = [o["value"] for o in element["options"]]
+        assert "google_gemini" in option_values
+        assert "openai" in option_values
+        assert element["initial_option"]["value"] == "google_gemini"
+        assert "Nano Banana Pro" in element["initial_option"]["text"]["text"]

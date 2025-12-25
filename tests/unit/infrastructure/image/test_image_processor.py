@@ -56,7 +56,7 @@ class TestCompressForSlack:
 
         assert len(result) <= 128 * 1024
 
-    def test_preserves_transparency(self):
+    def test_compress_for_slack_when_input_has_alpha_preserves_transparency(self):
         """Transparency should be preserved in output."""
         # Create image with transparency
         img = Image.new("RGBA", (512, 512), (255, 0, 0, 128))
@@ -94,7 +94,7 @@ class TestCompressForSlack:
 
         assert len(result) <= 50 * 1024
 
-    def test_returns_bytes(self):
+    def test_compress_for_slack_when_called_returns_bytes(self):
         """Output should be bytes."""
         img_bytes = self._create_png_bytes(size=256)
         result = compress_for_slack(img_bytes)
