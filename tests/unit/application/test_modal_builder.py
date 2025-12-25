@@ -58,6 +58,21 @@ class TestEmojiCreationModalBuilder:
         assert description_block["element"]["type"] == "plain_text_input"
         assert description_block["element"]["multiline"] is True
 
+    def test_build_collapsed_view_contains_image_provider(
+        self, builder, sample_metadata
+    ):
+        """Image provider should be available in collapsed/basic view."""
+        view = builder.build_collapsed_view(sample_metadata)
+        blocks = view["blocks"]
+
+        provider_block = next(
+            (b for b in blocks if b.get("block_id") == builder.IMAGE_PROVIDER_BLOCK),
+            None,
+        )
+        assert provider_block is not None
+        assert provider_block["type"] == "input"
+        assert provider_block["label"]["text"] == "Image Model"
+
     def test_build_collapsed_view_contains_toggle_button(
         self, builder, sample_metadata
     ):
