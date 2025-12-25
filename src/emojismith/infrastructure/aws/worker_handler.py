@@ -7,9 +7,12 @@ from typing import Any
 
 from emojismith.app import create_worker_emoji_service
 from shared.domain.entities import EmojiGenerationJob
+from shared.infrastructure.logging import log_event, setup_logging, trace_id_var
 
 from .secrets_loader import AWSSecretsLoader
 
+# Configure structured JSON logging for Lambda CloudWatch
+setup_logging()
 logger = logging.getLogger(__name__)
 
 _secrets_loader = AWSSecretsLoader()
@@ -39,15 +42,30 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
             job = EmojiGenerationJob.from_dict(message_body)
 
-            logger.info(
-                f"Processing emoji generation job: {job.job_id} for user {job.user_id}"
+            # Set trace context from incoming job
+            trace_id_var.set(job.trace_id or job.job_id)
+
+            log_event(
+                logger,
+                logging.INFO,
+                "Processing job",
+                event="job_received",
+                job_id=job.job_id,
+                user_id=job.user_id,
+                image_provider=job.image_provider,
             )
 
             import asyncio
 
             asyncio.run(emoji_service.process_emoji_generation_job(job))
 
-            logger.info(f"Successfully completed job: {job.job_id}")
+            log_event(
+                logger,
+                logging.INFO,
+                "Job completed successfully",
+                event="job_completed",
+                job_id=job.job_id,
+            )
 
         except Exception as e:
             logger.exception(f"Failed to process SQS record: {e}")

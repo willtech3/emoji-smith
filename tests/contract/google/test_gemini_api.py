@@ -1,5 +1,6 @@
 """Contract tests for GeminiAPIRepository."""
 
+import logging
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -185,3 +186,72 @@ class TestGeminiAPIRepositoryGenerateImage:
         # Act & Assert
         with pytest.raises(Exception, match="Imagen fallback unavailable"):
             await repository.generate_image("Test prompt")
+
+    @pytest.mark.asyncio()
+    async def test_generate_image_logs_model_generation_event(
+        self, repository, mock_gemini_client, caplog: pytest.LogCaptureFixture
+    ):
+        """Verify successful image generation logs model_generation event."""
+        # Arrange
+        expected_image_data = b"fake_image_bytes"
+        mock_part = MagicMock()
+        mock_part.inline_data = MagicMock()
+        mock_part.inline_data.data = expected_image_data
+
+        mock_response = MagicMock()
+        mock_response.parts = [mock_part]
+
+        mock_gemini_client.aio.models.generate_content.return_value = mock_response
+
+        # Act
+        with caplog.at_level(logging.INFO):
+            await repository.generate_image("Test prompt")
+
+        # Assert - check for model_generation event
+        generation_logs = [
+            r
+            for r in caplog.records
+            if hasattr(r, "event_data")
+            and r.event_data.get("event") == "model_generation"
+        ]
+        assert len(generation_logs) == 1
+        assert generation_logs[0].event_data["provider"] == "google_gemini"
+        assert generation_logs[0].event_data["is_fallback"] is False
+
+    @pytest.mark.asyncio()
+    async def test_generate_image_logs_fallback_when_primary_fails(
+        self, repository, mock_gemini_client, caplog: pytest.LogCaptureFixture
+    ):
+        """Verify fallback image generation logs with is_fallback=True."""
+        # Arrange
+        expected_image_data = b"fallback_image_bytes"
+
+        mock_image = MagicMock()
+        mock_image.image = MagicMock()
+        mock_image.image.image_bytes = expected_image_data
+
+        mock_imagen_response = MagicMock()
+        mock_imagen_response.generated_images = [mock_image]
+
+        # Primary fails, fallback succeeds
+        mock_gemini_client.aio.models.generate_content.side_effect = Exception(
+            "Primary model error"
+        )
+        mock_gemini_client.aio.models.generate_images.return_value = (
+            mock_imagen_response
+        )
+
+        # Act
+        with caplog.at_level(logging.INFO):
+            await repository.generate_image("Test prompt")
+
+        # Assert - check for model_generation event with fallback=True
+        generation_logs = [
+            r
+            for r in caplog.records
+            if hasattr(r, "event_data")
+            and r.event_data.get("event") == "model_generation"
+        ]
+        assert len(generation_logs) == 1
+        assert generation_logs[0].event_data["provider"] == "google_imagen"
+        assert generation_logs[0].event_data["is_fallback"] is True

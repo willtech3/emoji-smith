@@ -16,6 +16,7 @@ from emojismith.domain.repositories.image_generation_repository import (
     ImageGenerationRepository,
 )
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
+from shared.infrastructure.logging import log_event
 
 
 class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
@@ -181,4 +182,14 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
         for item in response.data:
             if item.b64_json:
                 images.append(base64.b64decode(item.b64_json))
+
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Image generated",
+            event="model_generation",
+            provider="openai",
+            model="gpt-image-1.5",
+            is_fallback=False,
+        )
         return images

@@ -363,3 +363,30 @@ class TestBuildPromptUseCase:
         )
         # Should not include the vague terms from original description
         assert "good" not in prompt_arg.lower()
+
+    @pytest.mark.asyncio()
+    async def test_build_prompt_logs_enhancement_event(
+        self,
+        use_case: BuildPromptUseCase,
+        basic_spec: EmojiSpecification,
+        mock_prompt_enhancer: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ):
+        """Verify prompt enhancement is logged with correct event type."""
+        mock_prompt_enhancer.enhance_prompt.return_value = (
+            "A vibrant celebration emoji with confetti and party elements"
+        )
+
+        with caplog.at_level(logging.INFO):
+            await use_case.build_prompt(basic_spec, enhance=True)
+
+        # Find the log record with event_data
+        enhancement_logs = [
+            r
+            for r in caplog.records
+            if hasattr(r, "event_data")
+            and r.event_data.get("event") == "prompt_enhancement"
+        ]
+        assert len(enhancement_logs) == 1
+        assert "original_description" in enhancement_logs[0].event_data
+        assert "enhanced_prompt" in enhancement_logs[0].event_data

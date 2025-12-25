@@ -30,6 +30,7 @@ class EmojiGenerationJob:
     status: JobStatus
     sharing_preferences: EmojiSharingPreferences
     created_at: datetime
+    trace_id: str = ""  # For cross-Lambda tracing
     thread_ts: str | None = None
     style_preferences: EmojiStylePreferences = field(
         default_factory=EmojiStylePreferences
@@ -57,6 +58,7 @@ class EmojiGenerationJob:
         generation_preferences: EmojiGenerationPreferences | None = None,
         thread_ts: str | None = None,
         image_provider: str = "google_gemini",
+        trace_id: str = "",
     ) -> "EmojiGenerationJob":
         """Create a new emoji generation job."""
         return cls(
@@ -72,6 +74,7 @@ class EmojiGenerationJob:
             sharing_preferences=sharing_preferences,
             thread_ts=thread_ts,
             created_at=datetime.now(UTC),
+            trace_id=trace_id or str(uuid.uuid4()),  # Auto-generate if not provided
             style_preferences=style_preferences or EmojiStylePreferences(),
             generation_preferences=generation_preferences
             or EmojiGenerationPreferences(),
@@ -82,6 +85,7 @@ class EmojiGenerationJob:
         """Convert to dictionary for serialization."""
         return {
             "job_id": self.job_id,
+            "trace_id": self.trace_id,
             "user_description": self.user_description,
             "message_text": self.message_text,
             "user_id": self.user_id,
@@ -103,6 +107,7 @@ class EmojiGenerationJob:
         """Create from dictionary."""
         return cls(
             job_id=data["job_id"],
+            trace_id=data.get("trace_id", ""),
             user_description=data["user_description"],
             message_text=data["message_text"],
             user_id=data["user_id"],
