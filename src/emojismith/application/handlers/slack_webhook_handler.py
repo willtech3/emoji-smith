@@ -16,6 +16,7 @@ from shared.domain.value_objects import (
     EmojiGenerationPreferences,
     EmojiSharingPreferences,
 )
+from shared.infrastructure.logging import trace_id_var
 
 
 class SlackEventProcessor(Protocol):
@@ -228,6 +229,10 @@ class WebhookEventProcessor:
             thread_ts=metadata.get("thread_ts"),
         )
 
+        trace_id = trace_id_var.get()
+        if trace_id == "no-trace-id":
+            trace_id = ""
+
         job = EmojiGenerationJob.create_new(
             user_description=description,
             message_text=metadata.get("message_text", ""),
@@ -239,6 +244,7 @@ class WebhookEventProcessor:
             emoji_name=emoji_name,
             image_provider=image_provider,
             generation_preferences=generation_preferences,
+            trace_id=trace_id,
         )
 
         await self._job_queue.enqueue_job(job)
