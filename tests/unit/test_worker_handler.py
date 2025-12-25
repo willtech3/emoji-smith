@@ -137,6 +137,17 @@ class TestWorkerHandler:
                 assert received[0].event_data["user_id"] == "U123456"
                 assert received[0].event_data["image_provider"] == "google_gemini"
 
+                completed = [
+                    r
+                    for r in caplog.records
+                    if hasattr(r, "event_data")
+                    and r.event_data.get("event") == "job_completed"
+                ]
+                assert len(completed) == 1
+                assert completed[0].event_data["job_id"] == "test-job-123"
+                assert isinstance(completed[0].event_data["duration_ms"], int)
+                assert completed[0].event_data["duration_ms"] >= 0
+
     @patch.dict(
         "os.environ",
         {
@@ -185,8 +196,9 @@ class TestWorkerHandler:
             "AWS_DEFAULT_REGION": "us-east-1",
         },
     )
-    def test_lambda_handler_processing_error(self, sqs_event, context):
+    def test_lambda_handler_processing_error(self, sqs_event, context, caplog):
         """Test handling of processing errors."""
+        caplog.set_level(logging.INFO)
         with mock_aws():
             boto3.client("secretsmanager", region_name="us-east-1").create_secret(
                 Name="test-secret",
@@ -211,6 +223,16 @@ class TestWorkerHandler:
                 assert result == {
                     "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
                 }
+
+                failed = [
+                    r
+                    for r in caplog.records
+                    if hasattr(r, "event_data")
+                    and r.event_data.get("event") == "job_failed"
+                ]
+                assert len(failed) == 1
+                assert failed[0].event_data["job_id"] == "test-job-123"
+                assert "Processing failed" in failed[0].event_data["error"]
 
     @patch.dict(
         "os.environ",

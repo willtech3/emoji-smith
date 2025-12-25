@@ -4,12 +4,33 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
 
+# Sentinel value used when no trace id has been set in the current context.
+DEFAULT_TRACE_ID = "no-trace-id"
+
 # Context variable for trace correlation across async boundaries
-trace_id_var: ContextVar[str] = ContextVar("trace_id", default="no-trace-id")
+trace_id_var: ContextVar[str] = ContextVar("trace_id", default=DEFAULT_TRACE_ID)
+
+
+def ensure_trace_id() -> str:
+    """Ensure a real trace id is set in the current context and return it.
+
+    If the current value is unset (empty) or the default sentinel, a new UUID is
+    generated, stored in the ContextVar, and returned. Otherwise, the existing
+    value is returned unchanged.
+    """
+
+    current = trace_id_var.get()
+    if not current or current == DEFAULT_TRACE_ID:
+        new_trace_id = str(uuid.uuid4())
+        trace_id_var.set(new_trace_id)
+        return new_trace_id
+
+    return current
 
 
 class JSONFormatter(logging.Formatter):
@@ -51,7 +72,12 @@ def setup_logging(level: int = logging.INFO) -> None:
 
 
 def log_event(
-    logger: logging.Logger, level: int, message: str, **event_fields: Any
+    logger: logging.Logger,
+    level: int,
+    message: str,
+    *,
+    exc_info: Any = None,
+    **event_fields: Any,
 ) -> None:
     """Log a structured event with additional fields merged at root level.
 
@@ -65,4 +91,4 @@ def log_event(
             enhanced_prompt="A cute cartoon cat emoji...",
         )
     """
-    logger.log(level, message, extra={"event_data": event_fields})
+    logger.log(level, message, extra={"event_data": event_fields}, exc_info=exc_info)

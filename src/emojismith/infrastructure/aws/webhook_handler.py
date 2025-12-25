@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import uuid
 from typing import Any
 
 import aioboto3
@@ -22,7 +21,7 @@ from emojismith.infrastructure.security.slack_signature_validator import (
     SlackSignatureValidator,
 )
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
-from shared.infrastructure.logging import log_event, setup_logging, trace_id_var
+from shared.infrastructure.logging import ensure_trace_id, log_event, setup_logging
 
 try:
     # When deployed as Lambda package, secrets_loader is at root
@@ -99,9 +98,7 @@ def _create_app() -> Any:
 
     @app.post("/slack/events")
     async def slack_events(request: Request) -> dict:
-        # Generate and set trace ID for this request
-        request_trace_id = str(uuid.uuid4())
-        trace_id_var.set(request_trace_id)
+        ensure_trace_id()
 
         log_event(
             logger,
@@ -116,8 +113,7 @@ def _create_app() -> Any:
 
     @app.post("/slack/interactive")
     async def slack_interactive(request: Request) -> dict:
-        request_trace_id = str(uuid.uuid4())
-        trace_id_var.set(request_trace_id)
+        ensure_trace_id()
         log_event(
             logger,
             logging.INFO,
@@ -131,8 +127,8 @@ def _create_app() -> Any:
 
     @app.post("/webhook")
     async def webhook_legacy(request: Request) -> dict:
-        request_trace_id = str(uuid.uuid4())
-        trace_id_var.set(request_trace_id)
+        # Preserve trace id when forwarding to /slack/events
+        ensure_trace_id()
         log_event(
             logger,
             logging.INFO,

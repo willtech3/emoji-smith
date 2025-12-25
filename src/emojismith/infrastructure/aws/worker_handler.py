@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import time
 from typing import Any
 
 from emojismith.app import create_worker_emoji_service
@@ -56,9 +57,33 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
             import asyncio
 
-            asyncio.run(emoji_service.process_emoji_generation_job(job))
+            start_time = time.monotonic()
+            try:
+                asyncio.run(emoji_service.process_emoji_generation_job(job))
+            except Exception as e:
+                log_event(
+                    logger,
+                    logging.ERROR,
+                    "Job failed",
+                    event="job_failed",
+                    job_id=job.job_id,
+                    error=str(e),
+                    exc_info=True,
+                )
+                batch_item_failures.append(
+                    {"itemIdentifier": record.get("messageId", "unknown")}
+                )
+                continue
 
-            logger.info(f"Successfully completed job: {job.job_id}")
+            duration_ms = int((time.monotonic() - start_time) * 1000)
+            log_event(
+                logger,
+                logging.INFO,
+                "Job completed",
+                event="job_completed",
+                job_id=job.job_id,
+                duration_ms=duration_ms,
+            )
 
         except Exception as e:
             logger.exception(f"Failed to process SQS record: {e}")
