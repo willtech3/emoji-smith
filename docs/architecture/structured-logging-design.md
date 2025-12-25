@@ -14,13 +14,13 @@ Create a centralized logging module to ensure consistent JSON-structured logging
 
 **File:** `src/shared/infrastructure/logging.py` *(new file, create `infrastructure/` directory)*
 
-#### ⬜ 1.1.1 Create `src/shared/infrastructure/__init__.py`
+#### ✅ 1.1.1 Create `src/shared/infrastructure/__init__.py`
 
 ```python
 """Shared infrastructure utilities."""
 ```
 
-#### ⬜ 1.1.2 Create `src/shared/infrastructure/logging.py`
+#### ✅ 1.1.2 Create `src/shared/infrastructure/logging.py`
 
 ```python
 """Structured JSON logging for observability."""
@@ -116,7 +116,7 @@ All log events **MUST** include these fields:
 
 ## 2. Domain Entity Update
 
-#### ⬜ 2.1 Add `trace_id` to `EmojiGenerationJob`
+#### ✅ 2.1 Add `trace_id` to `EmojiGenerationJob`
 
 **File:** `src/shared/domain/entities/__init__.py`
 
@@ -143,7 +143,7 @@ class EmojiGenerationJob:
     # ... rest unchanged
 ```
 
-#### ⬜ 2.2 Update `create_new()` factory method
+#### ✅ 2.2 Update `create_new()` factory method
 
 ```diff
     @classmethod
@@ -162,7 +162,7 @@ class EmojiGenerationJob:
         )
 ```
 
-#### ⬜ 2.3 Update `to_dict()` method
+#### ✅ 2.3 Update `to_dict()` method
 
 ```diff
     def to_dict(self) -> dict[str, Any]:
@@ -173,7 +173,7 @@ class EmojiGenerationJob:
         }
 ```
 
-#### ⬜ 2.4 Update `from_dict()` method
+#### ✅ 2.4 Update `from_dict()` method
 
 ```diff
     @classmethod
@@ -191,7 +191,7 @@ class EmojiGenerationJob:
 
 **File:** `src/emojismith/infrastructure/aws/webhook_handler.py`
 
-#### ⬜ 3.1 Import logging utilities
+#### ✅ 3.1 Import logging utilities
 
 ```diff
 + import uuid
@@ -204,7 +204,7 @@ class EmojiGenerationJob:
   logger = logging.getLogger(__name__)
 ```
 
-#### ⬜ 3.2 Set trace_id at request entry
+#### ✅ 3.2 Set trace_id at request entry
 
 In the `/slack/events` endpoint handler, set the trace context:
 
@@ -224,7 +224,7 @@ async def slack_events(request: Request) -> dict:
     return await webhook_handler.handle_event(body, headers)
 ```
 
-#### ⬜ 3.3 Pass trace_id when creating job
+#### ✅ 3.3 Pass trace_id when creating job
 
 Update `WebhookEventProcessor` to pass trace_id:
 
@@ -247,7 +247,7 @@ Update `WebhookEventProcessor` to pass trace_id:
 
 **File:** `src/emojismith/infrastructure/aws/worker_handler.py`
 
-#### ⬜ 4.1 Import and initialize logging
+#### ✅ 4.1 Import and initialize logging
 
 ```diff
 + from shared.infrastructure.logging import setup_logging, trace_id_var, log_event
@@ -256,7 +256,7 @@ Update `WebhookEventProcessor` to pass trace_id:
   logger = logging.getLogger(__name__)
 ```
 
-#### ⬜ 4.2 Extract and set trace_id from job
+#### ✅ 4.2 Extract and set trace_id from job
 
 ```diff
   def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -285,7 +285,7 @@ Update `WebhookEventProcessor` to pass trace_id:
 
 **File:** `src/emojismith/application/use_cases/build_prompt_use_case.py`
 
-#### ⬜ 5.1 Log prompt enhancement event
+#### ✅ 5.1 Log prompt enhancement event
 
 ```diff
 + from shared.infrastructure.logging import log_event
@@ -315,7 +315,7 @@ Update `WebhookEventProcessor` to pass trace_id:
 
 **File:** `src/emojismith/infrastructure/openai/openai_api.py`
 
-#### ⬜ 6.1.1 Log model generation
+#### ✅ 6.1.1 Log model generation
 
 ```diff
 + from shared.infrastructure.logging import log_event
@@ -333,7 +333,7 @@ Update `WebhookEventProcessor` to pass trace_id:
 
 **File:** `src/emojismith/infrastructure/google/gemini_api.py`
 
-#### ⬜ 6.2.1 Log Gemini generation
+#### ✅ 6.2.1 Log Gemini generation
 
 ```diff
 + from shared.infrastructure.logging import log_event
@@ -347,7 +347,7 @@ Update `WebhookEventProcessor` to pass trace_id:
 +               is_fallback=False)
 ```
 
-#### ⬜ 6.2.2 Log Imagen fallback
+#### ✅ 6.2.2 Log Imagen fallback
 
 ```diff
       # ... in imagen_generate_image or generate_with_fallback ...
@@ -364,7 +364,7 @@ Update `WebhookEventProcessor` to pass trace_id:
 
 ### 7.1 Unit Tests for Logging Module
 
-#### ⬜ 7.1.1 Create test file
+#### ✅ 7.1.1 Create test file
 
 **File:** `tests/unit/infrastructure/test_logging.py` *(new file)*
 
@@ -448,7 +448,7 @@ class TestLogEvent:
 
 ### 7.2 Update Existing Tests
 
-#### ⬜ 7.2.1 Update `BuildPromptUseCase` tests
+#### ✅ 7.2.1 Update `BuildPromptUseCase` tests
 
 **File:** `tests/unit/application/use_cases/test_build_prompt_use_case.py`
 
@@ -473,7 +473,7 @@ async def test_build_prompt_logs_enhancement_event(self, caplog):
     assert "enhanced_prompt" in enhancement_logs[0].event_data
 ```
 
-#### ⬜ 7.2.2 Create `GeminiAPIRepository` tests
+#### ✅ 7.2.2 Create `GeminiAPIRepository` tests
 
 **File:** `tests/unit/infrastructure/google/test_gemini_api.py` *(new file)*
 
