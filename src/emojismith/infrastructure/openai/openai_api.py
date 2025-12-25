@@ -16,6 +16,7 @@ from emojismith.domain.repositories.image_generation_repository import (
     ImageGenerationRepository,
 )
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
+from shared.infrastructure.logging import log_event
 
 
 class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
@@ -143,10 +144,12 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
         """
         # Cap at 4 images for reasonable UX
         n = min(num_images, 4)
+        used_model = "gpt-image-1.5"
+        is_fallback = False
 
         try:
             response = await self._client.images.generate(
-                model="gpt-image-1.5",
+                model=used_model,
                 prompt=prompt,
                 n=n,
                 size="1024x1024",
@@ -162,8 +165,10 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
                 "gpt-image-1.5 failed, falling back to gpt-image-1-mini: %s", exc
             )
             try:
+                used_model = "gpt-image-1-mini"
+                is_fallback = True
                 response = await self._client.images.generate(
-                    model="gpt-image-1-mini",
+                    model=used_model,
                     prompt=prompt,
                     n=n,
                     size="1024x1024",
@@ -181,4 +186,14 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
         for item in response.data:
             if item.b64_json:
                 images.append(base64.b64decode(item.b64_json))
+
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Image generated",
+            event="model_generation",
+            provider="openai",
+            model=used_model,
+            is_fallback=is_fallback,
+        )
         return images
