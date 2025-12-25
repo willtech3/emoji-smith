@@ -58,8 +58,8 @@ class EmojiCreationModalBuilder:
 
     @property
     def default_provider(self) -> str:
-        """Get the default image provider."""
-        return self._default_provider
+        """Get the effective default image provider."""
+        return self._get_effective_default_provider()
 
     def _get_provider_options(self) -> list[dict[str, Any]]:
         """Get available provider options based on configuration."""
@@ -87,20 +87,20 @@ class EmojiCreationModalBuilder:
 
         return options
 
-    def _get_default_provider_option(self) -> dict[str, Any]:
-        """Get the default provider option for the select."""
-        if self._google_available:
-            return {
-                "text": {"type": "plain_text", "text": "🍌 Nano Banana Pro"},
-                "value": "google_gemini",
-            }
-        return {
-            "text": {"type": "plain_text", "text": "🤖 GPT Image 1.5"},
-            "value": "openai",
-        }
+    def _get_effective_default_provider(self) -> str:
+        """Get the effective default provider based on availability."""
+        if self._google_available and self._default_provider == "google_gemini":
+            return "google_gemini"
+        return "openai"
 
     def _get_image_provider_block(self) -> dict[str, Any]:
         """Get the image provider input block."""
+        options = self._get_provider_options()
+        default_provider = self._get_effective_default_provider()
+        initial_option = next(
+            (o for o in options if o["value"] == default_provider),
+            options[0],
+        )
         return {
             "type": "input",
             "block_id": self.IMAGE_PROVIDER_BLOCK,
@@ -108,8 +108,8 @@ class EmojiCreationModalBuilder:
             "element": {
                 "type": "static_select",
                 "action_id": self.PROVIDER_ACTION,
-                "initial_option": self._get_default_provider_option(),
-                "options": self._get_provider_options(),
+                "initial_option": initial_option,
+                "options": options,
             },
             "label": {"type": "plain_text", "text": "Image Model"},
         }

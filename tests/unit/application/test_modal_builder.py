@@ -73,6 +73,62 @@ class TestEmojiCreationModalBuilder:
         assert provider_block["type"] == "input"
         assert provider_block["label"]["text"] == "Image Model"
 
+    def test_build_collapsed_view_provider_default_is_openai_without_google(
+        self, builder, sample_metadata
+    ):
+        """Provider should default to OpenAI in collapsed view when Google is not available."""
+        view = builder.build_collapsed_view(sample_metadata)
+        provider_block = next(
+            (
+                b
+                for b in view["blocks"]
+                if b.get("block_id") == builder.IMAGE_PROVIDER_BLOCK
+            ),
+            None,
+        )
+        assert provider_block is not None
+        assert provider_block["element"]["initial_option"]["value"] == "openai"
+
+    def test_build_collapsed_view_provider_default_is_google_when_available(
+        self, builder_with_google, sample_metadata
+    ):
+        """Provider should default to Google in collapsed view when available."""
+        view = builder_with_google.build_collapsed_view(sample_metadata)
+        provider_block = next(
+            (
+                b
+                for b in view["blocks"]
+                if b.get("block_id") == builder_with_google.IMAGE_PROVIDER_BLOCK
+            ),
+            None,
+        )
+        assert provider_block is not None
+        assert provider_block["element"]["initial_option"]["value"] == "google_gemini"
+
+    def test_build_collapsed_view_provider_respects_constructor_default_when_google_available(
+        self, sample_metadata
+    ):
+        """Constructor default_provider should not be ignored when Google is available."""
+        builder = EmojiCreationModalBuilder(
+            default_provider="openai",
+            google_available=True,
+        )
+        view = builder.build_collapsed_view(sample_metadata)
+        provider_block = next(
+            (
+                b
+                for b in view["blocks"]
+                if b.get("block_id") == builder.IMAGE_PROVIDER_BLOCK
+            ),
+            None,
+        )
+        assert provider_block is not None
+        assert provider_block["element"]["initial_option"]["value"] == "openai"
+
+        option_values = [o["value"] for o in provider_block["element"]["options"]]
+        assert "google_gemini" in option_values
+        assert "openai" in option_values
+
     def test_build_collapsed_view_contains_toggle_button(
         self, builder, sample_metadata
     ):
