@@ -152,7 +152,8 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
                 size="1024x1024",
                 quality=quality,
                 background=background,
-                response_format="b64_json",
+                # GPT image models use output_format, not response_format
+                output_format="png",
             )
         except openai.RateLimitError as exc:
             raise RateLimitExceededError(str(exc)) from exc
@@ -167,7 +168,8 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
                     n=n,
                     size="1024x1024",
                     background=background,
-                    response_format="b64_json",
+                    # GPT image models use output_format
+                    output_format="png",
                 )
             except openai.RateLimitError as rate_exc:
                 raise RateLimitExceededError(str(rate_exc)) from rate_exc
