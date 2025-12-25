@@ -130,7 +130,7 @@ def test_complete_webhook_flow(
 def test_invalid_signature_rejected(
     app_with_mocks: tuple[TestClient, AsyncMock, AsyncMock, bytes],
 ) -> None:
-    client, slack_repo, job_queue, secret = app_with_mocks
+    client, slack_repo, job_queue, _secret = app_with_mocks
     body = json.dumps(_message_action_payload()).encode()
     ts = str(int(time.time()))
     headers = {

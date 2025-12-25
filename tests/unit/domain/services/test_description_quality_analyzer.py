@@ -58,7 +58,7 @@ class TestDescriptionQualityAnalyzer:
         ]
 
         for desc, min_score, max_score in test_cases:
-            score, issues = analyzer.analyze_description(desc)
+            score, _issues = analyzer.analyze_description(desc)
             assert min_score <= score <= max_score, (
                 f"'{desc}' score {score} not in range [{min_score}, {max_score}]"
             )
