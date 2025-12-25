@@ -33,17 +33,19 @@ class WebhookEventProcessor:
         self,
         slack_repo: SlackModalRepository,
         job_queue: JobQueueProducer,
-        google_api_key: str | None = None,
+        google_enabled: bool = True,
     ) -> None:
         self._slack_repo = slack_repo
         self._job_queue = job_queue
         self._logger = logging.getLogger(__name__)
 
-        # Configure modal builder based on available providers
-        # Default to OpenAI unless Google is configured
-        # google_api_key must be wired from infrastructure layer
-        google_available = bool(google_api_key)
-        default_provider = "google_gemini" if google_available else "openai"
+        # Configure modal builder providers for the Slack UI.
+        #
+        # The webhook Lambda is intentionally "thin" and does not receive AI provider
+        # API keys (those belong in the worker Lambda). Provider availability is
+        # therefore configured explicitly via dependency injection.
+        google_available = google_enabled
+        default_provider = "google_gemini" if google_enabled else "openai"
 
         self._modal_builder = EmojiCreationModalBuilder(
             default_provider=default_provider,

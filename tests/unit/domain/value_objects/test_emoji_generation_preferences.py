@@ -75,7 +75,7 @@ class TestNumberOfImages:
 class TestEmojiGenerationPreferences:
     """Tests for EmojiGenerationPreferences dataclass."""
 
-    def test_default_values(self):
+    def test_defaults_when_instantiated_sets_expected_values(self):
         prefs = EmojiGenerationPreferences()
         assert prefs.background == BackgroundType.TRANSPARENT
         assert prefs.quality == QualityLevel.HIGH
@@ -184,7 +184,7 @@ class TestEmojiGenerationPreferences:
         assert "bold shapes" in suffix
         assert "high contrast" in suffix
 
-    def test_is_immutable(self):
+    def test_immutability_when_setting_attribute_raises_attribute_error(self):
         prefs = EmojiGenerationPreferences()
         with pytest.raises(AttributeError):
             prefs.background = BackgroundType.OPAQUE  # type: ignore[misc]
