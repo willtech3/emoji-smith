@@ -119,6 +119,19 @@ class BuildPromptUseCase:
                 enhanced_prompt = await self._prompt_enhancer.enhance_prompt(
                     spec.context, base_prompt
                 )
+
+                # Avoid circular import
+                from shared.infrastructure.logging import log_event
+
+                log_event(
+                    self._logger,
+                    logging.INFO,
+                    "Prompt enhanced",
+                    event="prompt_enhancement",
+                    original_description=spec.description,
+                    enhanced_prompt=enhanced_prompt[:200],  # Truncate for logs
+                )
+
                 return enhanced_prompt
             except Exception as e:
                 self._logger.warning(

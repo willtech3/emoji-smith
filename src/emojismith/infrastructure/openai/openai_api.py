@@ -16,6 +16,7 @@ from emojismith.domain.repositories.image_generation_repository import (
     ImageGenerationRepository,
 )
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
+from shared.infrastructure.logging import log_event
 
 
 class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
@@ -155,6 +156,15 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
                 # GPT image models use output_format, not response_format
                 output_format="png",
             )
+            log_event(
+                self._logger,
+                logging.INFO,
+                "Image generated",
+                event="model_generation",
+                provider="openai",
+                model="gpt-image-1.5",
+                is_fallback=False,
+            )
         except openai.RateLimitError as exc:
             raise RateLimitExceededError(str(exc)) from exc
         except Exception as exc:
@@ -170,6 +180,15 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
                     background=background,
                     # GPT image models use output_format
                     output_format="png",
+                )
+                log_event(
+                    self._logger,
+                    logging.INFO,
+                    "Image generated",
+                    event="model_generation",
+                    provider="openai",
+                    model="gpt-image-1-mini",
+                    is_fallback=True,
                 )
             except openai.RateLimitError as rate_exc:
                 raise RateLimitExceededError(str(rate_exc)) from rate_exc
