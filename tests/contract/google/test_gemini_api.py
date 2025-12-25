@@ -166,7 +166,7 @@ class TestGeminiAPIRepositoryGenerateImage:
         )
 
         # Act & Assert
-        with pytest.raises(ValueError, match="(Gemini|Imagen) did not return"):
+        with pytest.raises(ValueError, match=r"(Gemini|Imagen) did not return"):
             await repository.generate_image("Test prompt")
 
     @pytest.mark.asyncio()

@@ -1,5 +1,7 @@
 """Tests for EmojiGenerationJob domain entity."""
 
+import uuid
+
 import pytest
 
 from shared.domain.entities import EmojiGenerationJob
@@ -9,6 +11,39 @@ from shared.domain.value_objects import EmojiSharingPreferences, JobStatus
 @pytest.mark.unit()
 class TestEmojiGenerationJob:
     """Test creation and state transitions for EmojiGenerationJob."""
+
+    def test_create_new_when_trace_id_not_provided_generates_trace_id(self):
+        """create_new should generate a trace_id for cross-Lambda correlation."""
+        job = EmojiGenerationJob.create_new(
+            message_text="hello",
+            user_description="smile",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="ts",
+            team_id="T1",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            emoji_name="smile",
+        )
+
+        assert job.trace_id
+        # Should be a UUID string
+        uuid.UUID(job.trace_id)
+
+    def test_create_new_when_trace_id_provided_uses_value(self):
+        """create_new should use provided trace_id verbatim."""
+        job = EmojiGenerationJob.create_new(
+            message_text="hello",
+            user_description="smile",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="ts",
+            team_id="T1",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            emoji_name="smile",
+            trace_id="trace-xyz",
+        )
+
+        assert job.trace_id == "trace-xyz"
 
     def test_emoji_generation_job_round_trip_persists_status(self):
         job = EmojiGenerationJob.create_new(
@@ -25,9 +60,29 @@ class TestEmojiGenerationJob:
         assert job.status == JobStatus.PENDING
         data = job.to_dict()
         assert data["job_id"] == job.job_id
+        assert data["trace_id"] == job.trace_id
         restored = EmojiGenerationJob.from_dict(data)
         assert restored.job_id == job.job_id
+        assert restored.trace_id == job.trace_id
         assert restored.status == JobStatus.PENDING
+
+    def test_from_dict_when_trace_id_missing_defaults_to_empty_string(self):
+        """Backward compat: missing trace_id should default to empty string."""
+        original_job = EmojiGenerationJob.create_new(
+            message_text="hello",
+            user_description="smile",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="ts",
+            team_id="T1",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            emoji_name="smile",
+        )
+        data = original_job.to_dict()
+        del data["trace_id"]
+
+        restored = EmojiGenerationJob.from_dict(data)
+        assert restored.trace_id == ""
 
     def test_emoji_generation_job_lifecycle_transitions_correctly(self):
         job = EmojiGenerationJob.create_new(

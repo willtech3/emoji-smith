@@ -15,6 +15,7 @@ from emojismith.domain.repositories.image_generation_repository import (
 from emojismith.domain.repositories.prompt_enhancer_repository import (
     PromptEnhancerRepository,
 )
+from shared.infrastructure.logging import log_event
 
 
 class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
@@ -203,6 +204,15 @@ Output:"""
         for _ in range(n):
             try:
                 image_bytes = await self._generate_with_model(prompt, self._model)
+                log_event(
+                    self._logger,
+                    logging.INFO,
+                    "Image generated",
+                    event="model_generation",
+                    provider="google_gemini",
+                    model=self._model,
+                    is_fallback=False,
+                )
                 images.append(image_bytes)
             except Exception as exc:
                 if self._is_rate_limit_error(exc):
@@ -216,6 +226,15 @@ Output:"""
                 )
                 try:
                     image_bytes = await self._generate_with_imagen(prompt)
+                    log_event(
+                        self._logger,
+                        logging.INFO,
+                        "Image generated via Imagen",
+                        event="model_generation",
+                        provider="google_imagen",
+                        model=self._fallback_model,
+                        is_fallback=True,
+                    )
                     images.append(image_bytes)
                 except Exception as fallback_exc:
                     if self._is_rate_limit_error(fallback_exc):

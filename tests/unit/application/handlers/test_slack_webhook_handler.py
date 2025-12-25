@@ -1,6 +1,7 @@
 """Tests for SlackWebhookHandler and WebhookEventProcessor."""
 
 import json
+import uuid
 from unittest.mock import AsyncMock
 
 import pytest
@@ -137,6 +138,8 @@ class TestModalSubmissionAutoGeneratesName:
         # Should have auto-generated name from description
         assert job.emoji_name.startswith("a_happy_dancing_banan")
         assert len(job.emoji_name) <= 32
+        assert job.trace_id
+        uuid.UUID(job.trace_id)
 
     @pytest.mark.asyncio()
     async def test_auto_generates_name_when_block_missing(
@@ -156,6 +159,8 @@ class TestModalSubmissionAutoGeneratesName:
         job = mock_job_queue.enqueue_job.call_args.args[0]
         # Should have auto-generated name
         assert job.emoji_name.startswith("facepalm_reaction_")
+        assert job.trace_id
+        uuid.UUID(job.trace_id)
 
     @pytest.mark.asyncio()
     async def test_uses_provided_name_when_present(self, processor, mock_job_queue):
@@ -173,6 +178,8 @@ class TestModalSubmissionAutoGeneratesName:
         job = mock_job_queue.enqueue_job.call_args.args[0]
         # Should use provided name
         assert job.emoji_name == "custom_banana"
+        assert job.trace_id
+        uuid.UUID(job.trace_id)
 
 
 @pytest.mark.unit()
