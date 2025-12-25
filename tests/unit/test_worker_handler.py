@@ -4,8 +4,12 @@ Note: moto adds ~100ms overhead per test. Consider using class-level fixtures
 for test suites to improve performance when testing with many AWS service mocks.
 """
 
+import copy
 import json
+import logging
 import os
+import sys
+import types
 from typing import Any
 from unittest.mock import Mock, patch
 
@@ -13,7 +17,26 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from emojismith.infrastructure.aws.worker_handler import handler
+google_module = types.ModuleType("google")
+google_api_core = types.ModuleType("google.api_core")
+google_api_core.exceptions = types.SimpleNamespace(
+    ResourceExhausted=Exception, TooManyRequests=Exception
+)
+google_module.__path__ = []
+google_genai = types.ModuleType("google.genai")
+google_genai.types = types.SimpleNamespace()
+
+google_module.genai = google_genai
+google_module.api_core = google_api_core
+
+sys.modules["google"] = google_module
+sys.modules["google.api_core"] = google_api_core
+sys.modules["google.api_core.exceptions"] = google_api_core.exceptions
+sys.modules["google.genai"] = google_genai
+sys.modules["google.genai.types"] = google_genai.types
+
+from emojismith.infrastructure.aws.worker_handler import handler  # noqa: E402
+from shared.infrastructure.logging import trace_id_var  # noqa: E402
 
 SERVICE_PATH = (
     "emojismith.infrastructure.aws.worker_handler.create_worker_emoji_service"
@@ -40,6 +63,7 @@ def sqs_event() -> dict[str, Any]:
                         "team_id": "T123456",
                         "status": "PENDING",
                         "created_at": "2024-01-01T00:00:00+00:00",
+                        "trace_id": "trace-from-sqs",
                         "sharing_preferences": {
                             "share_location": "channel",
                             "instruction_visibility": "EVERYONE",
@@ -100,7 +124,7 @@ class TestWorkerHandler:
         },
     )
     def test_lambda_handler_processes_emoji_generation_job_successfully(
-        self, sqs_event, context
+        self, sqs_event, context, caplog
     ):
         """Test successful processing of emoji generation job from SQS message."""
         with mock_aws():
@@ -119,10 +143,21 @@ class TestWorkerHandler:
                 mock_create.return_value = Mock(process_emoji_generation_job=Mock())
                 mock_run.return_value = None
 
-                result = handler(sqs_event, context)
+                trace_id_var.set("no-trace-id")
+                with caplog.at_level(logging.INFO):
+                    result = handler(sqs_event, context)
 
                 assert result == {"batchItemFailures": []}
                 mock_run.assert_called_once()
+
+                assert trace_id_var.get() == "trace-from-sqs"
+                job_logs = [
+                    record
+                    for record in caplog.records
+                    if getattr(record, "event_data", {}).get("event") == "job_received"
+                ]
+                assert job_logs
+                assert job_logs[0].event_data["job_id"] == "test-job-123"
 
     @patch.dict(
         "os.environ",
@@ -163,6 +198,46 @@ class TestWorkerHandler:
                 assert result == {
                     "batchItemFailures": [{"itemIdentifier": "test-message-id"}]
                 }
+
+    @patch.dict(
+        "os.environ",
+        {
+            "AWS_LAMBDA_FUNCTION_NAME": "test-function",
+            "SECRETS_NAME": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
+        },
+    )
+    def test_handler_uses_job_id_when_trace_id_missing(
+        self, sqs_event, context, caplog
+    ) -> None:
+        """Trace ID defaults to job_id when not provided."""
+
+        event_without_trace = copy.deepcopy(sqs_event)
+        body = json.loads(event_without_trace["Records"][0]["body"])
+        body.pop("trace_id", None)
+        event_without_trace["Records"][0]["body"] = json.dumps(body)
+
+        with mock_aws():
+            boto3.client("secretsmanager", region_name="us-east-1").create_secret(
+                Name="test-secret",
+                SecretString=json.dumps(
+                    {
+                        "SLACK_BOT_TOKEN": "xoxb-test",
+                        "OPENAI_API_KEY": "sk-test",
+                    }
+                ),
+            )
+
+            with patch(SERVICE_PATH) as mock_create, patch("asyncio.run") as mock_run:
+                mock_create.return_value = Mock(process_emoji_generation_job=Mock())
+                mock_run.return_value = None
+
+                trace_id_var.set("no-trace-id")
+                with caplog.at_level(logging.INFO):
+                    result = handler(event_without_trace, context)
+
+                assert result == {"batchItemFailures": []}
+                assert trace_id_var.get() == "test-job-123"
 
     @patch.dict(
         "os.environ",

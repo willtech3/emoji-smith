@@ -8,6 +8,7 @@ import pytest
 from emojismith.application.handlers.slack_webhook_handler import WebhookEventProcessor
 from emojismith.application.modal_builder import EmojiCreationModalBuilder
 from shared.domain.repositories import JobQueueProducer, SlackModalRepository
+from shared.infrastructure.logging import trace_id_var
 
 
 @pytest.mark.unit()
@@ -173,6 +174,24 @@ class TestModalSubmissionAutoGeneratesName:
         job = mock_job_queue.enqueue_job.call_args.args[0]
         # Should use provided name
         assert job.emoji_name == "custom_banana"
+
+    @pytest.mark.asyncio()
+    async def test_process_passes_trace_id_to_job(
+        self, processor, mock_job_queue
+    ) -> None:
+        """Trace context is propagated to created jobs."""
+
+        trace_id_var.set("trace-job-123")
+        payload = self._make_submission_payload(
+            description="Traceable emoji",
+            emoji_name="with_trace",
+        )
+
+        await processor.process(json.dumps(payload).encode())
+
+        mock_job_queue.enqueue_job.assert_awaited_once()
+        job = mock_job_queue.enqueue_job.call_args.args[0]
+        assert job.trace_id == "trace-job-123"
 
 
 @pytest.mark.unit()

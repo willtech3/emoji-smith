@@ -10,6 +10,7 @@ from emojismith.domain.services.description_quality_analyzer import (
 )
 from emojismith.domain.services.prompt_builder_service import PromptBuilderService
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
+from shared.infrastructure.logging import log_event
 
 
 class BuildPromptUseCase:
@@ -118,6 +119,14 @@ class BuildPromptUseCase:
                 # since it already includes context
                 enhanced_prompt = await self._prompt_enhancer.enhance_prompt(
                     spec.context, base_prompt
+                )
+                log_event(
+                    self._logger,
+                    logging.INFO,
+                    "Prompt enhanced",
+                    event="prompt_enhancement",
+                    original_description=spec.description,
+                    enhanced_prompt=enhanced_prompt[:200],
                 )
                 return enhanced_prompt
             except Exception as e:

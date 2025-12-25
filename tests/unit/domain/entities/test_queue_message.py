@@ -123,6 +123,6 @@ class TestQueueMessage:
         )
 
         with pytest.raises(
-            RetryExceededError, match="Maximum retry attempts .* exceeded"
+            RetryExceededError, match=r"Maximum retry attempts .* exceeded"
         ):
             msg.raise_if_exhausted()

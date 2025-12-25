@@ -96,6 +96,31 @@ class TestBuildPromptUseCase:
         assert "celebration" in call_args[0] or "celebration" in call_args[1]
 
     @pytest.mark.asyncio()
+    async def test_build_prompt_logs_enhancement_event(
+        self,
+        use_case: BuildPromptUseCase,
+        basic_spec: EmojiSpecification,
+        mock_prompt_enhancer: Mock,
+        caplog,
+    ) -> None:
+        """Verify prompt enhancement is logged with correct event type."""
+
+        mock_prompt_enhancer.enhance_prompt.return_value = "Enhanced prompt text"
+
+        with caplog.at_level(logging.INFO):
+            await use_case.build_prompt(basic_spec, enhance=True)
+
+        enhancement_logs = [
+            r
+            for r in caplog.records
+            if hasattr(r, "event_data")
+            and r.event_data.get("event") == "prompt_enhancement"
+        ]
+        assert len(enhancement_logs) == 1
+        assert "original_description" in enhancement_logs[0].event_data
+        assert "enhanced_prompt" in enhancement_logs[0].event_data
+
+    @pytest.mark.asyncio()
     async def test_build_prompt_with_style(self, use_case: BuildPromptUseCase):
         """Should include style preferences in the prompt."""
         style_prefs = EmojiStylePreferences(style_type=StyleType.PIXEL_ART)
@@ -240,7 +265,7 @@ class TestBuildPromptUseCase:
 
         # Should have called enhance_prompt with a fallback prompt
         mock_prompt_enhancer.enhance_prompt.assert_called_once()
-        context_arg, prompt_arg = mock_prompt_enhancer.enhance_prompt.call_args[0]
+        _context_arg, prompt_arg = mock_prompt_enhancer.enhance_prompt.call_args[0]
 
         # The prompt should contain concepts from context, not just "nice"
         assert "nice" not in prompt_arg
@@ -271,7 +296,7 @@ class TestBuildPromptUseCase:
 
         # Should have called enhance_prompt with the original good description
         mock_prompt_enhancer.enhance_prompt.assert_called_once()
-        context_arg, prompt_arg = mock_prompt_enhancer.enhance_prompt.call_args[0]
+        _context_arg, prompt_arg = mock_prompt_enhancer.enhance_prompt.call_args[0]
 
         # The prompt should contain the original description
         assert "robot" in prompt_arg.lower()
@@ -355,7 +380,7 @@ class TestBuildPromptUseCase:
         await use_case.build_prompt(spec, enhance=True)
 
         # Check that enhance was called with fallback
-        context_arg, prompt_arg = mock_prompt_enhancer.enhance_prompt.call_args[0]
+        _context_arg, prompt_arg = mock_prompt_enhancer.enhance_prompt.call_args[0]
 
         # Should include context concepts due to strict threshold
         assert any(

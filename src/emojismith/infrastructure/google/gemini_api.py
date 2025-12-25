@@ -15,6 +15,7 @@ from emojismith.domain.repositories.image_generation_repository import (
 from emojismith.domain.repositories.prompt_enhancer_repository import (
     PromptEnhancerRepository,
 )
+from shared.infrastructure.logging import log_event
 
 
 class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
@@ -143,8 +144,9 @@ Output:"""
                 ),
             )
 
-            if response.text:
-                return response.text.strip()
+            text: str | None = getattr(response, "text", None)
+            if text:
+                return text.strip()
 
             raise ValueError("Gemini did not return text response")
 
@@ -204,6 +206,15 @@ Output:"""
             try:
                 image_bytes = await self._generate_with_model(prompt, self._model)
                 images.append(image_bytes)
+                log_event(
+                    self._logger,
+                    logging.INFO,
+                    "Image generated",
+                    event="model_generation",
+                    provider="google_gemini",
+                    model=self._model,
+                    is_fallback=False,
+                )
             except Exception as exc:
                 if self._is_rate_limit_error(exc):
                     raise RateLimitExceededError(str(exc)) from exc
@@ -217,6 +228,15 @@ Output:"""
                 try:
                     image_bytes = await self._generate_with_imagen(prompt)
                     images.append(image_bytes)
+                    log_event(
+                        self._logger,
+                        logging.INFO,
+                        "Image generated via Imagen",
+                        event="model_generation",
+                        provider="google_imagen",
+                        model="imagen-4-ultra-preview",
+                        is_fallback=True,
+                    )
                 except Exception as fallback_exc:
                     if self._is_rate_limit_error(fallback_exc):
                         raise RateLimitExceededError(

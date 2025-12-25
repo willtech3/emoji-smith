@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
 from typing import Any
 
 import aioboto3
@@ -21,6 +22,7 @@ from emojismith.infrastructure.security.slack_signature_validator import (
     SlackSignatureValidator,
 )
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
+from shared.infrastructure.logging import log_event, setup_logging, trace_id_var
 
 try:
     # When deployed as Lambda package, secrets_loader is at root
@@ -29,13 +31,8 @@ except ImportError:
     # When running locally or in tests, use relative import
     from .secrets_loader import AWSSecretsLoader
 
-# Configure logging for Lambda CloudWatch
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+setup_logging()
 logger = logging.getLogger(__name__)
-# Also configure root logger for Lambda
-logging.getLogger().setLevel(logging.INFO)
 
 # Global secrets loader
 _secrets_loader = AWSSecretsLoader()
@@ -93,7 +90,7 @@ def _create_app() -> Any:
     )
 
     # Create handler and security service
-    webhook_handler, security_service = create_webhook_handler()
+    webhook_handler, _security_service = create_webhook_handler()
 
     @app.get("/health")
     async def health_check() -> dict:
@@ -101,7 +98,16 @@ def _create_app() -> Any:
 
     @app.post("/slack/events")
     async def slack_events(request: Request) -> dict:
-        logger.info("Received request to /slack/events")
+        request_trace_id = str(uuid.uuid4())
+        trace_id_var.set(request_trace_id)
+
+        log_event(
+            logger,
+            logging.INFO,
+            "Slack event received",
+            event="webhook_received",
+            endpoint="/slack/events",
+        )
         body = await request.body()
         headers = dict(request.headers)
         return await webhook_handler.handle_event(body, headers)

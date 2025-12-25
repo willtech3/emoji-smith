@@ -22,11 +22,14 @@ class TestEmojiGenerationJob:
             emoji_name="smile",
         )
         assert job.job_id
+        assert job.trace_id
         assert job.status == JobStatus.PENDING
         data = job.to_dict()
         assert data["job_id"] == job.job_id
+        assert data["trace_id"] == job.trace_id
         restored = EmojiGenerationJob.from_dict(data)
         assert restored.job_id == job.job_id
+        assert restored.trace_id == job.trace_id
         assert restored.status == JobStatus.PENDING
 
     def test_emoji_generation_job_lifecycle_transitions_correctly(self):
@@ -132,3 +135,44 @@ class TestEmojiGenerationJob:
         data = job.to_dict()
         restored = EmojiGenerationJob.from_dict(data)
         assert restored.image_provider == "google_gemini"
+
+    def test_create_new_accepts_trace_id(self):
+        """create_new should preserve a provided trace_id."""
+
+        job = EmojiGenerationJob.create_new(
+            message_text="hello",
+            user_description="smile",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="ts",
+            team_id="T1",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            emoji_name="smile",
+            trace_id="trace-123",
+        )
+
+        assert job.trace_id == "trace-123"
+        data = job.to_dict()
+        assert data["trace_id"] == "trace-123"
+        restored = EmojiGenerationJob.from_dict(data)
+        assert restored.trace_id == "trace-123"
+
+    def test_from_dict_without_trace_id_defaults_to_empty_string(self):
+        """Backwards compatibility when trace_id is missing."""
+
+        job = EmojiGenerationJob.create_new(
+            message_text="hello",
+            user_description="smile",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="ts",
+            team_id="T1",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            emoji_name="smile",
+        )
+        data = job.to_dict()
+        data.pop("trace_id")
+
+        restored = EmojiGenerationJob.from_dict(data)
+
+        assert restored.trace_id == ""

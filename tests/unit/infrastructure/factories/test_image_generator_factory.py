@@ -1,5 +1,9 @@
 """Tests for ImageGeneratorFactory."""
 
+# ruff: noqa: I001
+
+import sys
+import types
 import pytest
 
 from emojismith.domain.value_objects.image_provider import ImageProvider
@@ -8,6 +12,51 @@ from emojismith.infrastructure.factories.image_generator_factory import (
 )
 from emojismith.infrastructure.google.gemini_api import GeminiAPIRepository
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
+
+google_module = types.ModuleType("google")
+api_core = types.ModuleType("google.api_core")
+api_core.exceptions = types.SimpleNamespace(
+    ResourceExhausted=Exception, TooManyRequests=Exception
+)
+google_module.__path__ = []
+genai_module = types.ModuleType("google.genai")
+types_module = types.ModuleType("google.genai.types")
+
+
+class _GenerateContentConfig:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+
+class _ImageConfig:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+
+class _GenerateImagesConfig:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+
+types_module.GenerateContentConfig = _GenerateContentConfig
+types_module.ImageConfig = _ImageConfig
+types_module.GenerateImagesConfig = _GenerateImagesConfig
+
+
+class _GenaiClient:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+
+genai_module.Client = _GenaiClient
+genai_module.types = types_module
+google_module.api_core = api_core
+google_module.genai = genai_module
+sys.modules["google"] = google_module
+sys.modules["google.api_core"] = api_core
+sys.modules["google.api_core.exceptions"] = api_core.exceptions
+sys.modules["google.genai"] = genai_module
+sys.modules["google.genai.types"] = types_module
 
 
 class TestImageGeneratorFactoryCreate:

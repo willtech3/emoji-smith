@@ -1,5 +1,6 @@
 """AWS Lambda handler for SQS worker processing emoji generation jobs."""
 
+import asyncio
 import json
 import logging
 import os
@@ -7,9 +8,11 @@ from typing import Any
 
 from emojismith.app import create_worker_emoji_service
 from shared.domain.entities import EmojiGenerationJob
+from shared.infrastructure.logging import log_event, setup_logging, trace_id_var
 
 from .secrets_loader import AWSSecretsLoader
 
+setup_logging()
 logger = logging.getLogger(__name__)
 
 _secrets_loader = AWSSecretsLoader()
@@ -39,11 +42,17 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
             job = EmojiGenerationJob.from_dict(message_body)
 
-            logger.info(
-                f"Processing emoji generation job: {job.job_id} for user {job.user_id}"
-            )
+            trace_id_var.set(job.trace_id or job.job_id)
 
-            import asyncio
+            log_event(
+                logger,
+                logging.INFO,
+                "Processing job",
+                event="job_received",
+                job_id=job.job_id,
+                user_id=job.user_id,
+                image_provider=job.image_provider,
+            )
 
             asyncio.run(emoji_service.process_emoji_generation_job(job))
 

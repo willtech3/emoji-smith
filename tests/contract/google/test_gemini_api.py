@@ -1,9 +1,59 @@
 """Contract tests for GeminiAPIRepository."""
 
+# ruff: noqa: E402
+
+import sys
+import types
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from google.api_core import exceptions as google_exceptions
+
+google_module = types.ModuleType("google")
+api_core = types.ModuleType("google.api_core")
+api_core.exceptions = types.SimpleNamespace(
+    ResourceExhausted=type("ResourceExhaustedError", (Exception,), {}),
+    TooManyRequests=type("TooManyRequestsError", (Exception,), {}),
+)
+google_module.__path__ = []
+genai_module = types.ModuleType("google.genai")
+types_module = types.ModuleType("google.genai.types")
+
+
+class _GenerateContentConfig:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+
+class _ImageConfig:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+
+class _GenerateImagesConfig:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+
+types_module.GenerateContentConfig = _GenerateContentConfig
+types_module.ImageConfig = _ImageConfig
+types_module.GenerateImagesConfig = _GenerateImagesConfig
+
+
+class _GenaiClient:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+
+genai_module.Client = _GenaiClient
+google_module.api_core = api_core
+genai_module.types = types_module
+google_module.genai = genai_module
+sys.modules["google"] = google_module
+sys.modules["google.api_core"] = api_core
+sys.modules["google.api_core.exceptions"] = api_core.exceptions
+sys.modules["google.genai"] = genai_module
+sys.modules["google.genai.types"] = types_module
+google_exceptions = api_core.exceptions
 
 from emojismith.domain.errors import RateLimitExceededError
 from emojismith.infrastructure.google.gemini_api import GeminiAPIRepository
@@ -166,7 +216,7 @@ class TestGeminiAPIRepositoryGenerateImage:
         )
 
         # Act & Assert
-        with pytest.raises(ValueError, match="(Gemini|Imagen) did not return"):
+        with pytest.raises(ValueError, match=r"(Gemini|Imagen) did not return"):
             await repository.generate_image("Test prompt")
 
     @pytest.mark.asyncio()
