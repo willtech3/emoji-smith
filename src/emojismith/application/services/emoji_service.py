@@ -1,5 +1,6 @@
 """Emoji creation service for orchestrating the workflow."""
 
+from dataclasses import replace
 import logging
 from typing import Any
 
@@ -171,10 +172,21 @@ class EmojiCreationService:
             else:
                 # Use file sharing for non-Enterprise workspaces
                 if self._file_sharing_repo:
+                    # When generating multiple variations, posting the full upload steps
+                    # on every file is noisy and confusing. Include instructions only
+                    # on the first emoji; subsequent files will just be shared with
+                    # their names (name, name_2, ...).
+                    preferences_for_share = (
+                        context.preferences
+                        if idx == 0
+                        else replace(
+                            context.preferences, include_upload_instructions=False
+                        )
+                    )
                     result = await self._file_sharing_repo.share_emoji_file(
                         emoji=emoji,
                         channel_id=job.channel_id,
-                        preferences=context.preferences,
+                        preferences=preferences_for_share,
                         requester_user_id=job.user_id,
                         original_message_ts=thread_ts_for_replies or job.timestamp,
                     )
