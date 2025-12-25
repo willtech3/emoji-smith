@@ -5,6 +5,7 @@ for test suites to improve performance when testing with many AWS service mocks.
 """
 
 import json
+import logging
 import os
 from typing import Any
 from unittest.mock import Mock, patch
@@ -100,9 +101,10 @@ class TestWorkerHandler:
         },
     )
     def test_lambda_handler_processes_emoji_generation_job_successfully(
-        self, sqs_event, context
+        self, sqs_event, context, caplog
     ):
         """Test successful processing of emoji generation job from SQS message."""
+        caplog.set_level(logging.INFO)
         with mock_aws():
             client = boto3.client("secretsmanager", region_name="us-east-1")
             client.create_secret(
@@ -123,6 +125,17 @@ class TestWorkerHandler:
 
                 assert result == {"batchItemFailures": []}
                 mock_run.assert_called_once()
+
+                received = [
+                    r
+                    for r in caplog.records
+                    if hasattr(r, "event_data")
+                    and r.event_data.get("event") == "job_received"
+                ]
+                assert len(received) == 1
+                assert received[0].event_data["job_id"] == "test-job-123"
+                assert received[0].event_data["user_id"] == "U123456"
+                assert received[0].event_data["image_provider"] == "google_gemini"
 
     @patch.dict(
         "os.environ",
