@@ -1,7 +1,7 @@
 """Emoji creation service for orchestrating the workflow."""
 
-from dataclasses import replace
 import logging
+from dataclasses import replace
 from typing import Any
 
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase

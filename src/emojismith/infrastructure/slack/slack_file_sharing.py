@@ -159,7 +159,7 @@ class SlackFileSharingRepository:
             "1. Right-click the image and save it\n"
             "2. Click the smiley icon in the message box\n"
             "3. Select 'Add emoji'\n"
-            f"4. Upload the image and name it to match the emoji name shown above (e.g. `{emoji_name}`)\n"
+            f"4. Upload the image and name it `{emoji_name}` (name shown above)\n"
             "5. Click 'Add'"
         )
 
@@ -174,8 +174,8 @@ class SlackFileSharingRepository:
             comment += self._build_emoji_upload_steps(emoji_name)
             comment += (
                 f"\n\nThen you can use it by typing `:{emoji_name}:` in any message! "
-                "If you generated multiple variations, repeat these steps for each file "
-                "(each file shows its own emoji name)."
+                "If you generated multiple variations, repeat these steps "
+                "for each file (each file shows its own emoji name)."
             )
 
         return comment

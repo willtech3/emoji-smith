@@ -302,7 +302,9 @@ class TestEmojiCreationService:
             timestamp="1234567890.123456",
             team_id="T11111",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
-            generation_preferences=EmojiGenerationPreferences(num_images=NumberOfImages.TWO),
+            generation_preferences=EmojiGenerationPreferences(
+                num_images=NumberOfImages.TWO
+            ),
         )
 
         mock_file_sharing_repo.share_emoji_file.side_effect = [
@@ -324,21 +326,20 @@ class TestEmojiCreationService:
         img2 = Image.new("RGBA", (128, 128), "blue")
         buf2 = BytesIO()
         img2.save(buf2, format="PNG")
-        mock_image_generator.generate_image.return_value = [buf1.getvalue(), buf2.getvalue()]
+        mock_image_generator.generate_image.return_value = [
+            buf1.getvalue(),
+            buf2.getvalue(),
+        ]
 
         await emoji_service.process_emoji_generation_job(job)
 
         assert mock_file_sharing_repo.share_emoji_file.call_count == 2
-        first_preferences = (
-            mock_file_sharing_repo.share_emoji_file.call_args_list[0].kwargs[
-                "preferences"
-            ]
-        )
-        second_preferences = (
-            mock_file_sharing_repo.share_emoji_file.call_args_list[1].kwargs[
-                "preferences"
-            ]
-        )
+        first_preferences = mock_file_sharing_repo.share_emoji_file.call_args_list[
+            0
+        ].kwargs["preferences"]
+        second_preferences = mock_file_sharing_repo.share_emoji_file.call_args_list[
+            1
+        ].kwargs["preferences"]
 
         assert first_preferences.include_upload_instructions is True
         assert second_preferences.include_upload_instructions is False
