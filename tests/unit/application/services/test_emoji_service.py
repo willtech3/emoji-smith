@@ -277,3 +277,69 @@ class TestEmojiCreationService:
         mock_file_sharing_repo.share_emoji_file.assert_called_once()
         # No direct upload attempted for standard workspace
         mock_slack_repo.upload_emoji.assert_not_called()
+
+    async def test_multi_image_sharing_includes_upload_instructions_only_once(
+        self,
+        emoji_service,
+        mock_image_generator,
+        mock_file_sharing_repo,
+    ):
+        """When multiple emojis are generated, only include upload steps once."""
+        from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
+        from shared.domain.entities import EmojiGenerationJob
+        from shared.domain.value_objects import (
+            EmojiGenerationPreferences,
+            EmojiSharingPreferences,
+            NumberOfImages,
+        )
+
+        job = EmojiGenerationJob.create_new(
+            message_text="The deployment failed again 😭",
+            user_description="facepalm reaction",
+            emoji_name="facepalm_reaction",
+            user_id="U12345",
+            channel_id="C67890",
+            timestamp="1234567890.123456",
+            team_id="T11111",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            generation_preferences=EmojiGenerationPreferences(
+                num_images=NumberOfImages.TWO
+            ),
+        )
+
+        mock_file_sharing_repo.share_emoji_file.side_effect = [
+            FileSharingResult(
+                success=True,
+                thread_ts="1234567890.123456",
+                file_url="https://files.slack.com/test1",
+            ),
+            FileSharingResult(
+                success=True,
+                thread_ts="1234567890.123456",
+                file_url="https://files.slack.com/test2",
+            ),
+        ]
+
+        img1 = Image.new("RGBA", (128, 128), "red")
+        buf1 = BytesIO()
+        img1.save(buf1, format="PNG")
+        img2 = Image.new("RGBA", (128, 128), "blue")
+        buf2 = BytesIO()
+        img2.save(buf2, format="PNG")
+        mock_image_generator.generate_image.return_value = [
+            buf1.getvalue(),
+            buf2.getvalue(),
+        ]
+
+        await emoji_service.process_emoji_generation_job(job)
+
+        assert mock_file_sharing_repo.share_emoji_file.call_count == 2
+        first_preferences = mock_file_sharing_repo.share_emoji_file.call_args_list[
+            0
+        ].kwargs["preferences"]
+        second_preferences = mock_file_sharing_repo.share_emoji_file.call_args_list[
+            1
+        ].kwargs["preferences"]
+
+        assert first_preferences.include_upload_instructions is True
+        assert second_preferences.include_upload_instructions is False
