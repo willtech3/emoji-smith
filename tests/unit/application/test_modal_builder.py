@@ -76,7 +76,7 @@ class TestEmojiCreationModalBuilder:
     def test_build_collapsed_view_provider_default_is_openai_without_google(
         self, builder, sample_metadata
     ):
-        """Provider should default to OpenAI in collapsed view when Google is not available."""
+        """Provider defaults to OpenAI in collapsed view when Google unavailable."""
         view = builder.build_collapsed_view(sample_metadata)
         provider_block = next(
             (
@@ -105,10 +105,10 @@ class TestEmojiCreationModalBuilder:
         assert provider_block is not None
         assert provider_block["element"]["initial_option"]["value"] == "google_gemini"
 
-    def test_build_collapsed_view_provider_respects_constructor_default_when_google_available(
+    def test_build_collapsed_view_provider_respects_constructor_default(
         self, sample_metadata
     ):
-        """Constructor default_provider should not be ignored when Google is available."""
+        """Constructor default_provider is respected when Google is available."""
         builder = EmojiCreationModalBuilder(
             default_provider="openai",
             google_available=True,
