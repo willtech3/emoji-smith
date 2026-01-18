@@ -44,8 +44,8 @@ class TestEmojiCreationService:
         """Mock emoji validator."""
         validator = MagicMock()
         # Validator returns the emoji as-is
-        validator.validate_and_create.side_effect = lambda data, name: GeneratedEmoji(
-            image_data=data, name=name
+        validator.validate_and_create_emoji.side_effect = (
+            lambda data, name: GeneratedEmoji(image_data=data, name=name)
         )
         return validator
 
@@ -343,3 +343,70 @@ class TestEmojiCreationService:
 
         assert first_preferences.include_upload_instructions is True
         assert second_preferences.include_upload_instructions is False
+
+    async def test_subsequent_images_have_no_initial_comment(
+        self,
+        emoji_service,
+        mock_image_generator,
+        mock_file_sharing_repo,
+    ):
+        """When multiple emojis are generated, only the first gets an initial comment."""
+        from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
+        from shared.domain.entities import EmojiGenerationJob
+        from shared.domain.value_objects import (
+            EmojiGenerationPreferences,
+            EmojiSharingPreferences,
+            NumberOfImages,
+        )
+
+        job = EmojiGenerationJob.create_new(
+            message_text="test",
+            user_description="test",
+            emoji_name="test_emoji",
+            user_id="U1",
+            channel_id="C1",
+            timestamp="123",
+            team_id="T1",
+            sharing_preferences=EmojiSharingPreferences.default_for_context(),
+            generation_preferences=EmojiGenerationPreferences(
+                num_images=NumberOfImages.TWO
+            ),
+        )
+
+        mock_file_sharing_repo.share_emoji_file.side_effect = [
+            FileSharingResult(
+                success=True,
+                thread_ts="123",
+                file_url="url1",
+            ),
+            FileSharingResult(
+                success=True,
+                thread_ts="123",
+                file_url="url2",
+            ),
+        ]
+
+        img1 = Image.new("RGBA", (10, 10), "red")
+        buf1 = BytesIO()
+        img1.save(buf1, format="PNG")
+        img2 = Image.new("RGBA", (10, 10), "blue")
+        buf2 = BytesIO()
+        img2.save(buf2, format="PNG")
+        mock_image_generator.generate_image.return_value = [
+            buf1.getvalue(),
+            buf2.getvalue(),
+        ]
+
+        await emoji_service.process_emoji_generation_job(job)
+
+        assert mock_file_sharing_repo.share_emoji_file.call_count == 2
+
+        call1 = mock_file_sharing_repo.share_emoji_file.call_args_list[0]
+        call2 = mock_file_sharing_repo.share_emoji_file.call_args_list[1]
+
+        # First call should have the comment
+        assert call1.kwargs.get("initial_comment") is not None
+        assert "test_emoji" in call1.kwargs.get("initial_comment")
+
+        # Second call should NOT have the comment (should be None)
+        assert call2.kwargs.get("initial_comment") is None
