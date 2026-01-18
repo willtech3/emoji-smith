@@ -350,7 +350,9 @@ class TestEmojiCreationService:
         mock_image_generator,
         mock_file_sharing_repo,
     ):
-        """When multiple emojis are generated, only the first gets an initial comment."""
+        """
+        When multiple emojis are generated, only the first gets an initial comment.
+        """
         from emojismith.infrastructure.slack.slack_file_sharing import FileSharingResult
         from shared.domain.entities import EmojiGenerationJob
         from shared.domain.value_objects import (
