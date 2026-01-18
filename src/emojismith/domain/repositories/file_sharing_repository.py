@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
-from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+from emojismith.domain.dtos import GeneratedEmojiDto
 from shared.domain.value_objects import EmojiSharingPreferences
 
 
@@ -22,11 +22,13 @@ class FileSharingRepository(Protocol):
 
     async def share_emoji_file(
         self,
-        emoji: GeneratedEmoji,
+        emoji: GeneratedEmojiDto,
         channel_id: str,
         preferences: EmojiSharingPreferences,
         requester_user_id: str,
         original_message_ts: str | None = None,
+        initial_comment: str | None = None,
+        upload_instructions: str | None = None,
     ) -> FileSharingResult:
         """Share emoji as a file with upload instructions.
 
@@ -36,6 +38,8 @@ class FileSharingRepository(Protocol):
             preferences: Sharing preferences including thread and visibility settings
             requester_user_id: ID of the user who requested the emoji
             original_message_ts: Timestamp of the original message (for threading)
+            initial_comment: Optional initial comment to post with the file
+            upload_instructions: Optional instructions to post (e.g. ephemerally)
 
         Returns:
             FileSharingResult with success status and metadata

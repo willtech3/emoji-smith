@@ -7,7 +7,7 @@ import time
 from typing import Any
 
 from emojismith.app import create_worker_emoji_service
-from shared.domain.entities import EmojiGenerationJob
+from shared.domain.dtos import EmojiGenerationJobDto
 from shared.infrastructure.logging import log_event, setup_logging, trace_id_var
 
 from .secrets_loader import AWSSecretsLoader
@@ -40,7 +40,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         try:
             message_body = json.loads(record["body"])
 
-            job = EmojiGenerationJob.from_dict(message_body)
+            job = EmojiGenerationJobDto(**message_body)
 
             # Set trace context from incoming job
             trace_id_var.set(job.trace_id or job.job_id)
