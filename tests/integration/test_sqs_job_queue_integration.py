@@ -53,7 +53,7 @@ async def test_enqueue_and_complete_job_flow() -> None:
 
         job_queue = SQSJobQueue(session=session, queue_url=queue_url)
 
-        job = EmojiGenerationJob.create_new(
+        job_entity = EmojiGenerationJob.create_new(
             message_text="Integration test",
             user_description="party parrot",
             emoji_name="party_parrot",
@@ -63,6 +63,9 @@ async def test_enqueue_and_complete_job_flow() -> None:
             team_id="T1",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
         )
+        from shared.domain.dtos import EmojiGenerationJobDto
+
+        job = EmojiGenerationJobDto(**job_entity.to_dict())
 
         job_id = await job_queue.enqueue_job(job)
         assert job_id == job.job_id

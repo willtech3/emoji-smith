@@ -10,6 +10,7 @@ from typing import Any, Protocol
 from emojismith.application.modal_builder import EmojiCreationModalBuilder
 from emojismith.domain.services.webhook_security_service import WebhookSecurityService
 from emojismith.domain.value_objects.webhook_request import WebhookRequest
+from shared.domain.dtos import EmojiGenerationJobDto
 from shared.domain.entities import EmojiGenerationJob, SlackMessage
 from shared.domain.repositories import JobQueueProducer, SlackModalRepository
 from shared.domain.value_objects import (
@@ -245,7 +246,8 @@ class WebhookEventProcessor:
             trace_id=trace_id,
         )
 
-        await self._job_queue.enqueue_job(job)
+        job_dto = EmojiGenerationJobDto(**job.to_dict())
+        await self._job_queue.enqueue_job(job_dto)
         return {"response_action": "clear"}
 
 

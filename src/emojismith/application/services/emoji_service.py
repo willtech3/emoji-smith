@@ -5,11 +5,15 @@ from dataclasses import replace
 from typing import Any
 
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
+from emojismith.domain.dtos import GeneratedEmojiDto
 from emojismith.domain.factories.image_generator_factory import ImageGeneratorFactory
 from emojismith.domain.repositories.file_sharing_repository import FileSharingRepository
 from emojismith.domain.repositories.image_processor import ImageProcessor
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 from emojismith.domain.repositories.slack_repository import SlackRepository
+from emojismith.domain.services.emoji_instruction_service import (
+    EmojiInstructionService,
+)
 from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingContext,
     EmojiSharingService,
@@ -20,6 +24,7 @@ from emojismith.domain.services.generation_service import EmojiGenerationService
 from emojismith.domain.services.style_template_manager import StyleTemplateManager
 from emojismith.domain.value_objects.emoji_specification import EmojiSpecification
 from emojismith.domain.value_objects.image_provider import ImageProvider
+from shared.domain.dtos import EmojiGenerationJobDto
 from shared.domain.entities import EmojiGenerationJob
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
@@ -43,6 +48,7 @@ class EmojiCreationService:
         job_queue: JobQueueRepository | None = None,
         file_sharing_repo: FileSharingRepository | None = None,
         sharing_service: EmojiSharingService | None = None,
+        instruction_service: EmojiInstructionService | None = None,
     ) -> None:
         self._slack_repo = slack_repo
         self._build_prompt_use_case = build_prompt_use_case
@@ -53,24 +59,55 @@ class EmojiCreationService:
         self._job_queue = job_queue
         self._file_sharing_repo = file_sharing_repo
         self._sharing_service = sharing_service or EmojiSharingService()
+        if instruction_service is None:
+            # Fallback for tests/legacy usage, but production code should inject it
+            instruction_service = EmojiInstructionService()
+        self._instruction_service = instruction_service
 
-    async def process_emoji_generation_job(self, job: EmojiGenerationJob) -> None:
+    async def process_emoji_generation_job(
+        self, job: EmojiGenerationJob | EmojiGenerationJobDto
+    ) -> None:
         """Process emoji generation job from background worker."""
+        # Convert DTO to entity if needed
+        if isinstance(job, EmojiGenerationJobDto):
+            job_entity = EmojiGenerationJob.from_dict(
+                {
+                    "job_id": job.job_id,
+                    "trace_id": job.trace_id,
+                    "user_description": job.user_description,
+                    "message_text": job.message_text,
+                    "user_id": job.user_id,
+                    "channel_id": job.channel_id,
+                    "timestamp": job.timestamp,
+                    "team_id": job.team_id,
+                    "emoji_name": job.emoji_name,
+                    "status": job.status,
+                    "sharing_preferences": job.sharing_preferences,
+                    "style_preferences": job.style_preferences,
+                    "generation_preferences": job.generation_preferences,
+                    "thread_ts": job.thread_ts,
+                    "created_at": job.created_at,
+                    "image_provider": job.image_provider,
+                }
+            )
+        else:
+            job_entity = job
+
         # Select provider based on job configuration
-        provider = ImageProvider.from_string(job.image_provider)
+        provider = ImageProvider.from_string(job_entity.image_provider)
         self._logger.info(
             "Processing emoji generation job",
             extra={
-                "job_id": job.job_id,
-                "user_id": job.user_id,
+                "job_id": job_entity.job_id,
+                "user_id": job_entity.user_id,
                 "image_provider": provider.value,
             },
         )
 
         spec = EmojiSpecification(
-            description=job.user_description,
-            context=job.message_text,
-            style=job.style_preferences,
+            description=job_entity.user_description,
+            context=job_entity.message_text,
+            style=job_entity.style_preferences,
         )
 
         # Build and enhance prompt using the use case
@@ -80,7 +117,7 @@ class EmojiCreationService:
         )
 
         # Apply generation preferences to prompt (for Google providers)
-        gen_prefs = job.generation_preferences
+        gen_prefs = job_entity.generation_preferences
         if provider == ImageProvider.GOOGLE_GEMINI:
             # Add Slack emoji optimization hints for Google's prompt-based approach
             enhanced_prompt += gen_prefs.get_background_prompt_suffix()
@@ -90,7 +127,7 @@ class EmojiCreationService:
             enhanced_prompt += f", {gen_prefs.style_text}"
 
         # Use provided emoji name, sanitize for Slack (max 32 chars)
-        name = job.emoji_name.replace(" ", "_").lower()[:32]
+        name = job_entity.emoji_name.replace(" ", "_").lower()[:32]
 
         # Create image generator for the selected provider
         image_generator = self._image_generator_factory.create(provider)
@@ -119,22 +156,23 @@ class EmojiCreationService:
         from shared.domain.entities.slack_message import SlackMessage
 
         original_message = SlackMessage(
-            text=job.message_text,
-            user_id=job.user_id,
-            channel_id=job.channel_id,
-            timestamp=job.timestamp,
-            team_id=job.team_id,
+            text=job_entity.message_text,
+            user_id=job_entity.user_id,
+            channel_id=job_entity.channel_id,
+            timestamp=job_entity.timestamp,
+            team_id=job_entity.team_id,
         )
 
         sharing_preferences = (
-            job.sharing_preferences
+            job_entity.sharing_preferences
             or EmojiSharingPreferences.default_for_context(
                 is_in_thread=bool(
-                    job.sharing_preferences and job.sharing_preferences.thread_ts
+                    job_entity.sharing_preferences
+                    and job_entity.sharing_preferences.thread_ts
                 ),
                 thread_ts=(
-                    job.sharing_preferences.thread_ts
-                    if job.sharing_preferences
+                    job_entity.sharing_preferences.thread_ts
+                    if job_entity.sharing_preferences
                     else None
                 ),
             )
@@ -164,8 +202,8 @@ class EmojiCreationService:
                         try:
                             await self._slack_repo.add_emoji_reaction(
                                 emoji_name=emoji.name,
-                                channel_id=job.channel_id,
-                                timestamp=job.timestamp,
+                                channel_id=job_entity.channel_id,
+                                timestamp=job_entity.timestamp,
                             )
                         except Exception as e:
                             self._logger.error(f"Failed to add emoji reaction: {e}")
@@ -183,12 +221,33 @@ class EmojiCreationService:
                             context.preferences, include_upload_instructions=False
                         )
                     )
+
+                    # Build instruction strings
+                    initial_comment = self._instruction_service.build_initial_comment(
+                        emoji_name=emoji.name, preferences=preferences_for_share
+                    )
+                    upload_instructions = (
+                        self._instruction_service.build_upload_instructions(
+                            emoji_name=emoji.name
+                        )
+                    )
+
+                    # Convert to DTO
+                    emoji_dto = GeneratedEmojiDto(
+                        image_data=emoji.image_data,
+                        name=emoji.name,
+                        format=emoji.format,
+                    )
+
                     result = await self._file_sharing_repo.share_emoji_file(
-                        emoji=emoji,
-                        channel_id=job.channel_id,
+                        emoji=emoji_dto,
+                        channel_id=job_entity.channel_id,
                         preferences=preferences_for_share,
-                        requester_user_id=job.user_id,
-                        original_message_ts=thread_ts_for_replies or job.timestamp,
+                        requester_user_id=job_entity.user_id,
+                        original_message_ts=thread_ts_for_replies
+                        or job_entity.timestamp,
+                        initial_comment=initial_comment,
+                        upload_instructions=upload_instructions,
                     )
                     if result.success:
                         shared_count += 1
@@ -214,7 +273,7 @@ class EmojiCreationService:
         self._logger.info(
             "Successfully processed emoji generation job",
             extra={
-                "job_id": job.job_id,
+                "job_id": job_entity.job_id,
                 "emoji_name": name,
                 "images_generated": len(emojis),
                 "images_shared": shared_count,

@@ -9,6 +9,9 @@ from slack_sdk.web.async_client import AsyncWebClient
 
 from emojismith.application.services.emoji_service import EmojiCreationService
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
+from emojismith.domain.services.emoji_instruction_service import (
+    EmojiInstructionService,
+)
 from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingService,
     WorkspaceType,
@@ -85,6 +88,7 @@ def create_worker_emoji_service() -> EmojiCreationService:
         workspace_type = WorkspaceType.ENTERPRISE_GRID
 
     sharing_service = EmojiSharingService(workspace_type=workspace_type)
+    instruction_service = EmojiInstructionService()
 
     return EmojiCreationService(
         slack_repo=slack_repo,
@@ -96,4 +100,5 @@ def create_worker_emoji_service() -> EmojiCreationService:
         job_queue=None,
         file_sharing_repo=file_sharing_repo,
         sharing_service=sharing_service,
+        instruction_service=instruction_service,
     )

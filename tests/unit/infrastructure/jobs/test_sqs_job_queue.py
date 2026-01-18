@@ -44,7 +44,7 @@ class TestSQSJobQueue:
         from shared.domain.entities import EmojiGenerationJob
         from shared.domain.value_objects import EmojiSharingPreferences
 
-        job = EmojiGenerationJob.create_new(
+        job_entity = EmojiGenerationJob.create_new(
             message_text="Just deployed on Friday!",
             user_description="facepalm reaction",
             emoji_name="facepalm_reaction",
@@ -54,6 +54,10 @@ class TestSQSJobQueue:
             team_id="T11111",
             sharing_preferences=EmojiSharingPreferences.default_for_context(),
         )
+        from shared.domain.dtos import EmojiGenerationJobDto
+
+        job = EmojiGenerationJobDto(**job_entity.to_dict())
+
         mock_sqs_client.send_message.return_value = {
             "MessageId": "msg_123",
             "MD5OfBody": "abc123",
@@ -103,6 +107,8 @@ class TestSQSJobQueue:
                 "image_size": "EMOJI_SIZE",
                 "thread_ts": None,
             },
+            "style_preferences": {},
+            "generation_preferences": {},
         }
 
         mock_sqs_client.receive_message.return_value = {
