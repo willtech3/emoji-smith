@@ -2,24 +2,24 @@
 
 from typing import Protocol, runtime_checkable
 
-from shared.domain.entities import EmojiGenerationJob
+from shared.domain.dtos import EmojiGenerationJobDto
 
 
 @runtime_checkable
 class JobQueueProducer(Protocol):
     """Interface for queue producers."""
 
-    async def enqueue_job(self, job: EmojiGenerationJob) -> str: ...
+    async def enqueue_job(self, job: EmojiGenerationJobDto) -> str: ...
 
 
 @runtime_checkable
 class JobQueueConsumer(Protocol):
     """Interface for queue consumers."""
 
-    async def dequeue_job(self) -> tuple[EmojiGenerationJob, str] | None: ...
+    async def dequeue_job(self) -> tuple[EmojiGenerationJobDto, str] | None: ...
 
     async def complete_job(
-        self, job: EmojiGenerationJob, receipt_handle: str
+        self, job: EmojiGenerationJobDto, receipt_handle: str
     ) -> None: ...
 
     async def get_job_status(self, job_id: str) -> str | None: ...

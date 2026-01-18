@@ -8,7 +8,7 @@ from PIL import Image
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
 
-from emojismith.domain.entities.generated_emoji import GeneratedEmoji
+from emojismith.domain.dtos import GeneratedEmojiDto
 from emojismith.domain.repositories.file_sharing_repository import FileSharingResult
 from shared.domain.value_objects import (
     EmojiSharingPreferences,
@@ -29,11 +29,13 @@ class SlackFileSharingRepository:
 
     async def share_emoji_file(
         self,
-        emoji: GeneratedEmoji,
+        emoji: GeneratedEmojiDto,
         channel_id: str,
         preferences: EmojiSharingPreferences,
         requester_user_id: str,
         original_message_ts: str | None = None,
+        initial_comment: str | None = None,
+        upload_instructions: str | None = None,
     ) -> FileSharingResult:
         """Share emoji as a file with upload instructions."""
         try:
@@ -65,10 +67,11 @@ class SlackFileSharingRepository:
 
             # Add initial comment only if not creating a new thread
             # (to avoid duplicate message when we post separately for thread creation)
-            if not (original_message_ts and not preferences.thread_ts):
-                upload_params["initial_comment"] = self._build_initial_comment(
-                    emoji.name, preferences
-                )
+            if (
+                not (original_message_ts and not preferences.thread_ts)
+                and initial_comment
+            ):
+                upload_params["initial_comment"] = initial_comment
 
             # Handle thread-specific sharing
             thread_ts = None
@@ -96,7 +99,9 @@ class SlackFileSharingRepository:
                 # For new threads, we need to post a message to create the thread
                 # The file upload alone doesn't return a thread_ts
                 # Include initial comment content since not added to file upload
-                thread_message = self._build_initial_comment(emoji.name, preferences)
+                thread_message = (
+                    initial_comment or f"Generated custom emoji: :{emoji.name}:"
+                )
                 message_response = await self._client.chat_postMessage(
                     channel=channel_id,
                     text=thread_message,
@@ -105,7 +110,7 @@ class SlackFileSharingRepository:
                 thread_ts = message_response.get("ts")
 
             # Post additional instructions if needed
-            if preferences.include_upload_instructions:
+            if preferences.include_upload_instructions and upload_instructions:
                 # Skip posting additional instructions if we just created a new thread
                 # and already included them in the thread message
                 is_new_thread = original_message_ts and not preferences.thread_ts
@@ -113,9 +118,9 @@ class SlackFileSharingRepository:
                     await self._post_instructions(
                         channel_id=channel_id,
                         thread_ts=thread_ts,
-                        emoji_name=emoji.name,
                         preferences=preferences,
                         requester_user_id=requester_user_id,
+                        instructions=upload_instructions,
                     )
 
             return FileSharingResult(
@@ -138,7 +143,7 @@ class SlackFileSharingRepository:
             )
 
     async def _prepare_image_data(
-        self, emoji: GeneratedEmoji, image_size: ImageSize
+        self, emoji: GeneratedEmojiDto, image_size: ImageSize
     ) -> BytesIO:
         """Prepare image data for upload based on size preference."""
         if image_size == ImageSize.EMOJI_SIZE:
@@ -153,40 +158,13 @@ class SlackFileSharingRepository:
             # Return full size image
             return BytesIO(emoji.image_data)
 
-    def _build_emoji_upload_steps(self, emoji_name: str) -> str:
-        """Build the step-by-step emoji upload instructions."""
-        return (
-            "1. Right-click the image and save it\n"
-            "2. Click the smiley icon in the message box\n"
-            "3. Select 'Add emoji'\n"
-            f"4. Upload the image and name it `{emoji_name}` (name shown above)\n"
-            "5. Click 'Add'"
-        )
-
-    def _build_initial_comment(
-        self, emoji_name: str, preferences: EmojiSharingPreferences
-    ) -> str:
-        """Build the initial comment for the file upload."""
-        comment = f"Generated custom emoji: :{emoji_name}:"
-
-        if preferences.include_upload_instructions:
-            comment += "\n\n*To add this emoji to your workspace:*\n"
-            comment += self._build_emoji_upload_steps(emoji_name)
-            comment += (
-                f"\n\nThen you can use it by typing `:{emoji_name}:` in any message! "
-                "If you generated multiple variations, repeat these steps "
-                "for each file (each file shows its own emoji name)."
-            )
-
-        return comment
-
     async def _post_instructions(
         self,
         channel_id: str,
         thread_ts: str | None,
-        emoji_name: str,
         preferences: EmojiSharingPreferences,
         requester_user_id: str,
+        instructions: str,
     ) -> None:
         """Post additional instructions based on visibility preferences."""
         # Instructions are already in the file comment for everyone visibility
@@ -195,23 +173,12 @@ class SlackFileSharingRepository:
 
         # For requester-only, send ephemeral message with instructions
         if preferences.instruction_visibility == InstructionVisibility.SUBMITTER_ONLY:
-            instructions = self._build_upload_instructions(emoji_name)
-
             await self._client.chat_postEphemeral(
                 channel=channel_id,
                 user=requester_user_id,
                 text=instructions,
                 thread_ts=thread_ts,
             )
-
-    def _build_upload_instructions(self, emoji_name: str) -> str:
-        """Build detailed upload instructions."""
-        return (
-            f"*Your custom emoji `:{emoji_name}:` is ready!*\n\n"
-            "To add it to the workspace:\n"
-            f"{self._build_emoji_upload_steps(emoji_name)}\n\n"
-            f"Then use it by typing `:{emoji_name}:` anywhere! 🚀"
-        )
 
     async def _ensure_bot_in_channel(self, channel_id: str) -> None:
         """Ensure the bot is a member of the channel before uploading files."""
