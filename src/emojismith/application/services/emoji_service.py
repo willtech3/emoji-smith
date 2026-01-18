@@ -223,8 +223,12 @@ class EmojiCreationService:
                     )
 
                     # Build instruction strings
-                    initial_comment = self._instruction_service.build_initial_comment(
-                        emoji_name=emoji.name, preferences=preferences_for_share
+                    initial_comment = (
+                        self._instruction_service.build_initial_comment(
+                            emoji_name=emoji.name, preferences=preferences_for_share
+                        )
+                        if idx == 0
+                        else None
                     )
                     upload_instructions = (
                         self._instruction_service.build_upload_instructions(
