@@ -23,6 +23,7 @@ dependencies = [
     "aiohttp>=3.8.0",
     "google-genai>=1.0.0",
     "google-api-core>=2.0.0",
+    "google-cloud-pubsub>=2.0.0",
 ]
 
 [project.optional-dependencies]

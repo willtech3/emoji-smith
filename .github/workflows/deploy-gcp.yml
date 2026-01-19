@@ -1,0 +1,155 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PROJECT_ID: your-gcp-project-id  # TODO: Replace with actual project ID
+  REGION: us-central1
+  WEBHOOK_SERVICE: emoji-smith-webhook
+  WORKER_SERVICE: emoji-smith-worker
+
+jobs:
+  # ==========================================================================
+  # Build and Test
+  # ==========================================================================
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run quality checks
+        run: |
+          uv run ruff format --check src/ tests/
+          uv run ruff check src/ tests/
+          uv run mypy src/
+          uv run pytest tests/ -q
+
+  # ==========================================================================
+  # Build and Push Docker Images (only on main branch)
+  # ==========================================================================
+  build-images:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    # Required for Workload Identity Federation
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      webhook_image: ${{ steps.build-webhook.outputs.image }}
+      worker_image: ${{ steps.build-worker.outputs.image }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          service_account: emoji-smith-cicd@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+          token_format: access_token
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Build and push webhook image
+        id: build-webhook
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.webhook
+          push: true
+          tags: |
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/webhook:${{ github.sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/webhook:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push worker image
+        id: build-worker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.worker
+          push: true
+          tags: |
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/worker:${{ github.sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/worker:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image tags
+        run: |
+          echo "webhook_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/webhook:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "worker_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/worker:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  # ==========================================================================
+  # Deploy to Cloud Run (only on main branch)
+  # ==========================================================================
+  deploy:
+    needs: build-images
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          service_account: emoji-smith-cicd@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy webhook service
+        run: |
+          gcloud run deploy ${{ env.WEBHOOK_SERVICE }} \
+            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/webhook:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }}
+
+      - name: Deploy worker service
+        run: |
+          gcloud run deploy ${{ env.WORKER_SERVICE }} \
+            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/worker:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }}
+
+      - name: Verify deployment
+        run: |
+          echo "Webhook URL: $(gcloud run services describe ${{ env.WEBHOOK_SERVICE }} --region=${{ env.REGION }} --format='value(status.url)')"
+          echo "Worker URL: $(gcloud run services describe ${{ env.WORKER_SERVICE }} --region=${{ env.REGION }} --format='value(status.url)')"
