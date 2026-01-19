@@ -1,0 +1,28 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system dependencies for Pillow
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install all dependencies
+RUN uv sync --no-dev --no-install-project
+
+# Copy application code
+COPY src/ ./src/
+
+# Install the project
+RUN uv sync --no-dev
+
+ENV PORT=8080
+
+CMD ["uv", "run", "uvicorn", "emojismith.infrastructure.gcp.worker_app:app", "--host", "0.0.0.0", "--port", "8080"]
