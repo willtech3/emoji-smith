@@ -215,3 +215,10 @@ ngrok
 CLAUDE.old.md
 AGENTS.old.md
 .claude/
+
+# Terraform / OpenTofu
+# - Commit `.terraform.lock.hcl` for reproducible provider installs
+# - Never commit local state or working directories
+infra_gcp/terraform/.terraform/
+infra_gcp/terraform/terraform.tfstate
+infra_gcp/terraform/terraform.tfstate.backup
