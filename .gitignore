@@ -222,3 +222,6 @@ AGENTS.old.md
 infra_gcp/terraform/.terraform/
 infra_gcp/terraform/terraform.tfstate
 infra_gcp/terraform/terraform.tfstate.backup
+
+# Keep local tfvars out of git (environment-specific)
+infra_gcp/terraform/terraform.tfvars
