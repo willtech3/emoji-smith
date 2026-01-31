@@ -1,6 +1,6 @@
 # Structured Logging and Traceability Design
 
-> **Status: NOT IMPLEMENTED** — This is a fully-specified design document ready for implementation.
+> **Status: IMPLEMENTED** — This design is implemented and used in production.
 >
 > **Legend:** ⬜ Not started | ✅ Completed
 
@@ -8,7 +8,7 @@
 
 ## 1. Shared Logging Infrastructure
 
-Create a centralized logging module to ensure consistent JSON-structured logging across both Lambda functions.
+Create a centralized logging module to ensure consistent JSON-structured logging across both Cloud Run services.
 
 ### 1.1 Create Logging Module
 
@@ -36,7 +36,7 @@ trace_id_var: ContextVar[str] = ContextVar("trace_id", default="no-trace-id")
 
 
 class JSONFormatter(logging.Formatter):
-    """Formats log records as JSON for CloudWatch/Datadog/Logfire compatibility."""
+    """Formats log records as JSON for Cloud Logging/Datadog/Logfire compatibility."""
 
     def format(self, record: logging.LogRecord) -> str:
         log_data: dict[str, Any] = {
@@ -138,7 +138,7 @@ class EmojiGenerationJob:
     status: JobStatus
     sharing_preferences: EmojiSharingPreferences
     created_at: datetime
-+   trace_id: str = ""  # For cross-Lambda tracing
++   trace_id: str = ""  # For cross-service tracing
     thread_ts: str | None = None
     # ... rest unchanged
 ```
@@ -189,7 +189,7 @@ class EmojiGenerationJob:
 
 ## 3. Webhook Handler Instrumentation
 
-**File:** `src/emojismith/infrastructure/aws/webhook_handler.py`
+**File:** `src/emojismith/infrastructure/gcp/webhook_app.py`
 
 #### ✅ 3.1 Import logging utilities
 
@@ -245,7 +245,7 @@ Update `WebhookEventProcessor` to pass trace_id:
 
 ## 4. Worker Handler Instrumentation
 
-**File:** `src/emojismith/infrastructure/aws/worker_handler.py`
+**File:** `src/emojismith/infrastructure/gcp/worker_app.py`
 
 #### ✅ 4.1 Import and initialize logging
 

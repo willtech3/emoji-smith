@@ -1,4 +1,4 @@
-# ADR-002: Separate Webhook and Worker Lambdas
+# ADR-002: Separate Webhook and Worker Services
 
 ## Status
 Accepted
@@ -11,23 +11,33 @@ Slack requires webhook endpoints to respond within 3 seconds, but emoji generati
 - Maintains system reliability
 
 ## Decision
-Use two separate Lambda functions connected by SQS:
+Use two separate services connected by a queue:
 
-1. **Webhook Lambda** - Handles Slack events, opens modals, queues jobs (< 3s)
-2. **Worker Lambda** - Processes emoji generation jobs asynchronously (up to 30s)
+1. **Webhook service** - Handles Slack events, opens modals, enqueues jobs (< 3s)
+2. **Worker service** - Processes emoji generation jobs asynchronously
 
 Communication flow:
 ```
-Slack → Webhook Lambda → SQS Queue → Worker Lambda → Slack API
-         (immediate)                    (async)
+Slack → Webhook service → Queue → Worker service → Slack API
+         (immediate)          (async)
 ```
+
+### Current implementation (2026-01-31)
+
+Emoji Smith currently implements this decision on GCP:
+
+```
+Slack → Cloud Run (webhook) → Pub/Sub → Cloud Run (worker) → Slack API
+```
+
+See `docs/GCP.md` for the production architecture.
 
 ## Consequences
 
 ### Positive
 - Always meets Slack's 3-second deadline
 - Can scale webhook and worker independently
-- Failed jobs can be retried via SQS DLQ
+- Failed jobs can be retried via queue retry/dead-letter configuration
 - Better cost optimization (different memory/CPU needs)
 - Clear separation of concerns
 
@@ -38,43 +48,16 @@ Slack → Webhook Lambda → SQS Queue → Worker Lambda → Slack API
 - Potential for lost messages
 
 ### Mitigation
-- Use SQS FIFO for ordering guarantees
 - Implement correlation IDs for request tracking
-- Add CloudWatch alarms for queue depth
+- Configure alerts for queue backlog / failures
 - Create runbook for debugging async flows
 
 ## Implementation Details
 
-### Webhook Lambda Configuration
-```python
-# CDK configuration
-webhook_function = lambda_.Function(
-    self, "WebhookFunction",
-    memory_size=512,  # Fast response, low memory
-    timeout=Duration.seconds(10),
-    environment={
-        "SQS_QUEUE_URL": queue.queue_url
-    }
-)
-```
-
-### Worker Lambda Configuration
-```python
-# CDK configuration
-worker_function = lambda_.Function(
-    self, "WorkerFunction",
-    memory_size=1024,  # Image generation needs more memory
-    timeout=Duration.seconds(30),
-    environment={
-        "OPENAI_API_KEY": secret.secret_arn
-    }
-)
-
-# SQS trigger
-worker_function.add_event_source(
-    SqsEventSource(queue, batch_size=1)
-)
-```
+Implementation guidance:
+- Keep the webhook service “thin” (validation + enqueue + immediate response).
+- Keep AI provider API keys and slow work in the worker service.
+- Ensure the queue triggers retries for transient failures and routes poison messages to a dead-letter path.
 
 ### Job Message Format
 ```json
@@ -93,16 +76,15 @@ worker_function.add_event_source(
 
 ## Alternatives Considered
 
-1. **Single Lambda with async processing**
+1. **Single service with async/background processing**
    - Rejected: Can't guarantee 3-second response time
 
-2. **Step Functions**
-   - Rejected: Overkill for simple async job
+2. **Workflow orchestration service**
+   - Rejected: Overkill for this workload
 
-3. **Direct Lambda invocation**
-   - Rejected: No retry mechanism, tight coupling
+3. **Direct worker invocation (no queue)**
+   - Rejected: Tight coupling and weaker retry/backpressure handling
 
 ## References
 - Slack Events API documentation
-- AWS Lambda best practices
-- SQS FIFO queues documentation
+- `docs/GCP.md`

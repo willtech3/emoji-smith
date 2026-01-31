@@ -79,7 +79,10 @@ async def process_pubsub_message(request: Request) -> dict:
 
         return {"status": "ok", "messageId": message_id}
 
+    except HTTPException:
+        # Preserve client-facing 4xx errors (do not convert them to 5xx retries).
+        raise
     except Exception as e:
-        logger.exception(f"Error processing Pub/Sub message: {e}")
-        # Return 500 to trigger Pub/Sub retry
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception("Error processing Pub/Sub message: %s", e)
+        # Return 500 to trigger Pub/Sub retry.
+        raise HTTPException(status_code=500, detail="Internal error") from e

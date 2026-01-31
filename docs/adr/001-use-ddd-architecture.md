@@ -56,12 +56,12 @@ class EmojiRepository(Protocol):
     async def save(self, emoji: Emoji) -> None: ...
 
 # Infrastructure implementation
-class S3EmojiRepository:
-    def __init__(self, s3_client: S3Client):
-        self._s3 = s3_client
+class ObjectStorageEmojiRepository:
+    def __init__(self, storage_client: ObjectStorageClient):
+        self._storage = storage_client
 
     async def save(self, emoji: Emoji) -> None:
-        # S3-specific implementation
+        # Object-storage-specific implementation
 ```
 
 ## References

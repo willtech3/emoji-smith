@@ -38,7 +38,7 @@ with separate emoji name and description fields?
 
 ### Tag @claude in Comments
 ```markdown
-@claude explain how the SQS retry mechanism works in this codebase
+@claude explain how Pub/Sub retries work for the worker service in this codebase
 ```
 
 ## What Claude Can Do
@@ -53,7 +53,7 @@ with separate emoji name and description fields?
 - **Refactoring**: Improve code structure while maintaining functionality
 
 ### ❌ Limitations
-- **No Direct Deployment**: Cannot deploy to AWS or trigger production actions
+- **No Direct Deployment**: Cannot deploy to GCP or trigger production actions directly
 - **No Secrets Access**: Cannot view or modify repository secrets
 - **No External Services**: Cannot directly interact with Slack, OpenAI, or other APIs
 - **Rate Limited**: Subject to API rate limits and GitHub Actions usage limits
@@ -74,7 +74,7 @@ established in SlackUser.from_dict(), including comprehensive unit tests
 ### 2. Reference Context
 ```markdown
 @claude looking at issue #172, can you remove the modal opening logic
-from the worker Lambda and ensure it only handles emoji generation?
+from the worker service and ensure it only handles emoji generation?
 ```
 
 ### 3. Request Incremental Changes
@@ -87,7 +87,7 @@ instruction text to match current Slack UI
 
 Claude is configured to understand this project's specific requirements:
 - **Emoji Smith Architecture**: Slack bot with AI emoji generation
-- **Tech Stack**: Python 3.12, FastAPI, AWS Lambda, SQS, OpenAI
+- **Tech Stack**: Python 3.12, FastAPI, GCP Cloud Run, Pub/Sub, OpenAI/Google
 - **Code Quality**: TDD, DDD, dependency injection, repository patterns
 - **Security**: No hardcoded secrets, proper validation, least privilege
 

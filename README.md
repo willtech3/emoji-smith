@@ -4,323 +4,159 @@
 
 > **AI-powered custom emoji generator for Slack workspaces**
 
-Emoji Smith is a Slack bot that automatically generates custom emojis using OpenAI's gpt-image-1, triggered by message actions. Simply right-click any Slack message, choose "Create Reaction," describe the emoji you want, and watch as AI creates the perfect custom emoji reaction.
+Emoji Smith is a Slack bot that generates custom emoji reactions using AI (OpenAI + Google). Right-click any Slack message, choose “Create Reaction”, describe what you want, and Emoji Smith will generate an emoji and help apply it.
 
 ## ✨ Features
 
-- **🎯 Context-Aware Generation**: Analyzes the original message for relevant emoji creation
-- **🎨 Style Customization**: Choose from cartoon, realistic, minimalist, or pixel art styles
-- **🔄 Multi-Provider Support**: Choose between OpenAI GPT-Image or Google Gemini for image generation
-- **⚡ Instant Application**: Generated emoji is automatically added as a reaction
-- **🔒 Secure Deployment**: AWS Lambda with proper secrets management
-- **🚀 Zero Downtime**: Serverless architecture scales automatically
+- **🎯 Context-aware generation**: Uses the original message for better emojis
+- **🎨 Style customization**: Multiple styles and quality options
+- **🔄 Multi-provider**: OpenAI + Google image generation
+- **⚡ Fast Slack response**: Webhook responds within Slack’s 3-second timeout
+- **🔒 Secure deployment**: GCP Secret Manager + least privilege service accounts
+- **🚀 Serverless runtime**: Cloud Run + Pub/Sub
 
-## 🏗️ Architecture
+## 🏗️ Architecture (Production)
 
 ```mermaid
 graph TB
-    subgraph "User Interaction"
-        A[Slack Message] -->|Right-click| B[Create Reaction Modal]
-    end
-
-    subgraph "AWS Infrastructure"
-        B -->|Submit| C[Webhook Lambda<br/>FastAPI]
-        C -->|Queue| D[SQS]
-        D -->|Process| E[Worker Lambda]
-    end
-
-    subgraph "AI Generation"
-        E -->|Provider Selection| F{Image Provider}
-        F -->|OpenAI| G[OpenAI gpt-image-1]
-        F -->|Gemini| H[Google Gemini]
-        G -->|Upload & React| A
-        H -->|Upload & React| A
-    end
+  Slack[Slack Workspace] -->|Events + Interactive| Webhook[Cloud Run: webhook service]
+  Webhook -->|Publish job| Topic[Pub/Sub Topic]
+  Topic -->|Push subscription (OIDC)| Worker[Cloud Run: worker service]
+  Worker -->|OpenAI / Google| AI[AI Providers]
+  Worker -->|Upload emoji / share file| Slack
 ```
 
-For detailed architecture documentation, see [Dual Lambda Architecture](./docs/architecture/dual-lambda.md).
+For deployment and architecture details, see `docs/GCP.md`.
 
-**Tech Stack:**
-- **Backend**: Python 3.12 + FastAPI + Slack Bolt
-- **AI Services**:
-  - OpenAI GPT-5 with fallback to gpt-4/gpt-3.5 (prompt enhancement)
-  - OpenAI gpt-image-1 with fallback to gpt-image-1-mini (image generation)
-  - Google Gemini with fallback models (alternative image generation)
-- **Infrastructure**: AWS Lambda + API Gateway + SQS + Secrets Manager
-- **Deployment**: AWS CDK + GitHub Actions
-- **Monitoring**: CloudWatch logs + health check endpoint (`/health`)
-- **Security**: Bandit SAST scanning + least-privilege IAM
+**Tech Stack**
+- **Backend**: Python 3.12 + FastAPI
+- **AI**: OpenAI (prompt enhancement + image generation), Google Gemini (optional)
+- **Infrastructure**: GCP Cloud Run + Pub/Sub + Secret Manager + Artifact Registry
+- **IaC**: Terraform (`infra_gcp/terraform/`)
+- **CI/CD**: GitHub Actions with Workload Identity Federation (`.github/workflows/deploy-gcp.yml`)
+- **Monitoring**: Cloud Logging
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - Python 3.12+
-- AWS Account with CDK bootstrapped
+- `uv`
 - Slack workspace (admin access)
 - OpenAI API key
+- Optional: Google API key (enables Gemini provider)
 
-### 1. Local Development Setup
+### 1) Local Development Setup
 
 ```bash
-# Clone and setup environment
 git clone https://github.com/willtech3/emoji-smith.git
 cd emoji-smith
 uv venv && source .venv/bin/activate
-uv pip install -e ".[dev]"
-
-# Configure environment
+uv sync --all-extras --dev
 cp .env.example .env
-# Edit .env with your Slack and OpenAI credentials
-
-# Verify setup
-pytest -q && ruff check src/ tests/
 ```
 
-### 2. Slack App Configuration
+Edit `.env` with your values (at minimum):
+- `SLACK_BOT_TOKEN`
+- `SLACK_SIGNING_SECRET`
+- `OPENAI_API_KEY`
+- `PUBSUB_PROJECT`
+- `PUBSUB_TOPIC`
 
-1. Create new Slack app at [api.slack.com/apps](https://api.slack.com/apps)
+### 2) Slack App Configuration
+
+1. Create a Slack app at `api.slack.com/apps`
 2. Add bot scopes: `emoji:write`, `reactions:write`, `commands`, `chat:write`
-3. Create message action: "Create Reaction" with callback ID `create_emoji_reaction`
+3. Create a message action: “Create Reaction” with callback ID `create_emoji_reaction`
 4. Install app to workspace and copy tokens to `.env`
 
-### 3. Local Testing
+### 3) Local Testing
 
 ```bash
-# Terminal 1: Start development server
-python -m src.emojismith.dev_server
+# Terminal 1
+python -m emojismith.dev_server
 
-# Terminal 2: Expose via ngrok
+# Terminal 2
 ngrok http 8000
-
-# Update Slack app webhook URL to ngrok HTTPS URL
 ```
 
-### 4. Production Deployment
+Update the Slack app request URLs to your `ngrok` HTTPS endpoint.
 
-```bash
-# Bootstrap AWS CDK (one-time)
-cdk bootstrap
+### 4) Production Deployment (GCP)
 
-# Deploy infrastructure
-cd infra && cdk deploy
+High level:
+- Terraform provisions infra in `infra_gcp/terraform/` (Cloud Run, Pub/Sub, Secret Manager, Artifact Registry, IAM/WIF).
+- App deploys happen via GitHub Actions (`.github/workflows/deploy-gcp.yml`).
 
-# Configure GitHub secrets for CI/CD
-gh secret set AWS_ACCESS_KEY_ID -b "<from-cdk-output>"
-gh secret set AWS_SECRET_ACCESS_KEY -b "<from-cdk-output>"
-
-# Store production secrets in AWS Secrets Manager
-aws secretsmanager create-secret --name "emoji-smith/production" --secret-string '{...}'
-```
-
-## 📖 Usage
-
-1. **Find a message** in Slack that needs a reaction
-2. **Right-click** the message → **More actions** → **Create Reaction**
-3. **Describe the emoji** you want in the modal dialog
-4. **Choose sharing options**:
-   - Where to share (new thread, existing thread, or direct message)
-   - Who sees instructions (everyone or just you)
-   - Image size (emoji size 128x128 or full size 1024x1024)
-5. **Submit** and wait 5-10 seconds for AI generation
-6. **For Enterprise Grid**: Emoji automatically uploaded and added as reaction
-7. **For Standard Workspaces**: Emoji shared as file with easy upload instructions
-
-### Example Use Cases
-
-- **"facepalm but cute"** on deployment failure messages
-- **"celebrating with confetti"** on successful releases
-- **"this is fine dog"** on system alerts
-- **"mind blown explosion"** on brilliant ideas
-- **"typing furiously"** on coding discussions
+See `docs/GCP.md` for the full deployment and operations guide.
 
 ## ⚙️ Configuration
 
-### Environment Variables
-
-| Variable | Description | Default | Values |
-|----------|-------------|---------|---------|
-| `SLACK_BOT_TOKEN` | Slack bot user OAuth token | Required | `xoxb-...` |
-| `SLACK_SIGNING_SECRET` | Slack app signing secret | Required | `...` |
-| `OPENAI_API_KEY` | OpenAI API key for gpt-image-1 | Required | `sk-...` |
-| `OPENAI_CHAT_MODEL` | Chat model for prompt enhancement | `gpt-5` | `gpt-5`, `gpt-4`, `gpt-3.5-turbo` |
-| `GOOGLE_API_KEY` | Google API key for Gemini image generation | Optional | `...` |
-| `EMOJISMITH_FORCE_ENTERPRISE` | Force Enterprise Grid mode | `false` | `true`, `false` |
-| `SQS_QUEUE_URL` | AWS SQS queue URL (production) | None | AWS SQS URL |
-| `AWS_SECRETS_NAME` | AWS Secrets Manager name | None | `emoji-smith/production` |
-| `SLACK_TEST_BOT_TOKEN` | Bot token for Slack integration tests | None | `xoxb-...` |
-| `SLACK_TEST_CHANNEL_ID` | Channel ID for Slack integration tests | None | `CXXXXXX` |
-| `SLACK_TEST_USER_ID` | User ID for Slack integration tests | None | `UXXXXXX` |
-
-**Note on `GOOGLE_API_KEY`**: This environment variable is optional. When set, users can select Google Gemini as an alternative image generation provider in the Slack modal. Get your API key from [Google AI Studio](https://aistudio.google.com/).
-
-**Note on `EMOJISMITH_FORCE_ENTERPRISE`**: This environment variable allows you to simulate Enterprise Grid workspace behavior in development/testing. When set to `true`, the bot will attempt direct emoji uploads. Invalid values (anything other than `true` or `false`) will log a warning and default to `false`.
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SLACK_BOT_TOKEN` | Slack bot user OAuth token | Yes |
+| `SLACK_SIGNING_SECRET` | Slack signing secret (request verification) | Yes (webhook) |
+| `OPENAI_API_KEY` | OpenAI API key | Yes |
+| `OPENAI_CHAT_MODEL` | Chat model for prompt enhancement | No (default: `gpt-5`) |
+| `GOOGLE_API_KEY` | Google API key (Gemini provider) | No |
+| `PUBSUB_PROJECT` | GCP project ID for Pub/Sub | Yes |
+| `PUBSUB_TOPIC` | Pub/Sub topic name | Yes |
+| `EMOJISMITH_FORCE_ENTERPRISE` | Force Enterprise Grid mode | No |
+| `SLACK_TEST_BOT_TOKEN` | Token for Slack integration tests | No |
+| `SLACK_TEST_CHANNEL_ID` | Channel ID for Slack integration tests | No |
+| `SLACK_TEST_USER_ID` | User ID for Slack integration tests | No |
 
 ## 🛠️ Development
+
+### Quality Checks
+
+```bash
+just qa
+```
 
 ### Feature Branch Workflow
 
 ```bash
-# Create feature branch
 git checkout -b feature/your-feature-name
-
-# Make changes with security in mind
-git add src/specific/files.py tests/specific/test_files.py  # NEVER use 'git add .'
-git commit -m "feat: your descriptive message"
-
-# Push and create PR
+just qa
+git add src/path/to/file.py tests/path/to/test_file.py  # never git add .
+git commit -m "feat: your change"
 git push origin feature/your-feature-name
-gh pr create --title "Your Feature" --body "Description"
+gh pr create --title "feat: your change" --body "..."
 ```
 
-### Dependency Injection Quickstart
-
-When embedding Emoji Smith in another FastAPI or async context, simply provide your own Slack client and inject a `SlackFileSharingRepository`:
-
-```python
-from slack_sdk.web.async_client import AsyncWebClient
-from emojismith.infrastructure.slack.slack_file_sharing import SlackFileSharingRepository
-
-slack_client = AsyncWebClient(token="xoxb-…")
-file_sharing_repo = SlackFileSharingRepository(slack_client)
-# pass `file_sharing_repo` into `EmojiCreationService`
-```
-
-If you don’t provide one, `create_app()` auto-constructs a default instance for the dev server.
-
-### Quality Checks
-
-All code must pass these checks before merging:
-
-```bash
-ruff format --check src/ tests/  # Code formatting
-ruff check src/ tests/           # Linting + security scanning
-mypy src/                        # Type checking
-pytest --cov=src tests/      # Tests with 90%+ coverage
-```
-
-### CI/CD Pipeline
-
-**Stage 1: Code Quality** → **Stage 2: Security** → **Stage 3: Testing** → **Stage 4: Build** → **Stage 5: Deploy**
-
-- **Pull Requests**: Run stages 1-3 for validation
-- **Main Branch**: Run all stages including production deployment
-- **Deployment**: Automatic via AWS CDK when main branch updated
-
-## 🔒 Security
-
-- **🚫 No hardcoded secrets**: All credentials via environment variables or AWS Secrets Manager
-- **🔍 SAST scanning**: Bandit security analysis on every commit
-- **🔐 Least privilege**: IAM roles with minimal required permissions
-- **📝 Explicit commits**: Never use `git add .` - always specify files explicitly
-- **🛡️ Branch protection**: All changes require pull request review
-
-## 📁 Project Structure (DDD Architecture)
+## 📁 Project Structure (DDD)
 
 ```
 emoji-smith/
 ├── src/
-│   ├── emojismith/         # Main application (Clean Architecture)
-│   │   ├── domain/         # 🏛️  Domain Layer (pure business logic)
-│   │   │   ├── entities/   # Core business objects
-│   │   │   ├── value_objects/  # Immutable domain concepts
-│   │   │   ├── services/   # Domain business rules
-│   │   │   ├── repositories/   # Repository interfaces (abstractions)
-│   │   │   ├── protocols/  # Domain protocol definitions
-│   │   │   ├── errors.py   # Domain-specific errors
-│   │   │   └── exceptions.py   # Domain exceptions
-│   │   ├── application/    # 🎯 Application Layer (use cases)
-│   │   │   ├── services/   # Application services (orchestration)
-│   │   │   ├── handlers/   # Slack webhook handlers
-│   │   │   ├── use_cases/  # Application use cases
-│   │   │   └── create_webhook_app.py  # Webhook app factory
-│   │   ├── infrastructure/ # 🔧 Infrastructure Layer (external concerns)
-│   │   │   ├── slack/      # Slack API implementations
-│   │   │   ├── openai/     # OpenAI API implementations
-│   │   │   ├── image/      # Image processing implementations
-│   │   │   ├── jobs/       # Job queue implementations
-│   │   │   ├── security/   # Security implementations
-│   │   │   └── aws/        # AWS service integrations
-│   │   │       ├── webhook_handler.py  # Webhook Lambda handler
-│   │   │       ├── worker_handler.py   # Worker Lambda handler
-│   │   │       └── secrets_loader.py   # AWS Secrets Manager
-│   │   ├── presentation/   # 🌐 Presentation Layer
-│   │   │   └── web/
-│   │   │       └── slack_webhook_api.py  # API endpoints
-│   │   ├── app.py         # FastAPI application factory
-│   │   └── dev_server.py  # Local development server
-│   ├── shared/            # Shared domain code
-│   │   └── domain/
-│   │       ├── entities/
-│   │       ├── repositories/
-│   │       └── value_objects.py
-│   └── webhook/           # Legacy webhook code (deprecated)
-│       ├── domain/
-│       ├── infrastructure/
-│       └── handler.py
-├── tests/                 # 🧪 Test Suite (TDD)
-│   ├── unit/             # Domain and application logic tests
-│   ├── integration/      # Infrastructure integration tests
-│   ├── contract/         # Contract tests for external services
-│   ├── e2e/             # End-to-end tests
-│   ├── security/        # Security-focused tests
-│   ├── performance/     # Performance tests
-│   ├── fixtures/        # Test data and mocks
-│   └── conftest.py      # Pytest configuration
-├── infra/               # ☁️  AWS CDK Infrastructure
-│   ├── stacks/          # CDK stack definitions
-│   ├── app.py          # CDK app entry point
-│   ├── cdk.json        # CDK configuration
-│   └── requirements.txt # CDK dependencies
-├── docs/                # 📚 Documentation
-│   ├── adr/            # Architecture Decision Records
-│   ├── architecture/   # Architecture documentation
-│   ├── testing/        # Testing documentation
-│   ├── claude/         # Claude AI-specific templates
-│   └── backup/         # Backup documentation
-├── scripts/            # 🛠️  Development scripts
-│   ├── build_webhook_package.sh
-│   ├── check-quality.sh
-│   ├── claude-refresh.sh
-│   ├── dev-setup.sh
-│   └── run-tests.sh
-├── .github/            # 🚀 GitHub configuration
-│   └── workflows/      # CI/CD pipelines
-├── .claude/            # 🤖 Claude AI configuration
-│   └── commands/       # Claude command definitions
-├── stubs/              # Type stubs
-└── Configuration files
-    ├── .pre-commit-config.yaml
-    ├── pyproject.toml
-    ├── requirements-webhook.lock
-    └── run_dev.sh
+│   ├── emojismith/
+│   │   ├── domain/
+│   │   ├── application/
+│   │   ├── infrastructure/
+│   │   │   ├── gcp/        # Cloud Run + Pub/Sub adapters
+│   │   │   ├── slack/      # Slack API adapters
+│   │   │   ├── openai/     # OpenAI adapters
+│   │   │   └── google/     # Gemini adapters
+│   │   └── presentation/
+│   └── shared/
+├── infra_gcp/
+│   └── terraform/
+├── tests/
+└── docs/
 ```
 
-## 📚 Documentation Structure
+## 📚 Documentation
 
-- `CLAUDE.md` - Core development rules (always read first)
-- Co-located `CLAUDE.md` files in each directory:
-  - `src/CLAUDE.md` - Security guidelines
-  - `src/emojismith/domain/CLAUDE.md` - Domain layer guidelines
-  - `src/emojismith/infrastructure/CLAUDE.md` - Infrastructure guidelines
-  - `tests/CLAUDE.md` - Testing guidelines
-  - `.github/CLAUDE.md` - Deployment and CI/CD guidelines
-- `.claude/context.md` - Current task tracking (git-ignored)
-- `scripts/claude-refresh.sh` - Quick context refresh
-
-For AI agents: Always start by reading root CLAUDE.md, then follow the hierarchy to the relevant local CLAUDE.md files.
-
-## 🤝 Contributing
-
-1. **Read the guidelines**: See [CLAUDE.md](./CLAUDE.md) for development standards
-2. **Follow security rules**: Never commit secrets, always use explicit file adds
-3. **Write tests**: Test-driven development with 90%+ coverage
-4. **Use feature branches**: All changes via pull request
-5. **Run quality checks**: Ensure all tools pass before committing
+- `docs/GCP.md` - Production deployment + architecture (Cloud Run + Pub/Sub)
+- `docs/adr/` - Architecture Decision Records
+- `docs/testing/testing-guidelines.md` - Testing guidelines
+- `CLAUDE.md` and co-located `CLAUDE.md` files - Coding and workflow rules
 
 ## 🆘 Support
 
-- **Development**: See [CLAUDE.md](./CLAUDE.md) for coding guidelines
-- **Architecture**: See [docs/architecture/](./docs/architecture/) for design documentation
-- **Testing**: See [docs/testing/testing-guidelines.md](./docs/testing/testing-guidelines.md) for test standards
-- **Bug Reports**: [Open an issue](https://github.com/willtech3/emoji-smith/issues)
+- **Development rules**: `CLAUDE.md`
+- **Deployment/architecture**: `docs/GCP.md`
+- **Testing**: `docs/testing/testing-guidelines.md`
+- **Issues**: https://github.com/willtech3/emoji-smith/issues
+

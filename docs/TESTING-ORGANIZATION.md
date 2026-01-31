@@ -26,7 +26,7 @@ The Emoji Smith test suite is organized by test categories to enable:
 
 **Characteristics**:
 - Test multiple components working together
-- May use mocked AWS services (via moto)
+- May use mocked cloud services (e.g., Pub/Sub publisher, HTTP clients)
 - May use test containers or in-memory databases
 - Focus on integration points and data flow
 
@@ -81,15 +81,15 @@ tests/
 ├── unit/              # Fast, isolated unit tests
 │   ├── domain/        # Domain logic tests
 │   ├── application/   # Application service tests
-│   ├── infrastructure/# Infrastructure tests (with mocks)
+│   ├── infrastructure/ # Infrastructure tests (with mocks)
 │   └── presentation/  # API endpoint tests
 ├── integration/       # Component interaction tests
-│   ├── aws/          # AWS service integration
 │   ├── slack/        # Slack API integration
 │   └── openai/       # OpenAI API integration
 ├── contract/         # API contract validation
 │   ├── slack/        # Slack webhook contracts
-│   └── openai/       # OpenAI API contracts
+│   ├── openai/       # OpenAI API contracts
+│   └── google/       # Google Gemini API contracts
 ├── security/         # Security-focused tests
 │   ├── validation/   # Input validation tests
 │   └── authentication/ # Auth/signature tests

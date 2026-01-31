@@ -38,7 +38,7 @@ class TestSecurityValidation:
             "${OPENAI_API_KEY}",
             "$SLACK_BOT_TOKEN",
             "$(printenv)",
-            "`echo $AWS_SECRET_ACCESS_KEY`",
+            "`echo $GOOGLE_API_KEY`",
         ],
     )
     def test_environment_variable_injection_prevention(self, env_injection):
