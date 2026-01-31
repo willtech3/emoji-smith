@@ -30,7 +30,10 @@ resource "google_pubsub_subscription" "jobs_push" {
 
   # Push configuration with OIDC authentication
   push_config {
-    push_endpoint = "${google_cloud_run_v2_service.worker.uri}/pubsub"
+    # Don't depend on worker.uri during initial bootstrap: it can be empty while
+    # the service is reconciling. The default Cloud Run URL is deterministic:
+    # https://{service}-{project_number}.{region}.run.app
+    push_endpoint = "https://${google_cloud_run_v2_service.worker.name}-${data.google_project.this.number}.${var.region}.run.app/pubsub"
 
     # OIDC token for authenticating to the worker Cloud Run service
     oidc_token {
