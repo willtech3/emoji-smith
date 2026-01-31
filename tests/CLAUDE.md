@@ -143,8 +143,10 @@ tests/
 │   ├── application/        # Use case tests
 │   └── infrastructure/     # Repository tests with mocks
 ├── integration/            # Tests with real dependencies
-│   ├── test_dual_lambda_e2e.py
-│   └── test_slack_integration.py
+│   ├── openai/             # OpenAI API integration tests
+│   ├── slack/              # Slack API integration tests
+│   ├── test_slack_integration.py
+│   └── test_webhook_handler_flow.py
 └── fixtures/              # Shared test data
     ├── slack_payloads.py
     └── sample_images.py
