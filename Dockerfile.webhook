@@ -20,5 +20,9 @@ RUN uv sync --no-dev
 # Cloud Run uses PORT env var (default 8080)
 ENV PORT=8080
 
+# Use the build-time virtualenv at runtime (avoid `uv run`, which can try to
+# resolve/install packages on startup and spike memory).
+ENV PATH="/app/.venv/bin:$PATH"
+
 # Run with uvicorn
-CMD ["uv", "run", "uvicorn", "emojismith.infrastructure.gcp.webhook_app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "emojismith.infrastructure.gcp.webhook_app:app", "--host", "0.0.0.0", "--port", "8080"]
