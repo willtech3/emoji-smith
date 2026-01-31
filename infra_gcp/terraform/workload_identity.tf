@@ -41,7 +41,8 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   # SECURITY: Use repository_owner_id (numeric) to prevent squatting attacks
   attribute_condition = <<-EOT
     assertion.repository_owner_id == "${var.github_repo_owner_id}" &&
-    attribute.repository == "${var.github_repo_owner}/${var.github_repo_name}"
+    attribute.repository == "${var.github_repo_owner}/${var.github_repo_name}" &&
+    attribute.ref == "refs/heads/main"
   EOT
 
   # OIDC configuration for GitHub Actions

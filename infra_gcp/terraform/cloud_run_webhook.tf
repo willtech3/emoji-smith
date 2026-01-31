@@ -64,7 +64,7 @@ resource "google_cloud_run_v2_service" "webhook" {
       # Plain environment variables
       env {
         name  = "PUBSUB_TOPIC"
-        value = google_pubsub_topic.jobs.id
+        value = google_pubsub_topic.jobs.name
       }
 
       env {
