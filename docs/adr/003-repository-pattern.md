@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-We need to abstract external service dependencies (Slack, OpenAI, AWS) to:
+We need to abstract external service dependencies (Slack, AI providers, cloud services) to:
 - Enable unit testing without real API calls
 - Support switching providers (e.g., OpenAI to Anthropic)
 - Keep domain logic free of infrastructure concerns
@@ -46,7 +46,7 @@ Rationale for Protocols over ABCs:
 - Easy to create test doubles
 - Type checker validates interface compliance
 - Can gradually type existing code
-- Multiple implementations possible (S3, local, etc.)
+- Multiple implementations possible (GCS, local, etc.)
 
 ### Negative
 - Requires Python 3.8+ (not an issue with 3.12)

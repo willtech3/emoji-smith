@@ -13,13 +13,10 @@ dependencies = [
     "fastapi>=0.104.0",
     "uvicorn>=0.24.0",
     "python-dotenv>=1.0.0",
-    "boto3>=1.34.0",
-    "aioboto3>=13.0.0",
     "httpx>=0.25.0",
     "pillow>=10.0.0",
     "pydantic>=2.5.0",
     "openai>=1.0.0",
-    "mangum>=0.17.0",
     "aiohttp>=3.8.0",
     "google-genai>=1.0.0",
     "google-api-core>=2.0.0",
@@ -35,11 +32,7 @@ dev = [
     "mypy>=1.7.0",
     "pre-commit>=3.5.0",
     "types-requests>=2.31.0",
-    "types-boto3>=1.0.0",
     "respx>=0.20.2",
-    "moto[sqs,secretsmanager]>=5.0.0",  # v5.0+ required for proper SQS message attributes
-    "aws-cdk-lib>=2.0.0",  # Required for CDK stack tests
-    "constructs>=10.0.0",  # Required for CDK stack tests
 ]
 
 [build-system]
@@ -138,7 +131,6 @@ source = ["src"]
 omit = [
     "tests/*",
     "src/emojismith/dev_server.py",
-    "src/emojismith/infrastructure/aws/webhook_handler.py",  # FastAPI wiring
 ]
 
 [tool.coverage.report]
@@ -154,13 +146,12 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
-    "moto[sqs]>=5.1.6",
-    "aws-cdk-lib>=2.0.0",
-    "constructs>=10.0.0",
-]
-webhook = [
-    "boto3>=1.37.3",
-    "fastapi>=0.115.12",
-    "mangum>=0.19.0",
-    "slack-sdk>=3.35.0",
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.8.0",
+    "mypy>=1.7.0",
+    "pre-commit>=3.5.0",
+    "types-requests>=2.31.0",
+    "respx>=0.20.2",
 ]

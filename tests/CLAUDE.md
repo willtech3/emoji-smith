@@ -80,7 +80,7 @@ async def test_generate_emoji_includes_message_context_in_prompt(
 | What to Mock | Reason |
 |--------------|--------|
 | External APIs (Slack, OpenAI) | Avoid network calls, ensure deterministic behavior |
-| AWS services (S3, SQS) | Prevent AWS costs and dependencies |
+| GCP services (Pub/Sub, Secret Manager) | Prevent cloud costs and external dependencies |
 | File system operations | Maintain test isolation |
 | Time-dependent operations | Control time for predictable tests |
 
@@ -223,7 +223,7 @@ def test_user_creation_activates_by_default():
 - Test error handling and compensation
 
 ### Infrastructure Layer Tests
-- Mock external services (AWS, APIs)
+- Mock external services (cloud services, APIs)
 - Test data mapping and transformation
 - Verify error handling and retries
 - Test configuration and initialization

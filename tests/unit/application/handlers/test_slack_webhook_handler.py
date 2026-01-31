@@ -186,8 +186,9 @@ class TestModalSubmissionAutoGeneratesName:
 class TestMessageActionModalDefaultsToNanoBananaPro:
     """Tests that the Slack modal defaults to Nano Banana Pro in production-like config.
 
-    The webhook Lambda does not have AI provider API keys injected, but the worker does.
-    The modal should still default to the best available model (Nano Banana Pro).
+    The webhook service does not have AI provider API keys injected, but the worker
+    service does. The modal should still default to the best available model
+    (Nano Banana Pro).
     """
 
     @pytest.fixture()
@@ -200,7 +201,7 @@ class TestMessageActionModalDefaultsToNanoBananaPro:
 
     @pytest.fixture()
     def processor(self, mock_slack_repo, mock_job_queue):
-        # Webhook Lambda does not receive provider API keys.
+        # Webhook service does not receive provider API keys.
         return WebhookEventProcessor(
             slack_repo=mock_slack_repo,
             job_queue=mock_job_queue,

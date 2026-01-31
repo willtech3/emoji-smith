@@ -24,13 +24,19 @@
 ```bash
 # .env.example (commit this)
 SLACK_BOT_TOKEN=xoxb-your-token-here
+SLACK_SIGNING_SECRET=your-signing-secret-here
 OPENAI_API_KEY=sk-your-key-here
-AWS_REGION=us-east-1
+GOOGLE_API_KEY=your-google-api-key-here  # optional (Gemini)
+PUBSUB_PROJECT=your-gcp-project-id
+PUBSUB_TOPIC=emoji-smith-jobs
 
 # .env (NEVER commit this)
 SLACK_BOT_TOKEN=xoxb-actual-token-value
+SLACK_SIGNING_SECRET=actual-signing-secret
 OPENAI_API_KEY=sk-actual-api-key
-AWS_REGION=us-east-1
+GOOGLE_API_KEY=actual-google-api-key  # optional (Gemini)
+PUBSUB_PROJECT=actual-gcp-project-id
+PUBSUB_TOPIC=emoji-smith-jobs
 ```
 
 #### Git Security
@@ -46,29 +52,9 @@ git add *
 
 ### Production Environment
 
-#### AWS Secrets Manager
-```python
-import boto3
-import json
-from functools import lru_cache
+#### Secret Manager + Cloud Run Env Injection (Recommended)
 
-@lru_cache()
-def get_secrets() -> dict:
-    """Retrieve secrets from AWS Secrets Manager."""
-    client = boto3.client('secretsmanager')
-
-    try:
-        response = client.get_secret_value(SecretId='emoji-smith/prod')
-        return json.loads(response['SecretString'])
-    except Exception as e:
-        logger.error(f"Failed to retrieve secrets: {e}")
-        raise
-
-# Usage
-secrets = get_secrets()
-slack_token = secrets['SLACK_BOT_TOKEN']
-openai_key = secrets['OPENAI_API_KEY']
-```
+In production, secrets should be stored in **GCP Secret Manager** and injected into Cloud Run as environment variables. The application should read secrets from `os.environ` and fail fast at startup if required values are missing.
 
 #### Environment Variable Security
 ```python
@@ -192,94 +178,12 @@ def validate_image_upload(file_data: bytes, filename: str) -> bool:
     return True
 ```
 
-## AWS Security
+## GCP Security
 
-### IAM Best Practices
-
-#### Lambda Execution Role
-```python
-# CDK example - Least privilege policy
-from aws_cdk import aws_iam as iam
-
-lambda_role = iam.Role(
-    self, "LambdaRole",
-    assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
-    managed_policies=[
-        iam.ManagedPolicy.from_aws_managed_policy_name(
-            "service-role/AWSLambdaBasicExecutionRole"
-        )
-    ]
-)
-
-# Grant specific permissions
-queue.grant_send_messages(webhook_lambda_role)
-queue.grant_consume_messages(worker_lambda_role)
-bucket.grant_read_write(worker_lambda_role)
-secrets.grant_read(lambda_role)
-```
-
-#### S3 Bucket Security
-```python
-from aws_cdk import aws_s3 as s3
-
-emoji_bucket = s3.Bucket(
-    self, "EmojiBucket",
-    encryption=s3.BucketEncryption.S3_MANAGED,
-    block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-    versioned=True,
-    lifecycle_rules=[
-        s3.LifecycleRule(
-            id="DeleteOld",
-            expiration=Duration.days(90),
-            noncurrent_version_expiration=Duration.days(30)
-        )
-    ]
-)
-
-# Bucket policy - restrict to specific Lambda
-bucket_policy = iam.PolicyStatement(
-    effect=iam.Effect.ALLOW,
-    principals=[lambda_role],
-    actions=["s3:GetObject", "s3:PutObject"],
-    resources=[f"{emoji_bucket.bucket_arn}/*"],
-    conditions={
-        "StringEquals": {
-            "s3:x-amz-server-side-encryption": "AES256"
-        }
-    }
-)
-```
-
-### Network Security
-
-#### VPC Configuration (if required)
-```python
-# Place Lambda in private subnet
-vpc = ec2.Vpc(self, "SecureVPC",
-    subnet_configuration=[
-        ec2.SubnetConfiguration(
-            name="Private",
-            subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
-            cidr_mask=24
-        )
-    ]
-)
-
-# Security group - restrict outbound
-security_group = ec2.SecurityGroup(
-    self, "LambdaSG",
-    vpc=vpc,
-    description="Lambda security group",
-    allow_all_outbound=False
-)
-
-# Allow HTTPS only
-security_group.add_egress_rule(
-    peer=ec2.Peer.any_ipv4(),
-    connection=ec2.Port.tcp(443),
-    description="Allow HTTPS outbound"
-)
-```
+### IAM & Service Accounts (High Level)
+- Use least-privilege **service accounts** for Cloud Run services.
+- Use Pub/Sub push with **OIDC authentication** to invoke the worker.
+- Prefer **Workload Identity Federation** for GitHub Actions (no long-lived keys).
 
 ## Security Scanning
 
@@ -386,8 +290,8 @@ class AuditLogger:
             "user_agent": self._get_user_agent()
         }
 
-        # Send to CloudWatch
-        await self._send_to_cloudwatch(audit_entry)
+        # Emit via structured logs / Cloud Logging
+        await self._emit(audit_entry)
 ```
 
 ## Error Handling
@@ -420,9 +324,9 @@ except Exception as e:
 
 ### Before Deployment
 - [ ] Secrets rotated recently
-- [ ] IAM policies reviewed (least privilege)
-- [ ] S3 buckets not public
-- [ ] CloudWatch alarms configured
+- [ ] Cloud Run service accounts reviewed (least privilege)
+- [ ] Worker endpoint protected (Pub/Sub push identity)
+- [ ] Alerts configured (Cloud Monitoring / log-based metrics)
 - [ ] Penetration testing completed (if applicable)
 - [ ] Security documentation updated
 
@@ -439,7 +343,6 @@ except Exception as e:
 ### Security Contact
 - Security Team: security@yourcompany.com
 - On-call: Use PagerDuty
-- AWS Support: Premium support tier
 
 ## Quick Reference
 
@@ -452,7 +355,7 @@ except Exception as e:
 - Deploy without security review
 
 **Always:**
-- Use AWS Secrets Manager
+- Use GCP Secret Manager (injected into Cloud Run)
 - Validate all inputs
 - Encrypt data in transit and at rest
 - Follow least privilege principle
