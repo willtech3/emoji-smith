@@ -1,4 +1,11 @@
-"""Cloud Run adapter for Slack webhooks."""
+"""Cloud Run adapter for Slack webhooks.
+
+This module intentionally constructs the production `app` at import time so Cloud
+Run fails fast if required environment variables are missing.
+
+For tests or embedding Emoji Smith into another FastAPI application, prefer
+calling `create_app()` with an injected `SlackWebhookHandler`.
+"""
 
 import logging
 import os
@@ -56,47 +63,55 @@ def create_webhook_handler() -> tuple[SlackWebhookHandler, WebhookSecurityServic
     return slack_handler, security_service
 
 
-app = FastAPI(
-    title="Emoji Smith Webhook",
-    description="Cloud Run webhook handler for Slack events",
-    version="0.1.0",
-)
+def create_app(*, webhook_handler: SlackWebhookHandler | None = None) -> FastAPI:
+    """Create a FastAPI app for Slack webhooks.
 
-# Create handler and security service
-webhook_handler, _security_service = create_webhook_handler()
+    When `webhook_handler` is omitted, this function constructs production
+    dependencies from environment variables.
+    """
+    if webhook_handler is None:
+        webhook_handler, _security_service = create_webhook_handler()
 
-
-@app.get("/health")
-async def health_check() -> dict:
-    return {"status": "healthy", "service": "webhook"}
-
-
-@app.post("/slack/events")
-async def slack_events(request: Request) -> dict:
-    ensure_trace_id()
-
-    log_event(
-        logger,
-        logging.INFO,
-        "Slack event received",
-        event="webhook_received",
-        endpoint="/slack/events",
+    app = FastAPI(
+        title="Emoji Smith Webhook",
+        description="Cloud Run webhook handler for Slack events",
+        version="0.1.0",
     )
-    body = await request.body()
-    headers = dict(request.headers)
-    return await webhook_handler.handle_event(body, headers)
+
+    @app.get("/health")
+    async def health_check() -> dict:
+        return {"status": "healthy", "service": "webhook"}
+
+    @app.post("/slack/events")
+    async def slack_events(request: Request) -> dict:
+        ensure_trace_id()
+
+        log_event(
+            logger,
+            logging.INFO,
+            "Slack event received",
+            event="webhook_received",
+            endpoint="/slack/events",
+        )
+        body = await request.body()
+        headers = dict(request.headers)
+        return await webhook_handler.handle_event(body, headers)
+
+    @app.post("/slack/interactive")
+    async def slack_interactive(request: Request) -> dict:
+        ensure_trace_id()
+        log_event(
+            logger,
+            logging.INFO,
+            "Slack event received",
+            event="webhook_received",
+            endpoint="/slack/interactive",
+        )
+        body = await request.body()
+        headers = dict(request.headers)
+        return await webhook_handler.handle_event(body, headers)
+
+    return app
 
 
-@app.post("/slack/interactive")
-async def slack_interactive(request: Request) -> dict:
-    ensure_trace_id()
-    log_event(
-        logger,
-        logging.INFO,
-        "Slack event received",
-        event="webhook_received",
-        endpoint="/slack/interactive",
-    )
-    body = await request.body()
-    headers = dict(request.headers)
-    return await webhook_handler.handle_event(body, headers)
+app = create_app()

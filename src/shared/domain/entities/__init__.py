@@ -30,7 +30,7 @@ class EmojiGenerationJob:
     status: JobStatus
     sharing_preferences: EmojiSharingPreferences
     created_at: datetime
-    trace_id: str = ""  # For cross-Lambda tracing
+    trace_id: str = ""  # For cross-service tracing
     thread_ts: str | None = None
     style_preferences: EmojiStylePreferences = field(
         default_factory=EmojiStylePreferences

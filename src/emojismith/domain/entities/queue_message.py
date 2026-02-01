@@ -44,7 +44,7 @@ class QueueMessage:
             )
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for SQS serialization."""
+        """Convert to dictionary for queue serialization."""
         return {
             "message_type": self.message_type.value,
             "payload": self.payload.to_dict(),

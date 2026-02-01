@@ -43,9 +43,9 @@ class WebhookEventProcessor:
 
         # Configure modal builder providers for the Slack UI.
         #
-        # The webhook Lambda is intentionally "thin" and does not receive AI provider
-        # API keys (those belong in the worker Lambda). Provider availability is
-        # therefore configured explicitly via dependency injection.
+        # The webhook service is intentionally "thin" and does not receive AI provider
+        # API keys (those belong in the worker service). Provider availability is
+        # configured explicitly via dependency injection.
         google_available = google_enabled
         default_provider = "google_gemini" if google_enabled else "openai"
 

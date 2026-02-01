@@ -14,11 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Reorganized documentation into topic-based directories
-- Updated CLAUDE.md with current dual Lambda architecture
+- Updated docs and guidance for GCP (Cloud Run + Pub/Sub) production deployment
 
 ### Removed
 - Deleted 5 mock-only tests that provided no value (#262)
 - Removed obsolete .old.md documentation files
+
+## [2.0.0] - 2026-01-31
+
+### Added
+- GCP production architecture documentation (`docs/GCP.md`)
+- ADR-004 documenting migration to GCP
+- Unit tests for GCP Pub/Sub + Cloud Run adapters
+
+### Changed
+- Production deployment target is now GCP (Cloud Run + Pub/Sub)
+- Local dev server runs the Cloud Run webhook app
+
+### Removed
+- AWS infrastructure and deployment artifacts (CDK, Lambda handlers, SQS queue, AWS GitHub Actions workflows)
 
 ## [1.2.0] - 2024-06-21
 
@@ -91,8 +105,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Architecture Decisions
 See [Architecture Decision Records](./adr/) for detailed rationale behind major design choices:
 - [ADR-001](./adr/001-use-ddd-architecture.md): Domain-Driven Design adoption
-- [ADR-002](./adr/002-two-lambda-separation.md): Dual Lambda architecture
+- [ADR-002](./adr/002-two-lambda-separation.md): Separate webhook and worker services
 - [ADR-003](./adr/003-repository-pattern.md): Repository pattern implementation
+- [ADR-004](./adr/004-migrate-to-gcp.md): Migration to GCP (Cloud Run + Pub/Sub)
 
 ## Migration Guide
 
@@ -120,4 +135,5 @@ See [Architecture Decision Records](./adr/) for detailed rationale behind major 
 ---
 
 For detailed architecture documentation, see [docs/architecture/](./architecture/).
+For current production deployment documentation, see [docs/GCP.md](./GCP.md).
 For testing guidelines, see [docs/testing/testing-guidelines.md](./testing/testing-guidelines.md).

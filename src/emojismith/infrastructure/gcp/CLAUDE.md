@@ -3,7 +3,7 @@
 ## 🏗️ Architecture
 
 - **Pub/Sub Job Queue**: Uses `PubSubJobQueue` adapter (async wrapper around sync `google-cloud-pubsub`)
-- **Webhook App**: Cloud Run service running FastAPI directly (no Lambda handler)
+- **Webhook App**: Cloud Run service running FastAPI directly (no platform-specific handler wrapper)
 - **Worker App**: Cloud Run service processing Pub/Sub push messages (FastAPI)
 
 ## 🔒 Security

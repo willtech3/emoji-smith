@@ -39,22 +39,22 @@ This document specifies adding **Google Gemini** as an additional image generati
 
 ```mermaid
 graph LR
-    A[Slack Modal] -->|User selects provider| B[Webhook Lambda]
-    B -->|Queue with provider choice| C[SQS]
-    C --> D[Worker Lambda]
+    A[Slack Modal] -->|User selects provider| B[Cloud Run: webhook service]
+    B -->|Publish job with provider choice| C[Pub/Sub]
+    C --> D[Cloud Run: worker service]
     D -->|If OpenAI| E[OpenAI Repository]
     D -->|If Google| F[Gemini Repository]
     E --> G[Generated Image]
     F --> G
 ```
 
-### Current SQS Serialization Architecture
+### Current Pub/Sub Job Payload
 
-**IMPORTANT:** The current codebase serializes `EmojiGenerationJob.to_dict()` directly to SQS, NOT `QueueMessage`. The worker parses `EmojiGenerationJob.from_dict()` from the message body.
+**IMPORTANT:** The webhook publishes a job DTO as JSON to Pub/Sub. The worker receives Pub/Sub push messages, base64-decodes `message.data`, parses JSON, and processes the job.
 
 ```
-Producer (webhook): job.to_dict() → JSON → SQS
-Consumer (worker):  JSON → EmojiGenerationJob.from_dict() → process
+Producer (webhook): job DTO → JSON → Pub/Sub (message.data)
+Consumer (worker):  Pub/Sub push → base64 decode → JSON → job DTO → process
 ```
 
 **Migration approach:** Add `image_provider` field to `EmojiGenerationJob` with default `"openai"` for backward compatibility.
@@ -120,16 +120,16 @@ Consumer (worker):  JSON → EmojiGenerationJob.from_dict() → process
 
 - [ ] **1.3** Update `EmojiGenerationJob` entity to include provider selection
   - File: **[MODIFY]** `src/shared/domain/entities/__init__.py`
-  - **CRITICAL:** This is where SQS serialization happens - NOT QueueMessage!
-  - Add field: `image_provider: str = "openai"` (use string for JSON serialization)
+  - **CRITICAL:** This is where job payload serialization happens (webhook → worker).
+  - Add field: `image_provider: str = "google_gemini"` (use string for JSON serialization)
   - Update `to_dict()` to include: `"image_provider": self.image_provider`
-  - Update `from_dict()` to parse: `image_provider=data.get("image_provider", "openai")`
+  - Update `from_dict()` to parse: `image_provider=data.get("image_provider", "google_gemini")`
   - Example modification:
     ```python
     @dataclass
     class EmojiGenerationJob:
         # ... existing fields ...
-        image_provider: str = "openai"  # Default for backward compatibility
+        image_provider: str = "google_gemini"
 
         def to_dict(self) -> dict[str, Any]:
             return {
@@ -141,7 +141,7 @@ Consumer (worker):  JSON → EmojiGenerationJob.from_dict() → process
         def from_dict(cls, data: dict[str, Any]) -> "EmojiGenerationJob":
             return cls(
                 # ... existing fields ...
-                image_provider=data.get("image_provider", "openai"),
+                image_provider=data.get("image_provider", "google_gemini"),
             )
     ```
 
@@ -209,26 +209,17 @@ Consumer (worker):  JSON → EmojiGenerationJob.from_dict() → process
   - File: **[MODIFY]** `pyproject.toml`
   - Add to `dependencies` list: `"google-genai>=1.0.0"`
 
-- [ ] **3.2** Add `google-genai` to Dockerfile (worker Lambda container)
-  - File: **[MODIFY]** `Dockerfile`
-  - Add to pip install line: `google-genai>=1.0.0 \`
-  - **CRITICAL:** The Dockerfile installs dependencies directly, NOT from pyproject.toml
+- [ ] **3.2** Ensure `google-genai` is included in the worker image
+  - Files: **[VERIFY]** `pyproject.toml`, `uv.lock`, `Dockerfile.worker`
+  - The Cloud Run images install dependencies via `uv sync`, so adding `google-genai` to `pyproject.toml` and re-locking is sufficient.
 
 - [ ] **3.3** Add `GOOGLE_API_KEY` to environment configuration
   - File: **[MODIFY]** `.env.example`
   - Add line: `GOOGLE_API_KEY=your-google-api-key-here`
 
-- [ ] **3.4** Update AWS Secrets Manager and CDK for Google API key
-  - File: **[MODIFY]** `infra/stacks/emoji_smith_stack.py`
-  - Add `GOOGLE_API_KEY` to worker Lambda environment variables (lines ~304-320):
-    ```python
-    environment={
-        # ... existing vars ...
-        "GOOGLE_API_KEY": self.secrets.secret_value_from_json(
-            "GOOGLE_API_KEY"
-        ).unsafe_unwrap(),
-    },
-    ```
+- [ ] **3.4** Update GCP Secret Manager + Terraform for Google API key
+  - Files: **[MODIFY]** `infra_gcp/terraform/secrets.tf`, `infra_gcp/terraform/cloud_run_worker.tf`
+  - Ensure `GOOGLE_API_KEY` is stored in Secret Manager and injected into the worker Cloud Run service as an env var.
 
 - [ ] **3.5** Create Google infrastructure directory with __init__
   - Directory: **[NEW]** `src/emojismith/infrastructure/google/`
@@ -486,7 +477,7 @@ Consumer (worker):  JSON → EmojiGenerationJob.from_dict() → process
 - [ ] **6.3** Update job creation to include provider in EmojiGenerationJob
   - File: Find where `EmojiGenerationJob.create_new()` is called
   - Add `image_provider` parameter from the extracted modal value
-  - **NOTE:** The job is serialized directly to SQS via `job.to_dict()` in `sqs_job_queue.py` line 27
+  - **NOTE:** The job is serialized into Pub/Sub `message.data` (JSON) by `PubSubJobQueue` in `src/emojismith/infrastructure/gcp/pubsub_job_queue.py`.
 
 ---
 
@@ -545,15 +536,13 @@ Consumer (worker):  JSON → EmojiGenerationJob.from_dict() → process
   - Add section about multi-provider support
   - Update environment variables table with `GOOGLE_API_KEY`
 
-- [ ] **8.2** Update SETUP.md
-  - File: **[MODIFY]** `SETUP.md`
-  - Add instructions for Google API key setup
-  - Link to Google AI Studio for key generation: https://aistudio.google.com/
+- [ ] **8.2** Update docs/GCP.md
+  - File: **[MODIFY]** `docs/GCP.md`
+  - Ensure env var docs include `GOOGLE_API_KEY` and clarify provider selection behavior
 
-- [ ] **8.3** Update architecture documentation
-  - File: **[MODIFY]** `docs/architecture/dual-lambda.md`
-  - Add diagram showing multi-provider architecture
-  - Document provider selection flow
+- [ ] **8.3** Keep this spec aligned with the codebase
+  - File: **[MODIFY]** `docs/google-nano-banana-migration.md`
+  - Keep diagrams and file references aligned with the current GCP deployment
 
 ---
 
@@ -607,8 +596,8 @@ pytest tests/unit/domain/entities/ -v
    - Check logs for warning messages
 
 4. **Test Backward Compatibility**:
-   - Send a job to SQS without `image_provider` field
-   - Verify worker defaults to OpenAI and processes successfully
+   - Send a job via Pub/Sub without the `image_provider` field
+   - Verify the worker falls back to the default provider and processes successfully
 
 ---
 
@@ -676,9 +665,9 @@ for part in response.parts:
 | `GOOGLE_API_KEY` | Google AI API key | Yes (for Gemini provider) |
 | `OPENAI_CHAT_MODEL` | Model for prompt enhancement | Optional (default: `gpt-5`) |
 
-### AWS Secrets Manager
+### GCP Secret Manager (Production)
 
-Add both keys to your secrets:
+Store both keys in Secret Manager and inject them into Cloud Run as environment variables (Terraform-managed).
 ```json
 {
   "SLACK_BOT_TOKEN": "xoxb-...",
@@ -694,14 +683,14 @@ Add both keys to your secrets:
 
 ### Critical Implementation Details
 
-1. **Add `image_provider` to `EmojiGenerationJob`**, NOT `QueueMessage` - the SQS serialization uses `EmojiGenerationJob.to_dict()` directly
+1. **Add `image_provider` to `EmojiGenerationJob`**, NOT `QueueMessage` - the webhook → worker payload includes `EmojiGenerationJob.to_dict()`
 2. **Gemini SDK has native async**: Use `client.aio.models.generate_content()`, NOT `asyncio.to_thread()`
 3. **Gemini `contents` accepts string or list**: String is fine for text-only prompts
 4. **Set `response_modalities=["IMAGE"]`** when requesting images from Gemini
 5. **Use `background="transparent"`** for OpenAI instead of relying on prompt text
 6. **DALL-E 3 is deprecated** (ends May 12, 2026): Use `gpt-image-1-mini` as fallback
-7. **Dockerfile installs deps directly**: Add `google-genai` to Dockerfile pip install, not just pyproject.toml
-8. **CDK injects secrets as env vars**: Add `GOOGLE_API_KEY` to worker Lambda environment
+7. **Cloud Run images install deps via `uv`**: Add `google-genai` to `pyproject.toml` and regenerate `uv.lock`
+8. **Terraform injects secrets as env vars**: Add `GOOGLE_API_KEY` to Secret Manager and worker Cloud Run env injection
 
 ### Files to Create (Complete List)
 
@@ -730,12 +719,13 @@ src/emojismith/application/services/emoji_service.py
 src/emojismith/application/handlers/slack_webhook_handler.py
 src/emojismith/app.py
 pyproject.toml
-Dockerfile  # Add google-genai to pip install
+uv.lock
+Dockerfile.worker  # Runtime deps installed via `uv sync`
 .env.example
-infra/stacks/emoji_smith_stack.py  # Add GOOGLE_API_KEY env var
+infra_gcp/terraform/secrets.tf
+infra_gcp/terraform/cloud_run_worker.tf
 README.md
-SETUP.md
-docs/architecture/dual-lambda.md
+docs/GCP.md
 tests/unit/domain/entities/test_emoji_generation_job_sharing.py  # Add image_provider tests
 ```
 

@@ -13,7 +13,7 @@ class TestEmojiGenerationJob:
     """Test creation and state transitions for EmojiGenerationJob."""
 
     def test_create_new_when_trace_id_not_provided_generates_trace_id(self):
-        """create_new should generate a trace_id for cross-Lambda correlation."""
+        """create_new should generate a trace_id for cross-service correlation."""
         job = EmojiGenerationJob.create_new(
             message_text="hello",
             user_description="smile",

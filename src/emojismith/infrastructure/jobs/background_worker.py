@@ -111,4 +111,5 @@ class BackgroundWorker:
                 await self._job_queue.update_job_status(job.job_id, "failed")
 
                 # Re-queue for retry if appropriate
-                # (SQS handles this through Dead Letter Queues)
+                # (queue implementations typically handle this via retries +
+                # dead-lettering)

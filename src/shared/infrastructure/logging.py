@@ -34,7 +34,7 @@ def ensure_trace_id() -> str:
 
 
 class JSONFormatter(logging.Formatter):
-    """Formats log records as JSON for CloudWatch/Datadog/Logfire compatibility."""
+    """Formats log records as JSON for Cloud Logging/Datadog/Logfire compatibility."""
 
     def format(self, record: logging.LogRecord) -> str:
         log_data: dict[str, Any] = {

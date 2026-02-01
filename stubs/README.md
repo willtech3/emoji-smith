@@ -26,7 +26,7 @@ These stubs are necessary because:
   - `dotenv.pyi`: Basic load_dotenv function signature
 
 ### Other Libraries
-- `fastapi`, `mangum`, `openai`, `uvicorn`: Basic stubs for import resolution
+- `fastapi`, `openai`, `uvicorn`: Basic stubs for import resolution
 
 ## Maintenance
 
@@ -38,4 +38,7 @@ When updating these stubs:
 
 ## Usage
 
-These stubs are automatically discovered by mypy through the `MYPYPATH=stubs` configuration in our type checking commands.
+These stubs are primarily for editor support. If you want mypy to use them explicitly, run:
+```bash
+MYPYPATH=stubs mypy src/
+```

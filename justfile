@@ -57,3 +57,30 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.py[co]" -delete
 	find . -type f -name '*$py.class' -delete
+
+# GCP Cloud Run log "tailing" (structured JSON via polling)
+#
+# Usage:
+#   just gcp-tail-webhook
+#   just gcp-tail-worker
+#
+# Optional overrides:
+#   just gcp-tail-webhook PROJECT_ID=... REGION=... FRESHNESS=30s LIMIT=50 SLEEP=2
+
+gcp-tail-webhook PROJECT_ID REGION="us-central1" FRESHNESS="30s" LIMIT="50" SLEEP="2":
+	while true; do \
+	  gcloud config set project {{PROJECT_ID}} >/dev/null 2>&1; \
+	  gcloud logging read \
+	    'resource.type="cloud_run_revision" AND resource.labels.service_name="emoji-smith-webhook"' \
+	    --freshness={{FRESHNESS}} --limit={{LIMIT}} --format=json; \
+	  sleep {{SLEEP}}; \
+	done
+
+gcp-tail-worker PROJECT_ID REGION="us-central1" FRESHNESS="30s" LIMIT="50" SLEEP="2":
+	while true; do \
+	  gcloud config set project {{PROJECT_ID}} >/dev/null 2>&1; \
+	  gcloud logging read \
+	    'resource.type="cloud_run_revision" AND resource.labels.service_name="emoji-smith-worker"' \
+	    --freshness={{FRESHNESS}} --limit={{LIMIT}} --format=json; \
+	  sleep {{SLEEP}}; \
+	done
