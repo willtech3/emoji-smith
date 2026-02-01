@@ -32,7 +32,7 @@ For deployment and architecture details, see `docs/GCP.md`.
 - **Backend**: Python 3.12 + FastAPI
 - **AI**: OpenAI (prompt enhancement + image generation), Google Gemini (optional)
 - **Infrastructure**: GCP Cloud Run + Pub/Sub + Secret Manager + Artifact Registry
-- **IaC**: Terraform (`infra_gcp/terraform/`)
+- **IaC**: Terraform (`terraform/`)
 - **CI/CD**: GitHub Actions with Workload Identity Federation (`.github/workflows/deploy-gcp.yml`)
 - **Monitoring**: Cloud Logging
 
@@ -85,7 +85,7 @@ Update the Slack app request URLs to your `ngrok` HTTPS endpoint.
 ### 4) Production Deployment (GCP)
 
 High level:
-- Terraform provisions infra in `infra_gcp/terraform/` (Cloud Run, Pub/Sub, Secret Manager, Artifact Registry, IAM/WIF).
+- Terraform provisions infra in `terraform/` (Cloud Run, Pub/Sub, Secret Manager, Artifact Registry, IAM/WIF).
 - App deploys happen via GitHub Actions (`.github/workflows/deploy-gcp.yml`).
 
 See `docs/GCP.md` for the full deployment and operations guide.
@@ -140,8 +140,7 @@ emoji-smith/
 │   │   │   └── google/     # Gemini adapters
 │   │   └── presentation/
 │   └── shared/
-├── infra_gcp/
-│   └── terraform/
+├── terraform/
 ├── tests/
 └── docs/
 ```

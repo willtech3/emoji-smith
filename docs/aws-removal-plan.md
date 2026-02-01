@@ -40,7 +40,7 @@ The following files/directories are GCP infrastructure and must NOT be modified:
 | Category | Path | Reason |
 |----------|------|--------|
 | Workflow | `.github/workflows/deploy-gcp.yml` | Active GCP deployment pipeline |
-| Terraform | `infra_gcp/` (entire directory) | GCP infrastructure already deployed |
+| Terraform | `terraform/` | GCP infrastructure already deployed |
 | Source | `src/emojismith/infrastructure/gcp/` | Active GCP handlers |
 | Source | `src/emojismith/infrastructure/gcp/webhook_app.py` | Running in production |
 | Source | `src/emojismith/infrastructure/gcp/worker_app.py` | Running in production |

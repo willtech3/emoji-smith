@@ -63,7 +63,7 @@ Application runtime secrets (Slack/OpenAI/Google keys) should live in **GCP Secr
 ## Infrastructure as Code
 
 Terraform (GCP):
-- `infra_gcp/terraform/`
+- `terraform/`
 
 Rules:
 - Keep secrets out of terraform state: use Secret Manager resources and avoid embedding secret values.

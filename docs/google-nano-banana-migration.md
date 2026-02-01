@@ -218,7 +218,7 @@ Consumer (worker):  Pub/Sub push → base64 decode → JSON → job DTO → proc
   - Add line: `GOOGLE_API_KEY=your-google-api-key-here`
 
 - [ ] **3.4** Update GCP Secret Manager + Terraform for Google API key
-  - Files: **[MODIFY]** `infra_gcp/terraform/secrets.tf`, `infra_gcp/terraform/cloud_run_worker.tf`
+  - Files: **[MODIFY]** `terraform/secrets.tf`, `terraform/cloud_run_worker.tf`
   - Ensure `GOOGLE_API_KEY` is stored in Secret Manager and injected into the worker Cloud Run service as an env var.
 
 - [ ] **3.5** Create Google infrastructure directory with __init__
@@ -722,8 +722,8 @@ pyproject.toml
 uv.lock
 Dockerfile.worker  # Runtime deps installed via `uv sync`
 .env.example
-infra_gcp/terraform/secrets.tf
-infra_gcp/terraform/cloud_run_worker.tf
+terraform/secrets.tf
+terraform/cloud_run_worker.tf
 README.md
 docs/GCP.md
 tests/unit/domain/entities/test_emoji_generation_job_sharing.py  # Add image_provider tests

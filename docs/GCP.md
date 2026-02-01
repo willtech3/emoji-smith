@@ -107,7 +107,7 @@ Authentication:
 ## Infrastructure as Code
 
 Terraform lives in:
-- `infra_gcp/terraform/`
+- `terraform/`
 
 Notes:
 - `terraform.tfstate` / `terraform.tfvars` are intentionally gitignored.
