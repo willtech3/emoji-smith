@@ -49,7 +49,7 @@ class TelemetryConfig:
         trace_sample_rate = _parse_float_env(
             "TRACE_SAMPLE_RATE",
             os.environ.get("TRACE_SAMPLE_RATE"),
-            default=0.1,
+            default=1.0,
         )
         if not (0.0 <= trace_sample_rate <= 1.0):
             raise ValueError("TRACE_SAMPLE_RATE must be between 0.0 and 1.0")

@@ -97,7 +97,7 @@ resource "google_cloud_run_v2_service" "worker" {
 
       env {
         name  = "TRACE_SAMPLE_RATE"
-        value = "0.1"
+        value = "1.0"
       }
 
       # Health check

@@ -108,7 +108,7 @@ See the Terraform configuration in `terraform/` for infrastructure details.
 | `ENVIRONMENT` | Deployment environment label (e.g. `development`, `production`) | No (default: `development`) |
 | `TRACING_ENABLED` | Enable OpenTelemetry tracing export to Cloud Trace | No (default: `false`) |
 | `METRICS_ENABLED` | Enable OpenTelemetry metrics export to Cloud Monitoring | No (default: `false`) |
-| `TRACE_SAMPLE_RATE` | Trace sampling ratio (0.0–1.0) when tracing enabled | No (default: `0.1`) |
+| `TRACE_SAMPLE_RATE` | Trace sampling ratio (0.0–1.0) when tracing enabled | No (default: `1.0`) |
 
 ## 🛠️ Development
 

@@ -95,7 +95,7 @@ resource "google_cloud_run_v2_service" "webhook" {
 
       env {
         name  = "TRACE_SAMPLE_RATE"
-        value = "0.1"
+        value = "1.0"
       }
 
       # Startup probe for faster scaling
