@@ -2,15 +2,11 @@
 
 import uvicorn
 
-from emojismith.infrastructure.wiring import create_webhook_app
-from emojismith.presentation.web.slack_webhook_api import create_webhook_api
+from emojismith.infrastructure.gcp.webhook_app import app
 
 
 def main() -> None:
-    """Run development server."""
-    handler = create_webhook_app()
-    app = create_webhook_api(handler)
-
+    """Run development server using the GCP webhook app."""
     uvicorn.run(
         app,
         host="0.0.0.0",

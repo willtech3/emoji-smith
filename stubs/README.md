@@ -26,7 +26,7 @@ These stubs are necessary because:
   - `dotenv.pyi`: Basic load_dotenv function signature
 
 ### Other Libraries
-- `fastapi`, `mangum`, `openai`, `uvicorn`: Basic stubs for import resolution
+- `fastapi`, `openai`, `uvicorn`: Basic stubs for import resolution
 
 ## Maintenance
 

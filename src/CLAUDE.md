@@ -46,28 +46,19 @@ git add *
 
 ### Production Environment
 
-#### AWS Secrets Manager
+#### GCP Secret Manager (via Cloud Run)
+On Cloud Run, secrets from GCP Secret Manager are injected directly as environment variables.
+No runtime secret-fetching code is needed - simply read from `os.environ`:
+
 ```python
-import boto3
-import json
-from functools import lru_cache
+import os
 
-@lru_cache()
-def get_secrets() -> dict:
-    """Retrieve secrets from AWS Secrets Manager."""
-    client = boto3.client('secretsmanager')
+# Secrets are injected by Cloud Run from Secret Manager
+slack_token = os.environ.get("SLACK_BOT_TOKEN")
+openai_key = os.environ.get("OPENAI_API_KEY")
 
-    try:
-        response = client.get_secret_value(SecretId='emoji-smith/prod')
-        return json.loads(response['SecretString'])
-    except Exception as e:
-        logger.error(f"Failed to retrieve secrets: {e}")
-        raise
-
-# Usage
-secrets = get_secrets()
-slack_token = secrets['SLACK_BOT_TOKEN']
-openai_key = secrets['OPENAI_API_KEY']
+if not slack_token:
+    raise ValueError("SLACK_BOT_TOKEN environment variable required")
 ```
 
 #### Environment Variable Security
@@ -192,93 +183,72 @@ def validate_image_upload(file_data: bytes, filename: str) -> bool:
     return True
 ```
 
-## AWS Security
+## GCP Security
 
-### IAM Best Practices
+### Service Account Best Practices
 
-#### Lambda Execution Role
-```python
-# CDK example - Least privilege policy
-from aws_cdk import aws_iam as iam
+#### Least Privilege for Cloud Run
+```hcl
+# Terraform example - Separate service accounts per service
+resource "google_service_account" "webhook" {
+  account_id   = "emoji-smith-webhook"
+  display_name = "Webhook Cloud Run Service Account"
+}
 
-lambda_role = iam.Role(
-    self, "LambdaRole",
-    assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
-    managed_policies=[
-        iam.ManagedPolicy.from_aws_managed_policy_name(
-            "service-role/AWSLambdaBasicExecutionRole"
-        )
-    ]
-)
+resource "google_service_account" "worker" {
+  account_id   = "emoji-smith-worker"
+  display_name = "Worker Cloud Run Service Account"
+}
 
-# Grant specific permissions
-queue.grant_send_messages(webhook_lambda_role)
-queue.grant_consume_messages(worker_lambda_role)
-bucket.grant_read_write(worker_lambda_role)
-secrets.grant_read(lambda_role)
+# Webhook only needs to publish to Pub/Sub
+resource "google_pubsub_topic_iam_member" "webhook_publisher" {
+  topic  = google_pubsub_topic.jobs.name
+  role   = "roles/pubsub.publisher"
+  member = "serviceAccount:${google_service_account.webhook.email}"
+}
+
+# Worker needs to read secrets
+resource "google_secret_manager_secret_iam_member" "worker_accessor" {
+  secret_id = google_secret_manager_secret.openai_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.worker.email}"
+}
 ```
 
-#### S3 Bucket Security
-```python
-from aws_cdk import aws_s3 as s3
-
-emoji_bucket = s3.Bucket(
-    self, "EmojiBucket",
-    encryption=s3.BucketEncryption.S3_MANAGED,
-    block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-    versioned=True,
-    lifecycle_rules=[
-        s3.LifecycleRule(
-            id="DeleteOld",
-            expiration=Duration.days(90),
-            noncurrent_version_expiration=Duration.days(30)
-        )
-    ]
-)
-
-# Bucket policy - restrict to specific Lambda
-bucket_policy = iam.PolicyStatement(
-    effect=iam.Effect.ALLOW,
-    principals=[lambda_role],
-    actions=["s3:GetObject", "s3:PutObject"],
-    resources=[f"{emoji_bucket.bucket_arn}/*"],
-    conditions={
-        "StringEquals": {
-            "s3:x-amz-server-side-encryption": "AES256"
+### Secret Manager Integration
+```hcl
+# Secrets are injected as environment variables into Cloud Run
+resource "google_cloud_run_v2_service" "webhook" {
+  template {
+    containers {
+      env {
+        name = "SLACK_BOT_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.slack_bot_token.secret_id
+            version = "latest"
+          }
         }
+      }
     }
-)
+    service_account = google_service_account.webhook.email
+  }
+}
 ```
 
-### Network Security
+### Private Worker Service
+```hcl
+# Worker Cloud Run is NOT publicly accessible
+resource "google_cloud_run_v2_service" "worker" {
+  ingress = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+}
 
-#### VPC Configuration (if required)
-```python
-# Place Lambda in private subnet
-vpc = ec2.Vpc(self, "SecureVPC",
-    subnet_configuration=[
-        ec2.SubnetConfiguration(
-            name="Private",
-            subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
-            cidr_mask=24
-        )
-    ]
-)
-
-# Security group - restrict outbound
-security_group = ec2.SecurityGroup(
-    self, "LambdaSG",
-    vpc=vpc,
-    description="Lambda security group",
-    allow_all_outbound=False
-)
-
-# Allow HTTPS only
-security_group.add_egress_rule(
-    peer=ec2.Peer.any_ipv4(),
-    connection=ec2.Port.tcp(443),
-    description="Allow HTTPS outbound"
-)
+# Only Pub/Sub can invoke it
+resource "google_cloud_run_service_iam_member" "pubsub_invoker" {
+  service  = google_cloud_run_v2_service.worker.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.pubsub_invoker.email}"
+}
 ```
 
 ## Security Scanning

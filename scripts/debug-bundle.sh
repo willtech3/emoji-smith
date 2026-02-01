@@ -39,10 +39,10 @@ uv pip list > "$BUNDLE_DIR/installed_packages.txt"
 echo "🔐 Collecting environment variables (sanitized)..."
 {
     echo "=== Environment Variables (sanitized) ==="
-    env | grep -E "(PYTHON|VIRTUAL|AWS_REGION|LOG_LEVEL)" | sort
+    env | grep -E "(PYTHON|VIRTUAL|GCP|PUBSUB|LOG_LEVEL)" | sort
     echo ""
     echo "=== Sensitive variables (existence only) ==="
-    for var in SLACK_BOT_TOKEN SLACK_SIGNING_SECRET OPENAI_API_KEY AWS_ACCESS_KEY_ID; do
+    for var in SLACK_BOT_TOKEN SLACK_SIGNING_SECRET OPENAI_API_KEY GOOGLE_API_KEY; do
         if [ -n "${!var}" ]; then
             echo "$var: [SET]"
         else

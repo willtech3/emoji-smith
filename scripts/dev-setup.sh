@@ -47,9 +47,12 @@ SLACK_SIGNING_SECRET=your-signing-secret
 # OpenAI Configuration
 OPENAI_API_KEY=sk-your-api-key
 
-# AWS Configuration (for local testing)
-AWS_REGION=us-east-2
-SQS_QUEUE_URL=https://sqs.us-east-2.amazonaws.com/123456789/emoji-smith-queue
+# Google Configuration (optional, for Gemini image generation)
+GOOGLE_API_KEY=your-google-api-key
+
+# GCP Configuration (for Pub/Sub - only needed in production)
+# PUBSUB_PROJECT=your-gcp-project
+# PUBSUB_TOPIC=emoji-smith-jobs
 
 # Development Settings
 LOG_LEVEL=INFO
