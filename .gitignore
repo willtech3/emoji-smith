@@ -219,9 +219,9 @@ AGENTS.old.md
 # Terraform / OpenTofu
 # - Commit `.terraform.lock.hcl` for reproducible provider installs
 # - Never commit local state or working directories
-infra_gcp/terraform/.terraform/
-infra_gcp/terraform/terraform.tfstate
-infra_gcp/terraform/terraform.tfstate.backup
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
 
 # Keep local tfvars out of git (environment-specific)
-infra_gcp/terraform/terraform.tfvars
+terraform/terraform.tfvars

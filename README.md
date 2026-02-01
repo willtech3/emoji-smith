@@ -19,20 +19,20 @@ Emoji Smith is a Slack bot that generates custom emoji reactions using AI (OpenA
 
 ```mermaid
 graph TB
-  Slack[Slack Workspace] -->|Events + Interactive| Webhook[Cloud Run: webhook service]
-  Webhook -->|Publish job| Topic[Pub/Sub Topic]
-  Topic -->|Push subscription (OIDC)| Worker[Cloud Run: worker service]
-  Worker -->|OpenAI / Google| AI[AI Providers]
-  Worker -->|Upload emoji / share file| Slack
+  Slack["Slack Workspace"] -->|"Events + Interactive"| Webhook["Cloud Run: webhook"]
+  Webhook -->|"Publish job"| Topic["Pub/Sub Topic"]
+  Topic -->|"Push subscription"| Worker["Cloud Run: worker"]
+  Worker -->|"OpenAI / Google"| AI["AI Providers"]
+  Worker -->|"Upload emoji"| Slack
 ```
 
-For deployment and architecture details, see `docs/GCP.md`.
+For deployment details, see the Terraform configuration in `terraform/`.
 
 **Tech Stack**
 - **Backend**: Python 3.12 + FastAPI
 - **AI**: OpenAI (prompt enhancement + image generation), Google Gemini (optional)
 - **Infrastructure**: GCP Cloud Run + Pub/Sub + Secret Manager + Artifact Registry
-- **IaC**: Terraform (`infra_gcp/terraform/`)
+- **IaC**: Terraform (`terraform/`)
 - **CI/CD**: GitHub Actions with Workload Identity Federation (`.github/workflows/deploy-gcp.yml`)
 - **Monitoring**: Cloud Logging
 
@@ -85,10 +85,10 @@ Update the Slack app request URLs to your `ngrok` HTTPS endpoint.
 ### 4) Production Deployment (GCP)
 
 High level:
-- Terraform provisions infra in `infra_gcp/terraform/` (Cloud Run, Pub/Sub, Secret Manager, Artifact Registry, IAM/WIF).
+- Terraform provisions infra in `terraform/` (Cloud Run, Pub/Sub, Secret Manager, Artifact Registry, IAM/WIF).
 - App deploys happen via GitHub Actions (`.github/workflows/deploy-gcp.yml`).
 
-See `docs/GCP.md` for the full deployment and operations guide.
+See the Terraform configuration in `terraform/` for infrastructure details.
 
 ## ⚙️ Configuration
 
@@ -140,23 +140,22 @@ emoji-smith/
 │   │   │   └── google/     # Gemini adapters
 │   │   └── presentation/
 │   └── shared/
-├── infra_gcp/
-│   └── terraform/
+├── terraform/
 ├── tests/
 └── docs/
 ```
 
 ## 📚 Documentation
 
-- `docs/GCP.md` - Production deployment + architecture (Cloud Run + Pub/Sub)
+- `terraform/` - GCP infrastructure as code (Cloud Run + Pub/Sub)
 - `docs/adr/` - Architecture Decision Records
-- `docs/testing/testing-guidelines.md` - Testing guidelines
+- `docs/guides/testing.md` - Testing guidelines
 - `CLAUDE.md` and co-located `CLAUDE.md` files - Coding and workflow rules
 
 ## 🆘 Support
 
 - **Development rules**: `CLAUDE.md`
-- **Deployment/architecture**: `docs/GCP.md`
-- **Testing**: `docs/testing/testing-guidelines.md`
+- **Deployment/architecture**: `terraform/` and architecture section above
+- **Testing**: `docs/guides/testing.md`
 - **Issues**: https://github.com/willtech3/emoji-smith/issues
 

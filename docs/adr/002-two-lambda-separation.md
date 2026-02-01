@@ -30,7 +30,7 @@ Emoji Smith currently implements this decision on GCP:
 Slack → Cloud Run (webhook) → Pub/Sub → Cloud Run (worker) → Slack API
 ```
 
-See `docs/GCP.md` for the production architecture.
+See `README.md` for the production architecture.
 
 ## Consequences
 
@@ -87,4 +87,4 @@ Implementation guidance:
 
 ## References
 - Slack Events API documentation
-- `docs/GCP.md`
+- `README.md`

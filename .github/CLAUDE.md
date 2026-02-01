@@ -26,7 +26,7 @@ Key properties:
 - Worker service handles image generation and Slack posting.
 - Pub/Sub retries worker deliveries on non-2xx responses.
 
-For the full architecture + operations details, see `docs/GCP.md`.
+For the full architecture + operations details, see `README.md`.
 
 ## CI/CD Pipeline
 
@@ -63,7 +63,7 @@ Application runtime secrets (Slack/OpenAI/Google keys) should live in **GCP Secr
 ## Infrastructure as Code
 
 Terraform (GCP):
-- `infra_gcp/terraform/`
+- `terraform/`
 
 Rules:
 - Keep secrets out of terraform state: use Secret Manager resources and avoid embedding secret values.

@@ -328,7 +328,7 @@ gh pr create --title "feat: description"
 
 ### Terraform Commands (Infrastructure Changes)
 ```bash
-# Terraform lives in infra_gcp/terraform/
+# Terraform lives in terraform/
 terraform plan
 terraform apply
 ```
@@ -374,6 +374,6 @@ git commit -m "type(scope): description"
 ## 📚 Additional Documentation
 
 - `docs/` - Feature specifications and migration guides
-- `infra_gcp/terraform/` - GCP infrastructure as code
+- `terraform/` - GCP infrastructure as code
 - `pyproject.toml` - Project configuration and dependencies
 - `justfile` - Common development commands
