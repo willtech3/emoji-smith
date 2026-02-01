@@ -13,6 +13,7 @@ from emojismith.domain.factories.image_generator_factory import (
 from emojismith.domain.value_objects.image_provider import ImageProvider
 from emojismith.infrastructure.google.gemini_api import GeminiAPIRepository
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
+from shared.infrastructure.telemetry.metrics import MetricsRecorder
 
 if TYPE_CHECKING:
     from emojismith.domain.repositories.image_generation_repository import (
@@ -31,6 +32,7 @@ class ImageGeneratorFactory(ImageGeneratorFactoryProtocol):
         self,
         openai_api_key: str | None = None,
         google_api_key: str | None = None,
+        metrics_recorder: MetricsRecorder | None = None,
     ) -> None:
         """Initialize factory with API keys.
 
@@ -40,6 +42,7 @@ class ImageGeneratorFactory(ImageGeneratorFactoryProtocol):
         """
         self._openai_api_key = openai_api_key
         self._google_api_key = google_api_key
+        self._metrics = metrics_recorder
 
     def create(self, provider: ImageProvider) -> ImageGenerationRepository:
         """Create an image generator for the specified provider.
@@ -57,13 +60,13 @@ class ImageGeneratorFactory(ImageGeneratorFactoryProtocol):
             if not self._openai_api_key:
                 raise ValueError("OPENAI_API_KEY required for OpenAI provider")
             openai_client = AsyncOpenAI(api_key=self._openai_api_key)
-            return OpenAIAPIRepository(openai_client)
+            return OpenAIAPIRepository(openai_client, metrics_recorder=self._metrics)
 
         elif provider == ImageProvider.GOOGLE_GEMINI:
             if not self._google_api_key:
                 raise ValueError("GOOGLE_API_KEY required for Gemini provider")
             gemini_client = genai.Client(api_key=self._google_api_key)
-            return GeminiAPIRepository(gemini_client)
+            return GeminiAPIRepository(gemini_client, metrics_recorder=self._metrics)
 
         else:
             raise ValueError(f"Unsupported provider: {provider}")

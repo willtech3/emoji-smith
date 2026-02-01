@@ -16,7 +16,7 @@ class TestWorkerApp:
         mock_service = MagicMock()
         mock_service.process_emoji_generation_job = AsyncMock()
         monkeypatch.setattr(
-            worker_app, "create_worker_emoji_service", lambda: mock_service
+            worker_app, "create_worker_emoji_service", lambda **_kwargs: mock_service
         )
 
         client = TestClient(worker_app.app)

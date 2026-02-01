@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import time
 from collections.abc import Iterable
 
 import openai
@@ -17,6 +18,7 @@ from emojismith.domain.repositories.image_generation_repository import (
 )
 from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from shared.infrastructure.logging import log_event
+from shared.infrastructure.telemetry.metrics import MetricsRecorder
 
 
 class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
@@ -27,6 +29,7 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
         client: AsyncOpenAI,
         model: str = "gpt-5",
         fallback_models: Iterable[str] | None = None,
+        metrics_recorder: MetricsRecorder | None = None,
     ) -> None:
         self._client = client
         self._logger = logging.getLogger(__name__)
@@ -35,6 +38,7 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
             fallback_models or ["gpt-4", "gpt-3.5-turbo"]
         )
         self._checked_model = False
+        self._metrics = metrics_recorder
 
     async def _ensure_model(self) -> None:
         if self._checked_model:
@@ -143,6 +147,7 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
             List of image bytes (PNG format with alpha channel if transparent)
         """
         # Cap at 4 images for reasonable UX
+        start_time = time.monotonic()
         n = min(num_images, 4)
         used_model = "gpt-image-1.5"
         is_fallback = False
@@ -186,6 +191,15 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
         for item in response.data:
             if item.b64_json:
                 images.append(base64.b64decode(item.b64_json))
+
+        duration_s = time.monotonic() - start_time
+        if self._metrics is not None:
+            self._metrics.record_emoji_generated(
+                provider="openai",
+                model=used_model,
+                is_fallback=is_fallback,
+                duration_s=duration_s,
+            )
 
         log_event(
             self._logger,

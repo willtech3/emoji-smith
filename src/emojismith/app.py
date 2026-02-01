@@ -29,13 +29,16 @@ from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 from emojismith.infrastructure.slack.slack_file_sharing import (
     SlackFileSharingRepository,
 )
+from shared.infrastructure.telemetry.metrics import MetricsRecorder
 
 # Profile imports to identify bottlenecks
 logger = logging.getLogger(__name__)
 logger.info("📦 All imports completed - profiling will happen in functions")
 
 
-def create_worker_emoji_service() -> EmojiCreationService:
+def create_worker_emoji_service(
+    *, metrics_recorder: MetricsRecorder | None = None
+) -> EmojiCreationService:
     """Create emoji service instance for the background worker."""
     load_dotenv()
 
@@ -53,11 +56,16 @@ def create_worker_emoji_service() -> EmojiCreationService:
 
     openai_client = AsyncOpenAI(api_key=openai_api_key)
     chat_model = os.getenv("OPENAI_CHAT_MODEL", "gpt-5")
-    openai_repo = OpenAIAPIRepository(openai_client, model=chat_model)
+    openai_repo = OpenAIAPIRepository(
+        openai_client,
+        model=chat_model,
+        metrics_recorder=metrics_recorder,
+    )
 
     image_generator_factory = ImageGeneratorFactory(
         openai_api_key=openai_api_key,
         google_api_key=google_api_key,
+        metrics_recorder=metrics_recorder,
     )
 
     image_processor = PillowImageProcessor()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import uuid
 from contextvars import ContextVar
 from datetime import UTC, datetime
@@ -26,11 +27,57 @@ def ensure_trace_id() -> str:
 
     current = trace_id_var.get()
     if not current or current == DEFAULT_TRACE_ID:
+        otel_trace_id = _get_otel_trace_id()
+        if otel_trace_id is not None:
+            trace_id_var.set(otel_trace_id)
+            return otel_trace_id
+
         new_trace_id = str(uuid.uuid4())
         trace_id_var.set(new_trace_id)
         return new_trace_id
 
     return current
+
+
+def _get_otel_trace_id() -> str | None:
+    """Return the current OpenTelemetry trace id as a 32-char hex string."""
+    try:
+        from opentelemetry import trace
+
+        span = trace.get_current_span()
+        span_context = span.get_span_context()
+        if span_context is None or not span_context.is_valid:
+            return None
+        return format(span_context.trace_id, "032x")
+    except Exception:
+        return None
+
+
+def get_cloud_logging_trace_fields(*, project_id: str | None = None) -> dict[str, Any]:
+    """Return Cloud Logging special trace correlation fields (if available)."""
+    project = project_id or os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+    if not project:
+        return {}
+
+    try:
+        from opentelemetry import trace
+
+        span = trace.get_current_span()
+        span_context = span.get_span_context()
+        if span_context is None or not span_context.is_valid:
+            return {}
+
+        trace_id = format(span_context.trace_id, "032x")
+        span_id = format(span_context.span_id, "016x")
+        sampled = bool(getattr(span_context.trace_flags, "sampled", False))
+
+        return {
+            "logging.googleapis.com/trace": f"projects/{project}/traces/{trace_id}",
+            "logging.googleapis.com/spanId": span_id,
+            "logging.googleapis.com/trace_sampled": sampled,
+        }
+    except Exception:
+        return {}
 
 
 class JSONFormatter(logging.Formatter):
@@ -40,11 +87,13 @@ class JSONFormatter(logging.Formatter):
         log_data: dict[str, Any] = {
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
+            "severity": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
             "module": record.module,
             "trace_id": trace_id_var.get(),
         }
+        log_data.update(get_cloud_logging_trace_fields())
 
         # Merge extra fields into root (for top-level searchability)
         if hasattr(record, "event_data") and isinstance(record.event_data, dict):

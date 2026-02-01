@@ -6,7 +6,12 @@ import json
 import logging
 import uuid
 
+import pytest
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
+
 from shared.infrastructure.logging import (
+    DEFAULT_TRACE_ID,
     JSONFormatter,
     ensure_trace_id,
     log_event,
@@ -32,6 +37,7 @@ class TestJSONFormatter:
         result = json.loads(formatter.format(record))
 
         assert result["level"] == "INFO"
+        assert result["severity"] == "INFO"
         assert result["logger"] == "test.logger"
         assert result["message"] == "Test message"
         assert result["module"] == "test"
@@ -112,3 +118,42 @@ class TestTraceIdHelpers:
             assert ensure_trace_id() == "trace-existing-123"
         finally:
             trace_id_var.reset(token)
+
+
+class TestCloudLoggingTraceCorrelation:
+    """Tests for Cloud Logging trace correlation fields."""
+
+    def test_formatter_includes_cloud_trace_fields_when_span_present(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "test-project")
+
+        if not isinstance(trace.get_tracer_provider(), SdkTracerProvider):
+            trace.set_tracer_provider(SdkTracerProvider())
+
+        tracer = trace.get_tracer(__name__)
+        formatter = JSONFormatter()
+
+        token = trace_id_var.set(DEFAULT_TRACE_ID)
+        try:
+            with tracer.start_as_current_span("span"):
+                trace_id = ensure_trace_id()
+                record = logging.LogRecord(
+                    name="test",
+                    level=logging.INFO,
+                    pathname="",
+                    lineno=0,
+                    msg="msg",
+                    args=(),
+                    exc_info=None,
+                )
+                result = json.loads(formatter.format(record))
+        finally:
+            trace_id_var.reset(token)
+
+        assert result["trace_id"] == trace_id
+        assert result["logging.googleapis.com/trace"] == (
+            f"projects/test-project/traces/{trace_id}"
+        )
+        assert "logging.googleapis.com/spanId" in result
+        assert isinstance(result["logging.googleapis.com/trace_sampled"], bool)

@@ -69,6 +69,42 @@ resource "google_pubsub_topic_iam_member" "webhook_publisher" {
 }
 
 # =============================================================================
+# Observability IAM: Allow runtimes to write traces + metrics
+# =============================================================================
+
+resource "google_project_iam_member" "webhook_trace_agent" {
+  project = var.project_id
+  role    = "roles/cloudtrace.agent"
+  member  = "serviceAccount:${google_service_account.webhook_runtime.email}"
+
+  depends_on = [google_project_service.cloudtrace]
+}
+
+resource "google_project_iam_member" "worker_trace_agent" {
+  project = var.project_id
+  role    = "roles/cloudtrace.agent"
+  member  = "serviceAccount:${google_service_account.worker_runtime.email}"
+
+  depends_on = [google_project_service.cloudtrace]
+}
+
+resource "google_project_iam_member" "webhook_metric_writer" {
+  project = var.project_id
+  role    = "roles/monitoring.metricWriter"
+  member  = "serviceAccount:${google_service_account.webhook_runtime.email}"
+
+  depends_on = [google_project_service.monitoring]
+}
+
+resource "google_project_iam_member" "worker_metric_writer" {
+  project = var.project_id
+  role    = "roles/monitoring.metricWriter"
+  member  = "serviceAccount:${google_service_account.worker_runtime.email}"
+
+  depends_on = [google_project_service.monitoring]
+}
+
+# =============================================================================
 # Pub/Sub Service Agent IAM (required for OIDC push authentication)
 # =============================================================================
 

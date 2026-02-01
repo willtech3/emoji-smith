@@ -77,6 +77,27 @@ resource "google_cloud_run_v2_service" "webhook" {
         value = "INFO"
       }
 
+      # Observability (OpenTelemetry)
+      env {
+        name  = "ENVIRONMENT"
+        value = "production"
+      }
+
+      env {
+        name  = "TRACING_ENABLED"
+        value = "true"
+      }
+
+      env {
+        name  = "METRICS_ENABLED"
+        value = "true"
+      }
+
+      env {
+        name  = "TRACE_SAMPLE_RATE"
+        value = "0.1"
+      }
+
       # Startup probe for faster scaling
       startup_probe {
         http_get {

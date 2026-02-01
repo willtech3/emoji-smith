@@ -79,6 +79,27 @@ resource "google_cloud_run_v2_service" "worker" {
         value = "INFO"
       }
 
+      # Observability (OpenTelemetry)
+      env {
+        name  = "ENVIRONMENT"
+        value = "production"
+      }
+
+      env {
+        name  = "TRACING_ENABLED"
+        value = "true"
+      }
+
+      env {
+        name  = "METRICS_ENABLED"
+        value = "true"
+      }
+
+      env {
+        name  = "TRACE_SAMPLE_RATE"
+        value = "0.1"
+      }
+
       # Health check
       startup_probe {
         http_get {

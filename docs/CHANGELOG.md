@@ -11,10 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive testing guidelines extracted from test review
 - Documentation reorganization with clear structure
 - Type stubs for third-party libraries (slack_sdk, dotenv)
+- OpenTelemetry-based tracing + metrics with GCP exporters (Cloud Trace + Cloud Monitoring)
 
 ### Changed
 - Reorganized documentation into topic-based directories
 - Updated docs and guidance for GCP (Cloud Run + Pub/Sub) production deployment
+- Structured JSON logs now include Cloud Logging trace correlation fields when tracing is enabled
 
 ### Removed
 - Deleted 5 mock-only tests that provided no value (#262)
