@@ -19,11 +19,11 @@ Emoji Smith is a Slack bot that generates custom emoji reactions using AI (OpenA
 
 ```mermaid
 graph TB
-  Slack[Slack Workspace] -->|Events + Interactive| Webhook[Cloud Run: webhook service]
-  Webhook -->|Publish job| Topic[Pub/Sub Topic]
-  Topic -->|Push subscription (OIDC)| Worker[Cloud Run: worker service]
-  Worker -->|OpenAI / Google| AI[AI Providers]
-  Worker -->|Upload emoji / share file| Slack
+  Slack["Slack Workspace"] -->|"Events + Interactive"| Webhook["Cloud Run: webhook"]
+  Webhook -->|"Publish job"| Topic["Pub/Sub Topic"]
+  Topic -->|"Push subscription"| Worker["Cloud Run: worker"]
+  Worker -->|"OpenAI / Google"| AI["AI Providers"]
+  Worker -->|"Upload emoji"| Slack
 ```
 
 For deployment and architecture details, see `docs/GCP.md`.
