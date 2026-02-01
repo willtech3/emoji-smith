@@ -8,6 +8,11 @@ on:
 
 env:
   # Set these in GitHub: Settings → Secrets and variables → Actions → Variables
+  # Required variables:
+  #   GCP_PROJECT_ID           - GCP project ID
+  #   GCP_PROJECT_NUMBER       - GCP project number
+  #   GCP_WORKLOAD_IDENTITY_PROVIDER - Full WIF provider path
+  #   GCP_CICD_SERVICE_ACCOUNT - Service account email for CI/CD
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER }}
   WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
@@ -119,6 +124,8 @@ jobs:
   # ==========================================================================
   # Deploy to Cloud Run (only on main branch)
   # ==========================================================================
+  # NOTE: Using gcloud deploy with env vars until Terraform state is imported.
+  # TODO: Migrate to Terraform once existing resources are imported into state.
   deploy:
     needs: build-images
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -144,14 +151,16 @@ jobs:
           gcloud run deploy ${{ env.WEBHOOK_SERVICE }} \
             --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/webhook:${{ github.sha }} \
             --region=${{ env.REGION }} \
-            --project=${{ env.PROJECT_ID }}
+            --project=${{ env.PROJECT_ID }} \
+            --set-env-vars="ENVIRONMENT=production,TRACING_ENABLED=true,METRICS_ENABLED=true,TRACE_SAMPLE_RATE=1.0"
 
       - name: Deploy worker service
         run: |
           gcloud run deploy ${{ env.WORKER_SERVICE }} \
             --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/worker:${{ github.sha }} \
             --region=${{ env.REGION }} \
-            --project=${{ env.PROJECT_ID }}
+            --project=${{ env.PROJECT_ID }} \
+            --set-env-vars="ENVIRONMENT=production,TRACING_ENABLED=true,METRICS_ENABLED=true,TRACE_SAMPLE_RATE=1.0"
 
       - name: Verify deployment
         run: |

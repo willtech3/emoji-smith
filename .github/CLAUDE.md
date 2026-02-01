@@ -53,7 +53,6 @@ Configured in GitHub: Settings → Secrets and variables → Actions → Variabl
 - `GCP_PROJECT_NUMBER`
 - `GCP_WORKLOAD_IDENTITY_PROVIDER`
 - `GCP_CICD_SERVICE_ACCOUNT`
-
 ### GitHub Actions Secrets (Required)
 
 - `ANTHROPIC_API_KEY` (for `.github/workflows/claude.yml` only)
