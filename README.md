@@ -12,33 +12,35 @@ Emoji Smith is a Slack bot that automatically generates custom emojis using Open
 - **🎨 Style Customization**: Choose from cartoon, realistic, minimalist, or pixel art styles
 - **🔄 Multi-Provider Support**: Choose between OpenAI GPT-Image or Google Gemini for image generation
 - **⚡ Instant Application**: Generated emoji is automatically added as a reaction
-- **🔒 Secure Deployment**: AWS Lambda with proper secrets management
+- **🔒 Secure Deployment**: Google Cloud Run with proper secrets management
 - **🚀 Zero Downtime**: Serverless architecture scales automatically
 
 ## 🏗️ Architecture
 
-```mermaid
-graph TB
-    subgraph "User Interaction"
-        A[Slack Message] -->|Right-click| B[Create Reaction Modal]
-    end
-
-    subgraph "AWS Infrastructure"
-        B -->|Submit| C[Webhook Lambda<br/>FastAPI]
-        C -->|Queue| D[SQS]
-        D -->|Process| E[Worker Lambda]
-    end
-
-    subgraph "AI Generation"
-        E -->|Provider Selection| F{Image Provider}
-        F -->|OpenAI| G[OpenAI gpt-image-1]
-        F -->|Gemini| H[Google Gemini]
-        G -->|Upload & React| A
-        H -->|Upload & React| A
-    end
+```
+┌─────────────────┐     ┌──────────────────────────────────────────────┐
+│ Slack Workspace │     │              GCP Infrastructure              │
+│ Events/Actions  │────▶│ Cloud Run ──▶ Pub/Sub ──▶ Cloud Run Worker  │
+└─────────────────┘     │ (webhook)     (OIDC)      (private)          │
+                        └──────────────────────────────────────────────┘
+                                                    │
+                        ┌───────────────────────────┴───────────────────────────┐
+                        │                   AI Generation                       │
+                        │  ┌─────────────┐                    ┌──────────────┐  │
+                        │  │ OpenAI      │◀── Provider ──────▶│ Google       │  │
+                        │  │ gpt-image-1 │    Selection       │ Gemini       │  │
+                        │  └──────┬──────┘                    └──────┬───────┘  │
+                        │         └────────── Upload & React ────────┘          │
+                        └───────────────────────────────────────────────────────┘
 ```
 
-For detailed architecture documentation, see [Dual Lambda Architecture](./docs/architecture/dual-lambda.md).
+**Flow:**
+1. Slack events hit the **Webhook Cloud Run** service (public, responds in <3s)
+2. Webhook publishes job to **Pub/Sub** topic
+3. Pub/Sub push subscription (with OIDC auth) triggers **Worker Cloud Run** service (private)
+4. Worker generates image via OpenAI or Gemini, then uploads/reacts in Slack
+
+For detailed architecture documentation, see [docs/architecture/](./docs/architecture/).
 
 **Tech Stack:**
 - **Backend**: Python 3.12 + FastAPI + Slack Bolt
@@ -46,19 +48,21 @@ For detailed architecture documentation, see [Dual Lambda Architecture](./docs/a
   - OpenAI GPT-5 with fallback to gpt-4/gpt-3.5 (prompt enhancement)
   - OpenAI gpt-image-1 with fallback to gpt-image-1-mini (image generation)
   - Google Gemini with fallback models (alternative image generation)
-- **Infrastructure**: AWS Lambda + API Gateway + SQS + Secrets Manager
-- **Deployment**: AWS CDK + GitHub Actions
-- **Monitoring**: CloudWatch logs + health check endpoint (`/health`)
-- **Security**: Bandit SAST scanning + least-privilege IAM
+- **Infrastructure**: Google Cloud Run + Pub/Sub + Secret Manager
+- **Deployment**: GitHub Actions CI/CD with Workload Identity Federation (keyless)
+- **IaC**: Terraform
+- **Monitoring**: Cloud Logging + health check endpoint (`/health`)
+- **Security**: Bandit SAST scanning + least-privilege service accounts
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - Python 3.12+
-- AWS Account with CDK bootstrapped
+- GCP project with billing enabled
+- Terraform installed
 - Slack workspace (admin access)
-- OpenAI API key
+- OpenAI API key (and optionally Google API key for Gemini)
 
 ### 1. Local Development Setup
 
@@ -99,18 +103,22 @@ ngrok http 8000
 ### 4. Production Deployment
 
 ```bash
-# Bootstrap AWS CDK (one-time)
-cdk bootstrap
+# Initialize Terraform (one-time)
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your GCP project details
 
-# Deploy infrastructure
-cd infra && cdk deploy
+terraform init
+terraform plan
+terraform apply
 
-# Configure GitHub secrets for CI/CD
-gh secret set AWS_ACCESS_KEY_ID -b "<from-cdk-output>"
-gh secret set AWS_SECRET_ACCESS_KEY -b "<from-cdk-output>"
+# Configure GitHub for keyless deployment (Workload Identity Federation)
+# Set these GitHub repository variables:
+#   GCP_PROJECT_ID, GCP_PROJECT_NUMBER, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_CICD_SERVICE_ACCOUNT
 
-# Store production secrets in AWS Secrets Manager
-aws secretsmanager create-secret --name "emoji-smith/production" --secret-string '{...}'
+# Store secrets in GCP Secret Manager (Terraform creates the secret resources)
+gcloud secrets versions add slack-bot-token --data-file=-
+gcloud secrets versions add openai-api-key --data-file=-
 ```
 
 ## 📖 Usage
@@ -146,8 +154,7 @@ aws secretsmanager create-secret --name "emoji-smith/production" --secret-string
 | `OPENAI_CHAT_MODEL` | Chat model for prompt enhancement | `gpt-5` | `gpt-5`, `gpt-4`, `gpt-3.5-turbo` |
 | `GOOGLE_API_KEY` | Google API key for Gemini image generation | Optional | `...` |
 | `EMOJISMITH_FORCE_ENTERPRISE` | Force Enterprise Grid mode | `false` | `true`, `false` |
-| `SQS_QUEUE_URL` | AWS SQS queue URL (production) | None | AWS SQS URL |
-| `AWS_SECRETS_NAME` | AWS Secrets Manager name | None | `emoji-smith/production` |
+| `PUBSUB_TOPIC` | Pub/Sub topic for job queue (GCP) | None | `projects/.../topics/...` |
 | `SLACK_TEST_BOT_TOKEN` | Bot token for Slack integration tests | None | `xoxb-...` |
 | `SLACK_TEST_CHANNEL_ID` | Channel ID for Slack integration tests | None | `CXXXXXX` |
 | `SLACK_TEST_USER_ID` | User ID for Slack integration tests | None | `UXXXXXX` |
@@ -201,15 +208,15 @@ pytest --cov=src tests/      # Tests with 90%+ coverage
 
 ### CI/CD Pipeline
 
-**Stage 1: Code Quality** → **Stage 2: Security** → **Stage 3: Testing** → **Stage 4: Build** → **Stage 5: Deploy**
+**Stage 1: Code Quality** → **Stage 2: Testing** → **Stage 3: Build Docker Images** → **Stage 4: Deploy to Cloud Run**
 
-- **Pull Requests**: Run stages 1-3 for validation
+- **Pull Requests**: Run stages 1-2 for validation
 - **Main Branch**: Run all stages including production deployment
-- **Deployment**: Automatic via AWS CDK when main branch updated
+- **Deployment**: Automatic via GitHub Actions with Workload Identity Federation (keyless auth to GCP)
 
 ## 🔒 Security
 
-- **🚫 No hardcoded secrets**: All credentials via environment variables or AWS Secrets Manager
+- **🚫 No hardcoded secrets**: All credentials via environment variables or cloud secret managers
 - **🔍 SAST scanning**: Bandit security analysis on every commit
 - **🔐 Least privilege**: IAM roles with minimal required permissions
 - **📝 Explicit commits**: Never use `git add .` - always specify files explicitly
@@ -240,10 +247,9 @@ emoji-smith/
 │   │   │   ├── image/      # Image processing implementations
 │   │   │   ├── jobs/       # Job queue implementations
 │   │   │   ├── security/   # Security implementations
-│   │   │   └── aws/        # AWS service integrations
-│   │   │       ├── webhook_handler.py  # Webhook Lambda handler
-│   │   │       ├── worker_handler.py   # Worker Lambda handler
-│   │   │       └── secrets_loader.py   # AWS Secrets Manager
+│   │   │   └── gcp/        # GCP service integrations
+│   │   │       ├── webhook_app.py      # Cloud Run webhook service
+│   │   │       └── worker_app.py       # Cloud Run worker service
 │   │   ├── presentation/   # 🌐 Presentation Layer
 │   │   │   └── web/
 │   │   │       └── slack_webhook_api.py  # API endpoints
@@ -267,11 +273,12 @@ emoji-smith/
 │   ├── performance/     # Performance tests
 │   ├── fixtures/        # Test data and mocks
 │   └── conftest.py      # Pytest configuration
-├── infra/               # ☁️  AWS CDK Infrastructure
-│   ├── stacks/          # CDK stack definitions
-│   ├── app.py          # CDK app entry point
-│   ├── cdk.json        # CDK configuration
-│   └── requirements.txt # CDK dependencies
+├── terraform/           # ☁️  GCP Terraform Infrastructure
+│   ├── cloud_run_*.tf  # Cloud Run services (webhook + worker)
+│   ├── pubsub.tf       # Pub/Sub topic & subscription
+│   ├── secrets.tf      # Secret Manager config
+│   ├── iam.tf          # Service accounts & IAM
+│   └── workload_identity.tf  # GitHub Actions OIDC auth
 ├── docs/                # 📚 Documentation
 │   ├── adr/            # Architecture Decision Records
 │   ├── architecture/   # Architecture documentation

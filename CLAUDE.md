@@ -22,12 +22,12 @@
 
 ## 🏗️ Architecture Constraints (IMMUTABLE)
 
-### Fixed Lambda Handler Locations
+### Fixed Cloud Run Handler Locations
 ```
-src/emojismith/infrastructure/aws/webhook_handler.py  # < 3s response
-src/emojismith/infrastructure/aws/worker_handler.py   # async processing
+src/emojismith/infrastructure/gcp/webhook_app.py  # < 3s response (public)
+src/emojismith/infrastructure/gcp/worker_app.py   # async processing (private)
 ```
-**These paths are hardcoded in CDK - DO NOT MOVE**
+**These are the Cloud Run entry points - coordinate with Dockerfile changes**
 
 ### Layer Dependencies (One Direction Only)
 ```
@@ -144,12 +144,12 @@ Before implementing ANYTHING:
 src/
 ├── domain/           # Zero dependencies, pure Python
 ├── application/      # Orchestrates domain objects
-├── infrastructure/   # External world (AWS, Slack, OpenAI)
+├── infrastructure/   # External world (GCP, Slack, OpenAI)
 └── presentation/     # HTTP/API endpoints
 ```
 
 **Red Flags:**
-- Importing `boto3` in domain/
+- Importing GCP clients in domain/
 - Direct `os.environ` access outside config
 - Concrete classes in domain/repositories/
 - Missing `__init__.py` files

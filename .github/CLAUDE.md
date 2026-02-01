@@ -7,7 +7,7 @@
 
 ## Rules
 
-**Context:** This document provides guidelines for working with CI/CD pipelines, CDK infrastructure, and deployment processes. Read this when configuring GitHub Actions, deploying infrastructure, or managing the deployment pipeline.
+**Context:** This document provides guidelines for working with CI/CD pipelines, Terraform infrastructure, and deployment processes. Read this when configuring GitHub Actions, deploying infrastructure, or managing the deployment pipeline.
 
 ## 🚀 Deployment Philosophy
 
@@ -15,28 +15,28 @@
 
 ## Architecture Overview
 
-### Dual Lambda Architecture
+### Dual Cloud Run Architecture
 ```
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Slack     │────▶│   Webhook    │────▶│     SQS      │────▶│    Worker    │
-│   Events    │     │   Lambda     │     │    Queue     │     │   Lambda     │
+│   Slack     │────▶│   Webhook    │────▶│   Pub/Sub    │────▶│    Worker    │
+│   Events    │     │  Cloud Run   │     │    Topic     │     │  Cloud Run   │
 └─────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
                            │                                            │
                            └────────────────────────────────────────────┘
                                                 │
                                         ┌───────▼────────┐
-                                        │  AWS Services  │
-                                        │ - Secrets Mgr  │
-                                        │ - CloudWatch   │
-                                        │ - S3 Storage   │
+                                        │  GCP Services  │
+                                        │ - Secret Mgr   │
+                                        │ - Cloud Log    │
+                                        │ - Artifact Reg │
                                         └────────────────┘
 ```
 
-### Why Dual Lambda?
-- **Webhook Lambda**: Responds within Slack's 3-second timeout
-- **Worker Lambda**: Handles time-consuming image generation (10-15s)
-- **Better cold starts**: Minimal dependencies in webhook
-- **Scalability**: SQS provides buffering and retry logic
+### Why Dual Cloud Run?
+- **Webhook Cloud Run**: Responds within Slack's 3-second timeout (public)
+- **Worker Cloud Run**: Handles time-consuming image generation (10-15s, private)
+- **Better isolation**: Webhook is public, worker only accepts Pub/Sub
+- **Scalability**: Pub/Sub provides buffering, retry logic, and dead-letter handling
 
 ## CI/CD Pipeline
 
@@ -45,125 +45,143 @@
 Our deployment pipeline runs automatically on push to main:
 
 ```yaml
-name: Deploy to AWS
+name: Deploy to GCP
 
 on:
   push:
     branches: [main]
 
 jobs:
-  quality:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - Code formatting (ruff format)
       - Linting + security scanning (ruff check)
       - Type checking (mypy)
+      - Unit tests with coverage
 
-  test:
+  build-images:
+    needs: [build-and-test]
     runs-on: ubuntu-latest
     steps:
-      - Unit tests with coverage
-      - Integration tests
-      - Coverage report (>80% required)
+      - Authenticate via Workload Identity Federation (keyless)
+      - Build Docker images
+      - Push to Artifact Registry
 
   deploy:
-    needs: [quality, test]
+    needs: [build-images]
     runs-on: ubuntu-latest
     steps:
-      - Build Docker images
-      - Push to ECR
-      - Deploy with CDK
+      - Deploy webhook Cloud Run service
+      - Deploy worker Cloud Run service
 ```
 
 ### Environment Variables
 
-#### Required Secrets in GitHub Actions
+#### Required GitHub Variables (not secrets - use Workload Identity)
 ```
-AWS_ACCOUNT_ID          # Target AWS account
-AWS_REGION              # Deployment region
-SLACK_BOT_TOKEN         # Bot user OAuth token
-SLACK_SIGNING_SECRET    # Request verification
-OPENAI_API_KEY          # Image generation API
+GCP_PROJECT_ID              # Target GCP project
+GCP_PROJECT_NUMBER          # GCP project number
+GCP_WORKLOAD_IDENTITY_PROVIDER  # OIDC provider for keyless auth
+GCP_CICD_SERVICE_ACCOUNT    # Service account for deployments
 ```
 
-#### CDK Context Variables
-```json
-{
-  "environment": "production",
-  "slackAppId": "A0XXXXXX",
-  "webhookMemory": 512,
-  "workerMemory": 1024,
-  "enableXRay": true
+#### Secrets (stored in GCP Secret Manager, not GitHub)
+```
+slack-bot-token         # Bot user OAuth token
+slack-signing-secret    # Request verification
+openai-api-key          # Image generation API
+google-api-key          # Gemini API (optional)
+```
+
+## Terraform Infrastructure
+
+### Directory Organization
+```
+terraform/
+├── providers.tf            # GCP provider config
+├── variables.tf            # Input variables
+├── versions.tf             # Terraform version constraints
+├── apis.tf                 # Enable required GCP APIs
+├── iam.tf                  # Service accounts
+├── secrets.tf              # Secret Manager resources
+├── pubsub.tf               # Pub/Sub topic & subscription
+├── artifact_registry.tf    # Container registry
+├── cloud_run_webhook.tf    # Webhook service
+├── cloud_run_worker.tf     # Worker service
+├── workload_identity.tf    # GitHub Actions OIDC
+└── outputs.tf              # Output values
+```
+
+### Key Terraform Patterns
+
+#### Cloud Run Service
+```hcl
+resource "google_cloud_run_v2_service" "webhook" {
+  name     = "emoji-smith-webhook"
+  location = var.region
+
+  template {
+    containers {
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/emoji-smith/webhook:latest"
+      
+      env {
+        name = "SLACK_BOT_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.slack_bot_token.secret_id
+            version = "latest"
+          }
+        }
+      }
+    }
+    
+    service_account = google_service_account.webhook.email
+  }
 }
 ```
 
-## CDK Infrastructure
+#### Pub/Sub with OIDC Push
+```hcl
+resource "google_pubsub_subscription" "worker_push" {
+  name  = "emoji-smith-worker-push"
+  topic = google_pubsub_topic.jobs.name
 
-### Stack Organization
-```
-infra/
-├── app.py                  # CDK app entry point
-├── stacks/
-│   ├── emoji_smith_stack.py    # Main stack
-│   ├── lambda_stack.py         # Lambda functions
-│   └── storage_stack.py        # S3, DynamoDB
-└── constructs/
-    ├── dual_lambda.py          # Webhook + Worker pattern
-    └── sqs_processor.py        # Queue configuration
-```
+  push_config {
+    push_endpoint = google_cloud_run_v2_service.worker.uri
 
-### Key CDK Patterns
-
-#### Lambda Container Image
-```python
-from aws_cdk import aws_lambda as lambda_
-
-webhook_function = lambda_.DockerImageFunction(
-    self, "WebhookHandler",
-    code=lambda_.DockerImageCode.from_image_asset(
-        "../",
-        file="Dockerfile.webhook",
-        build_args={"FUNCTION_TYPE": "webhook"}
-    ),
-    memory_size=512,
-    timeout=Duration.seconds(30),
-    environment={
-        "SQS_QUEUE_URL": queue.queue_url,
-        "LOG_LEVEL": "INFO"
+    oidc_token {
+      service_account_email = google_service_account.pubsub_invoker.email
     }
-)
+  }
+
+  dead_letter_policy {
+    dead_letter_topic     = google_pubsub_topic.dead_letter.id
+    max_delivery_attempts = 5
+  }
+}
 ```
 
-#### SQS Dead Letter Queue
-```python
-dlq = sqs.Queue(
-    self, "DeadLetterQueue",
-    retention_period=Duration.days(14)
-)
+#### Workload Identity Federation
+```hcl
+resource "google_iam_workload_identity_pool" "github" {
+  workload_identity_pool_id = "github-actions"
+  display_name              = "GitHub Actions"
+}
 
-main_queue = sqs.Queue(
-    self, "ProcessingQueue",
-    visibility_timeout=Duration.seconds(300),
-    dead_letter_queue=sqs.DeadLetterQueue(
-        max_receive_count=3,
-        queue=dlq
-    )
-)
-```
+resource "google_iam_workload_identity_pool_provider" "github" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_provider_id = "github-provider"
 
-#### Secrets Manager Integration
-```python
-secrets = secretsmanager.Secret(
-    self, "EmojiSmithSecrets",
-    description="API keys and tokens",
-    secret_object_value={
-        "slackBotToken": SecretValue.unsafe_plain_text(""),
-        "openaiApiKey": SecretValue.unsafe_plain_text("")
-    }
-)
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.repository" = "assertion.repository"
+  }
 
-# Grant read access to Lambda
-secrets.grant_read(lambda_function)
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}
 ```
 
 ## Local Development
@@ -189,7 +207,7 @@ docker build -f Dockerfile.webhook -t emoji-webhook .
 docker build -f Dockerfile.worker -t emoji-worker .
 
 # Run with environment
-docker run -p 8000:8000 \
+docker run -p 8080:8080 \
   -e SLACK_BOT_TOKEN=$SLACK_BOT_TOKEN \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   emoji-webhook
@@ -197,15 +215,14 @@ docker run -p 8000:8000 \
 
 ## Deployment Process
 
-### 1. Feature Branch Deployment
+### 1. Infrastructure Changes (Manual Terraform)
 ```bash
-# Never deploy from feature branches to production
-# Use development environment for testing
-cd infra
-cdk deploy --context environment=development
+cd terraform
+terraform plan
+terraform apply
 ```
 
-### 2. Production Deployment (Automatic)
+### 2. Application Deployment (Automatic)
 ```yaml
 # Triggered by merge to main
 # No manual steps required
@@ -223,112 +240,86 @@ git push origin main
 
 ## Monitoring and Alerts
 
-### CloudWatch Dashboards
-- Lambda invocations and errors
-- SQS message age and DLQ depth
-- API Gateway response times
-- Cost tracking by service
+### Cloud Logging
+- Cloud Run request logs
+- Application structured logs
+- Error aggregation
 
-### Alarms Configuration
-```python
-# High error rate alarm
-error_alarm = cloudwatch.Alarm(
-    self, "HighErrorRate",
-    metric=lambda_function.metric_errors(),
-    threshold=10,
-    evaluation_periods=2,
-    datapoints_to_alarm=2
-)
-
-# SQS message age alarm
-age_alarm = cloudwatch.Alarm(
-    self, "OldMessages",
-    metric=queue.metric_approximate_age_of_oldest_message(),
-    threshold=300,  # 5 minutes
-    evaluation_periods=1
-)
-```
-
-### X-Ray Tracing
-```python
-# Enable in CDK
-lambda_function = lambda_.Function(
-    self, "Function",
-    tracing=lambda_.Tracing.ACTIVE,
-    ...
-)
-
-# Use in code
-from aws_xray_sdk.core import xray_recorder
-
-@xray_recorder.capture('process_emoji')
-async def process_emoji_request(request):
-    # Traced execution
-    pass
+### Setting Up Alerts (optional)
+```hcl
+resource "google_monitoring_alert_policy" "high_error_rate" {
+  display_name = "High Error Rate"
+  
+  conditions {
+    display_name = "Error rate > 5%"
+    condition_threshold {
+      filter          = "resource.type=\"cloud_run_revision\" AND metric.type=\"run.googleapis.com/request_count\" AND metric.labels.response_code_class=\"5xx\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = 0.05
+      duration        = "300s"
+    }
+  }
+}
 ```
 
 ## Security Best Practices
 
-### IAM Least Privilege
-```python
-# Grant only required permissions
-queue.grant_send_messages(webhook_lambda)
-queue.grant_consume_messages(worker_lambda)
-secrets.grant_read(worker_lambda)
-bucket.grant_read_write(worker_lambda)
+### Service Account Least Privilege
+```hcl
+# Webhook only needs to publish to Pub/Sub
+resource "google_pubsub_topic_iam_member" "webhook_publisher" {
+  topic  = google_pubsub_topic.jobs.name
+  role   = "roles/pubsub.publisher"
+  member = "serviceAccount:${google_service_account.webhook.email}"
+}
+
+# Worker needs to read secrets
+resource "google_secret_manager_secret_iam_member" "worker_accessor" {
+  secret_id = google_secret_manager_secret.openai_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.worker.email}"
+}
 ```
 
-### VPC Configuration (if needed)
-```python
-vpc = ec2.Vpc(
-    self, "EmojiSmithVPC",
-    max_azs=2,
-    nat_gateways=1,
-    subnet_configuration=[
-        ec2.SubnetConfiguration(
-            name="Private",
-            subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-        )
-    ]
-)
+### Private Worker Service
+```hcl
+# Worker Cloud Run is NOT publicly accessible
+resource "google_cloud_run_v2_service" "worker" {
+  # ...
+  ingress = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+}
 
-lambda_function = lambda_.Function(
-    self, "Function",
-    vpc=vpc,
-    vpc_subnets=ec2.SubnetSelection(
-        subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-    )
-)
+# Only Pub/Sub can invoke it
+resource "google_cloud_run_service_iam_member" "pubsub_invoker" {
+  service  = google_cloud_run_v2_service.worker.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.pubsub_invoker.email}"
+}
 ```
 
 ## Cost Optimization
 
-### Lambda Configuration
-- Right-size memory based on profiling
-- Use ARM architecture for cost savings
-- Enable Lambda SnapStart for Java (if applicable)
+### Cloud Run Configuration
+- `min_instance_count = 0` (scale to zero)
+- Right-size memory (webhook: 256Mi, worker: 512Mi)
+- Set appropriate timeout limits
 
-### S3 Lifecycle Policies
-```python
-bucket.add_lifecycle_rule(
-    id="DeleteOldEmojis",
-    expiration=Duration.days(90),
-    transitions=[
-        s3.Transition(
-            storage_class=s3.StorageClass.INFREQUENT_ACCESS,
-            transition_after=Duration.days(30)
-        )
-    ]
-)
-```
+### Free Tier Awareness
+- Cloud Run: 2M requests/month, 360K GB-seconds
+- Pub/Sub: 10GB messages/month
+- Secret Manager: 6 active secret versions, 10K access ops
+- Artifact Registry: 500MB storage
 
 ## Troubleshooting Deployments
 
 ### Common Issues
 
-1. **CDK Bootstrap Required**
+1. **Workload Identity Auth Failure**
    ```bash
-   cdk bootstrap aws://ACCOUNT-ID/REGION
+   # Verify the GitHub repository is allowed
+   gcloud iam workload-identity-pools providers describe github-provider \
+     --workload-identity-pool=github-actions \
+     --location=global
    ```
 
 2. **Docker Build Failures**
@@ -336,23 +327,24 @@ bucket.add_lifecycle_rule(
    - Ensure sufficient disk space
    - Verify Dockerfile syntax
 
-3. **Lambda Timeout**
-   - Check CloudWatch logs
-   - Verify SQS visibility timeout > Lambda timeout
+3. **Cloud Run Timeout**
+   - Check Cloud Logging for errors
+   - Verify Pub/Sub ack deadline > processing time
    - Review memory allocation
 
 4. **Permission Errors**
-   - Check IAM roles and policies
-   - Verify secrets access
-   - Review resource policies
+   - Check service account bindings
+   - Verify secret access
+   - Review IAM policies
 
 ### Deployment Checklist
 
 Before deploying:
 - [ ] All tests passing
 - [ ] Security scan clean
-- [ ] Environment variables configured
-- [ ] CDK diff reviewed
+- [ ] GitHub variables configured
+- [ ] GCP secrets populated
+- [ ] Terraform plan reviewed
 - [ ] Rollback plan ready
 
 ## Emergency Procedures
@@ -365,41 +357,39 @@ git push origin main
 ```
 
 ### Disable Webhook
-```python
-# Emergency Lambda environment variable
-MAINTENANCE_MODE=true
-
-# In webhook handler
-if os.environ.get('MAINTENANCE_MODE') == 'true':
-    return {
-        'statusCode': 503,
-        'body': json.dumps({'message': 'Service temporarily unavailable'})
-    }
+```bash
+# Set Cloud Run to 0 max instances
+gcloud run services update emoji-smith-webhook \
+  --max-instances=0 \
+  --region=us-central1
 ```
 
-### Manual Queue Purge
+### Purge Dead Letter Queue
 ```bash
-# Clear problematic messages
-aws sqs purge-queue --queue-url $QUEUE_URL
+# View dead letter messages
+gcloud pubsub subscriptions pull emoji-smith-dlq-sub --auto-ack --limit=100
 ```
 
 ## Quick Reference
 
-**Deployment Commands:**
+**Terraform Commands:**
 ```bash
-# Deploy to dev
-cdk deploy --context environment=development
+cd terraform
 
-# Show changes
-cdk diff
+# Preview changes
+terraform plan
 
-# Destroy stack (dev only)
-cdk destroy --context environment=development
+# Apply changes
+terraform apply
+
+# Destroy (dev only!)
+terraform destroy
 ```
 
 **Never:**
 - Deploy manually to production
 - Skip CI/CD pipeline
-- Use `cdk deploy` without context
+- Store secrets in Terraform state or GitHub
 - Commit secrets to repository
 - Ignore failed deployments
+- Make worker Cloud Run public

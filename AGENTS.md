@@ -4,7 +4,7 @@
 
 ## 📋 Project Overview
 
-**Emoji Smith** is an AI-powered Slack bot that generates custom emojis using multiple AI providers (OpenAI gpt-image-1.5, Google Gemini 3, Imagen 4). It uses Domain-Driven Design (DDD) with a layered architecture deployed on AWS Lambda.
+**Emoji Smith** is an AI-powered Slack bot that generates custom emojis using multiple AI providers (OpenAI gpt-image-1, Google Gemini). It uses Domain-Driven Design (DDD) with a layered architecture deployed on Google Cloud Run.
 
 ## 🛠️ Development Setup
 
@@ -36,10 +36,10 @@ ruff format src/ tests/ && ruff check src/ tests/ && mypy src/ && pytest tests/
 
 ## 🏗️ Architecture
 
-### Fixed Lambda Handler Locations (DO NOT MOVE)
+### Fixed Cloud Run Handler Locations
 ```
-src/emojismith/infrastructure/aws/webhook_handler.py  # < 3s response
-src/emojismith/infrastructure/aws/worker_handler.py   # async processing
+src/emojismith/infrastructure/gcp/webhook_app.py  # < 3s response (public)
+src/emojismith/infrastructure/gcp/worker_app.py   # async processing (private)
 ```
 
 ### Layer Dependencies (One Direction Only)
@@ -53,17 +53,19 @@ Domain ← Application ← Infrastructure ← Presentation
 src/
 ├── domain/           # Zero dependencies, pure Python only
 ├── application/      # Orchestrates domain objects
-├── infrastructure/   # External world (AWS, Slack, OpenAI, Gemini)
+├── infrastructure/   # External world (GCP, Slack, OpenAI, Gemini)
 └── presentation/     # HTTP/API endpoints
 
 tests/
 ├── unit/             # Fast, isolated tests by layer
 ├── integration/      # Tests with real dependencies
 └── fixtures/         # Shared test data
+
+terraform/            # GCP infrastructure (Cloud Run, Pub/Sub, etc.)
 ```
 
 ### Architecture Red Flags
-- ❌ Importing `boto3` in domain/
+- ❌ Importing GCP clients in domain/
 - ❌ Direct `os.environ` access outside config
 - ❌ Concrete classes in domain/repositories/
 - ❌ Missing `__init__.py` files
@@ -101,11 +103,11 @@ git add -A
 - Remove potential injection characters
 - Validate file uploads (type, size, content)
 
-### AWS Security
-- Use least privilege IAM policies
-- Store secrets in AWS Secrets Manager
-- Encrypt S3 buckets with server-side encryption
-- Block public access to all S3 buckets
+### GCP Security
+- Use least privilege service account permissions
+- Store secrets in GCP Secret Manager (injected as env vars to Cloud Run)
+- Use Workload Identity Federation for keyless CI/CD auth
+- Keep worker Cloud Run service private (only Pub/Sub can invoke)
 
 ---
 
@@ -181,25 +183,12 @@ class Product:
 ## 🔧 Infrastructure Layer Guidelines
 
 ### Responsibilities
-- AWS service integration (Lambda, S3, SQS, Secrets Manager)
+- GCP service integration (Cloud Run, Pub/Sub, Secret Manager)
 - External API clients (Slack, OpenAI, Google Gemini)
 - Repository implementations
 - Configuration management
 
 ### Key Patterns
-
-**Repository Implementation:**
-```python
-class DynamoDBEmojiTemplateRepository:
-    def __init__(self, table_name: str):
-        self._table = boto3.resource('dynamodb').Table(table_name)
-
-    async def get_by_id(self, template_id: str) -> Optional[EmojiTemplate]:
-        response = self._table.get_item(Key={'id': template_id})
-        if 'Item' not in response:
-            return None
-        return self._deserialize(response['Item'])
-```
 
 **Error Handling with Retries:**
 ```python
@@ -213,17 +202,19 @@ async def call_external_api(self, data: dict) -> dict:
     return response.json()
 ```
 
-**Lambda Handler Pattern:**
+**Cloud Run Webhook Pattern:**
 ```python
 # Webhook handler - must respond in < 3 seconds
-async def handler(event: dict, context: LambdaContext) -> dict:
-    body = json.loads(event["body"])
+# Secrets are injected as environment variables by Cloud Run
+@app.post("/slack/events")
+async def handle_slack_event(request: Request):
+    body = await request.json()
     
     if body.get("type") == "url_verification":
-        return {"statusCode": 200, "body": json.dumps({"challenge": body["challenge"]})}
+        return {"challenge": body["challenge"]}
     
-    await queue_message(body)  # Queue for async processing
-    return {"statusCode": 200, "body": json.dumps({"status": "processing"})}
+    await publish_to_pubsub(body)  # Queue for async processing
+    return {"status": "processing"}
 ```
 
 ---
@@ -248,7 +239,7 @@ async def handler(event: dict, context: LambdaContext) -> dict:
 
 **When to Mock:**
 - External APIs (Slack, OpenAI, Gemini)
-- AWS services (S3, SQS, DynamoDB)
+- GCP services (Pub/Sub, Secret Manager)
 - File system operations
 - Time-dependent operations
 
@@ -299,9 +290,9 @@ ruff check src/ tests/
 ### Golden Rule
 **All deployments happen through CI/CD. Manual deployments are forbidden.**
 
-### Dual Lambda Architecture
+### Dual Cloud Run Architecture
 ```
-Slack → Webhook Lambda (< 3s) → SQS Queue → Worker Lambda (async)
+Slack → Webhook Cloud Run (< 3s) → Pub/Sub → Worker Cloud Run (async)
 ```
 
 ### Workflow
@@ -321,14 +312,15 @@ git commit -m "feat(scope): description"
 git push origin feature/your-feature
 gh pr create --title "feat: description"
 
-# 6. CI/CD handles deployment after merge
+# 6. CI/CD handles deployment after merge (Workload Identity Federation)
 ```
 
-### CDK Commands (Development Only)
+### Terraform Commands (Development Only)
 ```bash
-cdk deploy --context environment=development
-cdk diff
-cdk destroy --context environment=development
+cd terraform
+terraform plan
+terraform apply
+terraform destroy
 ```
 
 ### Rollback
@@ -371,7 +363,7 @@ git commit -m "type(scope): description"
 
 ## 📚 Additional Documentation
 
-- `docs/` - Feature specifications and migration guides
-- `infra/` - CDK infrastructure code
+- `docs/` - Feature specifications and architecture docs
+- `terraform/` - GCP infrastructure code (Cloud Run, Pub/Sub, etc.)
 - `pyproject.toml` - Project configuration and dependencies
 - `justfile` - Common development commands
