@@ -8,6 +8,15 @@ on:
 
 env:
   # Set these in GitHub: Settings → Secrets and variables → Actions → Variables
+  # Required variables:
+  #   GCP_PROJECT_ID           - GCP project ID
+  #   GCP_PROJECT_NUMBER       - GCP project number
+  #   GCP_WORKLOAD_IDENTITY_PROVIDER - Full WIF provider path
+  #   GCP_CICD_SERVICE_ACCOUNT - Service account email for CI/CD
+  #   GH_REPO_OWNER_ID         - Numeric GitHub owner ID (gh api users/OWNER --jq .id)
+  #
+  # Required infrastructure (one-time setup):
+  #   - GCS bucket: ${PROJECT_ID}-terraform-state (for Terraform remote state)
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER }}
   WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
@@ -117,7 +126,7 @@ jobs:
           echo "worker_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/worker:${{ github.sha }}" >> $GITHUB_OUTPUT
 
   # ==========================================================================
-  # Deploy to Cloud Run (only on main branch)
+  # Deploy Infrastructure via Terraform (only on main branch)
   # ==========================================================================
   deploy:
     needs: build-images
@@ -129,6 +138,9 @@ jobs:
       id-token: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v2
@@ -136,22 +148,32 @@ jobs:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.CICD_SERVICE_ACCOUNT }}
 
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.0"
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.PROJECT_ID }}-terraform-state" \
+            -backend-config="prefix=emoji-smith"
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          terraform apply -auto-approve \
+            -var="project_id=${{ env.PROJECT_ID }}" \
+            -var="region=${{ env.REGION }}" \
+            -var="github_repo_owner=${{ github.repository_owner }}" \
+            -var="github_repo_name=emoji-smith" \
+            -var="github_repo_owner_id=${{ vars.GH_REPO_OWNER_ID }}" \
+            -var="webhook_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/webhook:${{ github.sha }}" \
+            -var="worker_image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/worker:${{ github.sha }}"
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-
-      - name: Deploy webhook service
-        run: |
-          gcloud run deploy ${{ env.WEBHOOK_SERVICE }} \
-            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/webhook:${{ github.sha }} \
-            --region=${{ env.REGION }} \
-            --project=${{ env.PROJECT_ID }}
-
-      - name: Deploy worker service
-        run: |
-          gcloud run deploy ${{ env.WORKER_SERVICE }} \
-            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/emoji-smith/worker:${{ github.sha }} \
-            --region=${{ env.REGION }} \
-            --project=${{ env.PROJECT_ID }}
 
       - name: Verify deployment
         run: |

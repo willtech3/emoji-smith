@@ -183,6 +183,78 @@ class TestModalSubmissionAutoGeneratesName:
 
 
 @pytest.mark.unit()
+class TestMessageActionUserIdHandling:
+    """Tests that message actions always use the triggering user's ID.
+
+    The user_id in metadata is used for ephemeral messaging (chat_postEphemeral)
+    which requires a real user ID. Bot IDs or message author IDs won't work -
+    we must always use the ID of the user who triggered the action.
+    """
+
+    @pytest.fixture()
+    def mock_slack_repo(self):
+        return AsyncMock(spec=SlackModalRepository)
+
+    @pytest.fixture()
+    def mock_job_queue(self):
+        return AsyncMock(spec=JobQueueProducer)
+
+    @pytest.fixture()
+    def processor(self, mock_slack_repo, mock_job_queue):
+        return WebhookEventProcessor(
+            slack_repo=mock_slack_repo,
+            job_queue=mock_job_queue,
+            google_enabled=True,
+        )
+
+    @pytest.mark.asyncio()
+    async def test_uses_triggering_user_for_bot_message(
+        self, processor, mock_slack_repo
+    ):
+        """Bot messages use triggering user, not bot_id, for user_id."""
+        payload = {
+            "type": "message_action",
+            "trigger_id": "TRIGGER",
+            "user": {"id": "U_TRIGGERING_USER"},
+            "message": {"text": "bot message", "ts": "111.222", "bot_id": "B123"},
+            "channel": {"id": "C1"},
+            "team": {"id": "T1"},
+        }
+
+        result = await processor.process(json.dumps(payload).encode())
+
+        assert result == {"status": "ok"}
+        mock_slack_repo.open_modal.assert_awaited_once()
+        view = mock_slack_repo.open_modal.call_args.kwargs["view"]
+        metadata = json.loads(view["private_metadata"])
+        # Must use triggering user, not bot_id, for ephemeral messaging
+        assert metadata["user_id"] == "U_TRIGGERING_USER"
+
+    @pytest.mark.asyncio()
+    async def test_uses_triggering_user_for_regular_message(
+        self, processor, mock_slack_repo
+    ):
+        """Regular messages use triggering user, not message author, for user_id."""
+        payload = {
+            "type": "message_action",
+            "trigger_id": "TRIGGER",
+            "user": {"id": "U_TRIGGERING_USER"},
+            "message": {"text": "hello", "ts": "111.222", "user": "U_MESSAGE_AUTHOR"},
+            "channel": {"id": "C1"},
+            "team": {"id": "T1"},
+        }
+
+        result = await processor.process(json.dumps(payload).encode())
+
+        assert result == {"status": "ok"}
+        mock_slack_repo.open_modal.assert_awaited_once()
+        view = mock_slack_repo.open_modal.call_args.kwargs["view"]
+        metadata = json.loads(view["private_metadata"])
+        # Must use triggering user for ephemeral messaging, not message author
+        assert metadata["user_id"] == "U_TRIGGERING_USER"
+
+
+@pytest.mark.unit()
 class TestMessageActionModalDefaultsToNanoBananaPro:
     """Tests that the Slack modal defaults to Nano Banana Pro in production-like config.
 

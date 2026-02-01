@@ -106,9 +106,14 @@ class WebhookEventProcessor:
         message = payload.get("message", {})
         channel = payload.get("channel", {})
         team = payload.get("team", {})
+
+        # The triggering user (who clicked the action) is used for job ownership
+        # and ephemeral messaging - must be a real user ID, not a bot ID
+        triggering_user_id = payload.get("user", {}).get("id", "unknown")
+
         slack_message = SlackMessage(
             text=message.get("text", ""),
-            user_id=message.get("user", ""),
+            user_id=triggering_user_id,
             channel_id=channel.get("id", ""),
             timestamp=message.get("ts", ""),
             team_id=team.get("id", ""),
