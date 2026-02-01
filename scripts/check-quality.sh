@@ -33,6 +33,13 @@ scripts/check-test-names.py
 echo "✓ Test naming conventions passed"
 echo ""
 
+# MyPy type checking
+echo "🔍 Running MyPy type checker..."
+mypy src/
+echo "✓ MyPy type checking passed"
+echo ""
+
+
 # Pytest with coverage
 echo "🧪 Running tests with coverage..."
 pytest --cov=src tests/

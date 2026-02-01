@@ -60,8 +60,8 @@ jobs:
             - Use Test-Driven Development (TDD) with comprehensive unit tests
             - Apply Domain-Driven Design (DDD) principles with proper separation of concerns
             - Ensure all code changes include appropriate error handling and logging
-            - Run code quality checks (ruff format, ruff check, pytest) before committing
-            - Focus on emoji generation, Slack integration, and GCP Cloud Run deployment
+            - Run code quality checks (black, flake8, mypy, bandit, pytest) before committing
+            - Focus on emoji generation, Slack integration, and AWS Lambda deployment
 
             For code reviews:
             - Check compliance with Python PEP 8 and type hints

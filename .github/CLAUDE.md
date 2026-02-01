@@ -57,6 +57,7 @@ jobs:
     steps:
       - Code formatting (ruff format)
       - Linting + security scanning (ruff check)
+      - Type checking (mypy)
       - Unit tests with coverage
 
   build-images:
