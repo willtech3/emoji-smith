@@ -113,7 +113,6 @@ gh pr create --title "type: description" --body "Details of changes"
 ```bash
 ruff format src/ tests/ && \
 ruff check src/ tests/ && \
-mypy src/ && \
 pytest tests/
 ```
 

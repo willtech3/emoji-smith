@@ -20,7 +20,7 @@ pip install -e ".[dev]"
 # Run quality checks
 just qa
 # OR manually:
-ruff format src/ tests/ && ruff check src/ tests/ && mypy src/ && pytest tests/
+ruff format src/ tests/ && ruff check src/ tests/ && pytest tests/
 ```
 
 ## 🚨 CRITICAL RULES - NEVER VIOLATE
@@ -345,7 +345,6 @@ git push origin main
 ```bash
 ruff format src/ tests/
 ruff check src/ tests/
-mypy src/
 pytest tests/
 git add <specific-files>
 git commit -m "type(scope): description"

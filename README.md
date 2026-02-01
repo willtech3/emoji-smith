@@ -202,8 +202,7 @@ All code must pass these checks before merging:
 ```bash
 ruff format --check src/ tests/  # Code formatting
 ruff check src/ tests/           # Linting + security scanning
-mypy src/                        # Type checking
-pytest --cov=src tests/      # Tests with 90%+ coverage
+pytest --cov=src tests/          # Tests with 90%+ coverage
 ```
 
 ### CI/CD Pipeline

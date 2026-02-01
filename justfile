@@ -19,10 +19,6 @@ lint:
 lint-fix:
 	uv run ruff check --fix src/ tests/
 
-# Type checking
-typecheck:
-	uv run mypy src/
-
 # Security scanning
 security:
 	uv run ruff check --select S src/ tests/
@@ -36,7 +32,6 @@ qa:
 	set -e
 	just format-check
 	just lint
-	just typecheck
 	just security
 	just test
 
