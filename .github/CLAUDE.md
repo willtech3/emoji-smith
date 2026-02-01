@@ -53,6 +53,16 @@ Configured in GitHub: Settings → Secrets and variables → Actions → Variabl
 - `GCP_PROJECT_NUMBER`
 - `GCP_WORKLOAD_IDENTITY_PROVIDER`
 - `GCP_CICD_SERVICE_ACCOUNT`
+- `GH_REPO_OWNER_ID` - Numeric GitHub owner ID (find via: `gh api users/OWNER --jq .id`)
+
+### One-Time Infrastructure Setup
+
+Before the first deployment, create a GCS bucket for Terraform state:
+
+```bash
+gsutil mb -p $PROJECT_ID gs://${PROJECT_ID}-terraform-state
+gsutil versioning set on gs://${PROJECT_ID}-terraform-state
+```
 
 ### GitHub Actions Secrets (Required)
 
