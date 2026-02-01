@@ -26,7 +26,7 @@ graph TB
   Worker -->|"Upload emoji"| Slack
 ```
 
-For deployment and architecture details, see `docs/GCP.md`.
+For deployment details, see the Terraform configuration in `terraform/`.
 
 **Tech Stack**
 - **Backend**: Python 3.12 + FastAPI
@@ -88,7 +88,7 @@ High level:
 - Terraform provisions infra in `terraform/` (Cloud Run, Pub/Sub, Secret Manager, Artifact Registry, IAM/WIF).
 - App deploys happen via GitHub Actions (`.github/workflows/deploy-gcp.yml`).
 
-See `docs/GCP.md` for the full deployment and operations guide.
+See the Terraform configuration in `terraform/` for infrastructure details.
 
 ## ⚙️ Configuration
 
@@ -147,15 +147,15 @@ emoji-smith/
 
 ## 📚 Documentation
 
-- `docs/GCP.md` - Production deployment + architecture (Cloud Run + Pub/Sub)
+- `terraform/` - GCP infrastructure as code (Cloud Run + Pub/Sub)
 - `docs/adr/` - Architecture Decision Records
-- `docs/testing/testing-guidelines.md` - Testing guidelines
+- `docs/guides/testing.md` - Testing guidelines
 - `CLAUDE.md` and co-located `CLAUDE.md` files - Coding and workflow rules
 
 ## 🆘 Support
 
 - **Development rules**: `CLAUDE.md`
-- **Deployment/architecture**: `docs/GCP.md`
-- **Testing**: `docs/testing/testing-guidelines.md`
+- **Deployment/architecture**: `terraform/` and architecture section above
+- **Testing**: `docs/guides/testing.md`
 - **Issues**: https://github.com/willtech3/emoji-smith/issues
 

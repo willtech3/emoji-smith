@@ -32,7 +32,7 @@ The infrastructure layer handles:
 - Worker service: `src/emojismith/infrastructure/gcp/worker_app.py`
 - Pub/Sub adapter: `src/emojismith/infrastructure/gcp/pubsub_job_queue.py`
 
-See `docs/GCP.md` for the deployed architecture.
+See `README.md` for the deployed architecture.
 
 ## External Service Clients (Example Pattern)
 

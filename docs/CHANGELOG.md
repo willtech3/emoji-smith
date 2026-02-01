@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.0] - 2026-01-31
 
 ### Added
-- GCP production architecture documentation (`docs/GCP.md`)
+- GCP production architecture documentation (in README.md)
 - ADR-004 documenting migration to GCP
 - Unit tests for GCP Pub/Sub + Cloud Run adapters
 
@@ -135,5 +135,4 @@ See [Architecture Decision Records](./adr/) for detailed rationale behind major 
 ---
 
 For detailed architecture documentation, see [docs/architecture/](./architecture/).
-For current production deployment documentation, see [docs/GCP.md](./GCP.md).
-For testing guidelines, see [docs/testing/testing-guidelines.md](./testing/testing-guidelines.md).
+For testing guidelines, see [docs/guides/testing.md](./guides/testing.md).

@@ -536,13 +536,9 @@ Consumer (worker):  Pub/Sub push → base64 decode → JSON → job DTO → proc
   - Add section about multi-provider support
   - Update environment variables table with `GOOGLE_API_KEY`
 
-- [ ] **8.2** Update docs/GCP.md
-  - File: **[MODIFY]** `docs/GCP.md`
+- [ ] **8.2** Update README.md
+  - File: **[MODIFY]** `README.md`
   - Ensure env var docs include `GOOGLE_API_KEY` and clarify provider selection behavior
-
-- [ ] **8.3** Keep this spec aligned with the codebase
-  - File: **[MODIFY]** `docs/google-nano-banana-migration.md`
-  - Keep diagrams and file references aligned with the current GCP deployment
 
 ---
 
@@ -725,7 +721,7 @@ Dockerfile.worker  # Runtime deps installed via `uv sync`
 terraform/secrets.tf
 terraform/cloud_run_worker.tf
 README.md
-docs/GCP.md
+README.md
 tests/unit/domain/entities/test_emoji_generation_job_sharing.py  # Add image_provider tests
 ```
 

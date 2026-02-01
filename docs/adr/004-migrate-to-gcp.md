@@ -37,6 +37,6 @@ Slack → Cloud Run (webhook) → Pub/Sub → Cloud Run (worker) → Slack API
 - New operational surface area (Cloud Run + Pub/Sub configuration)
 
 ## References
-- `docs/GCP.md` (current deployment + architecture)
+- `README.md` (current deployment + architecture)
 - ADR-002 (historical: original “webhook + worker” separation)
 

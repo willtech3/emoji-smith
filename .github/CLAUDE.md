@@ -26,7 +26,7 @@ Key properties:
 - Worker service handles image generation and Slack posting.
 - Pub/Sub retries worker deliveries on non-2xx responses.
 
-For the full architecture + operations details, see `docs/GCP.md`.
+For the full architecture + operations details, see `README.md`.
 
 ## CI/CD Pipeline
 
