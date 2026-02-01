@@ -94,13 +94,6 @@ def create_app(*, webhook_handler: SlackWebhookHandler | None = None) -> FastAPI
     tracing_provider = create_tracing_provider(telemetry_config)
     metrics_recorder = create_metrics_recorder(telemetry_config)
 
-    if telemetry_config.tracing_enabled:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-        if not getattr(app.state, "otel_instrumented", False):
-            FastAPIInstrumentor.instrument_app(app)
-            app.state.otel_instrumented = True
-
     @app.middleware("http")
     async def telemetry_middleware(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -128,6 +121,15 @@ def create_app(*, webhook_handler: SlackWebhookHandler | None = None) -> FastAPI
                 duration_s=duration_s,
             )
             trace_id_var.reset(token)
+
+    # Instrument last so OpenTelemetry middleware wraps our middleware and a span
+    # is active when we sync trace context.
+    if telemetry_config.tracing_enabled:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        if not getattr(app.state, "otel_instrumented", False):
+            FastAPIInstrumentor.instrument_app(app)
+            app.state.otel_instrumented = True
 
     @app.get("/health")
     async def health_check() -> dict:
