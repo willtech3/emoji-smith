@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import re
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -146,3 +147,65 @@ class TestWebhookAppSubmission:
         enqueued_job = job_queue.enqueue_job.call_args.args[0]
         assert enqueued_job.user_description == "facepalm"
         assert enqueued_job.image_provider == "openai"
+
+    def test_view_submission_enqueues_job_with_otel_trace_id_when_enabled(
+        self, webhook_app_module, monkeypatch
+    ):
+        monkeypatch.setenv("TRACING_ENABLED", "true")
+        monkeypatch.setenv("TRACE_SAMPLE_RATE", "1.0")
+        monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+
+        slack_repo = AsyncMock(spec=SlackModalRepository)
+        job_queue = AsyncMock(spec=JobQueueProducer)
+
+        security_service = MagicMock(spec=WebhookSecurityService)
+        security_service.is_authentic_webhook.return_value = True
+
+        processor = WebhookEventProcessor(
+            slack_repo=slack_repo,
+            job_queue=job_queue,
+            google_enabled=True,
+        )
+        handler = SlackWebhookHandler(
+            security_service=security_service,
+            event_processor=processor,
+        )
+
+        app = webhook_app_module.create_app(webhook_handler=handler)
+        client = TestClient(app)
+
+        payload = {
+            "type": "view_submission",
+            "view": {
+                "private_metadata": json.dumps(
+                    {
+                        "message_text": "hello",
+                        "user_id": "U123",
+                        "channel_id": "C123",
+                        "timestamp": "123.456",
+                        "team_id": "T123",
+                    }
+                ),
+                "state": {
+                    "values": {
+                        "emoji_description": {"description": {"value": "facepalm"}},
+                        "image_provider_block": {
+                            "image_provider_select": {
+                                "selected_option": {"value": "openai"}
+                            }
+                        },
+                    }
+                },
+            },
+        }
+
+        resp = client.post(
+            "/slack/interactive",
+            content=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert resp.status_code == 200
+        job_queue.enqueue_job.assert_awaited_once()
+        enqueued_job = job_queue.enqueue_job.call_args.args[0]
+        assert re.fullmatch(r"[0-9a-f]{32}", enqueued_job.trace_id)

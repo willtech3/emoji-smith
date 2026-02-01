@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from google import genai
 from google.api_core import exceptions as google_exceptions
@@ -16,6 +17,7 @@ from emojismith.domain.repositories.prompt_enhancer_repository import (
     PromptEnhancerRepository,
 )
 from shared.infrastructure.logging import log_event
+from shared.infrastructure.telemetry.metrics import MetricsRecorder
 
 
 class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
@@ -31,12 +33,14 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
         model: str = "gemini-3-pro-image-preview",
         fallback_model: str = "imagen-4.0-ultra-generate-001",
         text_model: str = "gemini-3-flash-preview",
+        metrics_recorder: MetricsRecorder | None = None,
     ) -> None:
         self._client = client
         self._logger = logging.getLogger(__name__)
         self._model = model
         self._fallback_model = fallback_model
         self._text_model = text_model
+        self._metrics = metrics_recorder
 
     def _is_rate_limit_error(self, exc: Exception) -> bool:
         """Check if an exception represents a rate limit error.
@@ -203,7 +207,9 @@ Output:"""
 
         for _ in range(n):
             try:
+                start_time = time.monotonic()
                 image_bytes = await self._generate_with_model(prompt, self._model)
+                duration_s = time.monotonic() - start_time
                 log_event(
                     self._logger,
                     logging.INFO,
@@ -213,6 +219,13 @@ Output:"""
                     model=self._model,
                     is_fallback=False,
                 )
+                if self._metrics is not None:
+                    self._metrics.record_emoji_generated(
+                        provider="google_gemini",
+                        model=self._model,
+                        is_fallback=False,
+                        duration_s=duration_s,
+                    )
                 images.append(image_bytes)
             except Exception as exc:
                 if self._is_rate_limit_error(exc):
@@ -225,7 +238,9 @@ Output:"""
                     exc,
                 )
                 try:
+                    start_time = time.monotonic()
                     image_bytes = await self._generate_with_imagen(prompt)
+                    duration_s = time.monotonic() - start_time
                     log_event(
                         self._logger,
                         logging.INFO,
@@ -235,6 +250,13 @@ Output:"""
                         model=self._fallback_model,
                         is_fallback=True,
                     )
+                    if self._metrics is not None:
+                        self._metrics.record_emoji_generated(
+                            provider="google_imagen",
+                            model=self._fallback_model,
+                            is_fallback=True,
+                            duration_s=duration_s,
+                        )
                     images.append(image_bytes)
                 except Exception as fallback_exc:
                     if self._is_rate_limit_error(fallback_exc):

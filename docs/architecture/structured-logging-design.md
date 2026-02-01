@@ -25,14 +25,84 @@ Create a centralized logging module to ensure consistent JSON-structured logging
 ```python
 """Structured JSON logging for observability."""
 
+from __future__ import annotations
+
 import json
 import logging
+import os
+import uuid
 from contextvars import ContextVar
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
+# Sentinel value used when no trace id has been set in the current context.
+DEFAULT_TRACE_ID = "no-trace-id"
+
 # Context variable for trace correlation across async boundaries
-trace_id_var: ContextVar[str] = ContextVar("trace_id", default="no-trace-id")
+trace_id_var: ContextVar[str] = ContextVar("trace_id", default=DEFAULT_TRACE_ID)
+
+
+def ensure_trace_id() -> str:
+    """Ensure a real trace id is set in the current context and return it.
+
+    If OpenTelemetry tracing is enabled and a current span exists, this uses the
+    OpenTelemetry trace id (32-hex) so logs correlate to Cloud Trace. Otherwise,
+    it falls back to generating a UUID.
+    """
+
+    current = trace_id_var.get()
+    if not current or current == DEFAULT_TRACE_ID:
+        otel_trace_id = _get_otel_trace_id()
+        if otel_trace_id is not None:
+            trace_id_var.set(otel_trace_id)
+            return otel_trace_id
+
+        new_trace_id = str(uuid.uuid4())
+        trace_id_var.set(new_trace_id)
+        return new_trace_id
+
+    return current
+
+
+def _get_otel_trace_id() -> str | None:
+    """Return the current OpenTelemetry trace id as a 32-char hex string."""
+    try:
+        from opentelemetry import trace
+
+        span = trace.get_current_span()
+        span_context = span.get_span_context()
+        if span_context is None or not span_context.is_valid:
+            return None
+        return format(span_context.trace_id, "032x")
+    except Exception:
+        return None
+
+
+def get_cloud_logging_trace_fields(*, project_id: str | None = None) -> dict[str, Any]:
+    """Return Cloud Logging special trace correlation fields (if available)."""
+    project = project_id or os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+    if not project:
+        return {}
+
+    try:
+        from opentelemetry import trace
+
+        span = trace.get_current_span()
+        span_context = span.get_span_context()
+        if span_context is None or not span_context.is_valid:
+            return {}
+
+        trace_id = format(span_context.trace_id, "032x")
+        span_id = format(span_context.span_id, "016x")
+        sampled = bool(getattr(span_context.trace_flags, "sampled", False))
+
+        return {
+            "logging.googleapis.com/trace": f"projects/{project}/traces/{trace_id}",
+            "logging.googleapis.com/spanId": span_id,
+            "logging.googleapis.com/trace_sampled": sampled,
+        }
+    except Exception:
+        return {}
 
 
 class JSONFormatter(logging.Formatter):
@@ -42,11 +112,13 @@ class JSONFormatter(logging.Formatter):
         log_data: dict[str, Any] = {
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
+            "severity": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
             "module": record.module,
             "trace_id": trace_id_var.get(),
         }
+        log_data.update(get_cloud_logging_trace_fields())
 
         # Merge extra fields into root (for top-level searchability)
         if hasattr(record, "event_data") and isinstance(record.event_data, dict):
@@ -95,12 +167,16 @@ All log events **MUST** include these fields:
 |-------|------|----------|-------------|
 | `timestamp` | `string` (ISO8601) | ✅ | UTC timestamp |
 | `level` | `string` | ✅ | Log level (INFO, WARNING, ERROR) |
+| `severity` | `string` | ✅ | Cloud Logging severity (same as `level`) |
 | `logger` | `string` | ✅ | Logger name (module path) |
 | `message` | `string` | ✅ | Human-readable message |
 | `module` | `string` | ✅ | Python module name |
-| `trace_id` | `string` | ✅ | UUID for request correlation |
+| `trace_id` | `string` | ✅ | Correlation id (UUID by default; 32-hex OTel trace id when tracing enabled) |
 | `event` | `string` | ⬜ Optional | Event type for filtering |
 | `exception` | `string` | ⬜ Optional | Formatted traceback if error |
+| `logging.googleapis.com/trace` | `string` | ⬜ Optional | Cloud Trace path for log → trace linking |
+| `logging.googleapis.com/spanId` | `string` | ⬜ Optional | Cloud Trace span id for log → trace linking |
+| `logging.googleapis.com/trace_sampled` | `boolean` | ⬜ Optional | Sampling flag for log → trace linking |
 
 #### Defined Event Types
 
@@ -206,22 +282,19 @@ class EmojiGenerationJob:
 
 #### ✅ 3.2 Set trace_id at request entry
 
-In the `/slack/events` endpoint handler, set the trace context:
+Set the trace context at request entry (middleware), so all logs within the request
+share the same correlation id:
 
 ```python
-@app.post("/slack/events")
-async def slack_events(request: Request) -> dict:
-    # Generate and set trace ID for this request
-    request_trace_id = str(uuid.uuid4())
-    trace_id_var.set(request_trace_id)
-
-    log_event(logger, logging.INFO, "Slack event received",
-              event="webhook_received",
-              endpoint="/slack/events")
-
-    body = await request.body()
-    headers = dict(request.headers)
-    return await webhook_handler.handle_event(body, headers)
+@app.middleware("http")
+async def telemetry_middleware(request: Request, call_next) -> Response:
+    token = trace_id_var.set(DEFAULT_TRACE_ID)
+    try:
+        # Uses current OTel span trace id when available, otherwise UUID.
+        ensure_trace_id()
+        return await call_next(request)
+    finally:
+        trace_id_var.reset(token)
 ```
 
 #### ✅ 3.3 Pass trace_id when creating job
@@ -231,12 +304,12 @@ Update `WebhookEventProcessor` to pass trace_id:
 **File:** `src/emojismith/application/handlers/slack_webhook_handler.py`
 
 ```diff
-+ from shared.infrastructure.logging import trace_id_var
++ from shared.infrastructure.logging import ensure_trace_id
 
   job = EmojiGenerationJob.create_new(
       user_description=description,
       emoji_name=emoji_name,
-+     trace_id=trace_id_var.get(),
++     trace_id=ensure_trace_id(),
       # ... rest unchanged
   )
 ```

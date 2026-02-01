@@ -9,8 +9,10 @@ calling `create_app()` with an injected `SlackWebhookHandler`.
 
 import logging
 import os
+import time
+from collections.abc import Awaitable, Callable
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from slack_sdk.web.async_client import AsyncWebClient
 
 from emojismith.application.handlers.slack_webhook_handler import (
@@ -23,7 +25,17 @@ from emojismith.infrastructure.security.slack_signature_validator import (
     SlackSignatureValidator,
 )
 from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
-from shared.infrastructure.logging import ensure_trace_id, log_event, setup_logging
+from shared.infrastructure.logging import (
+    DEFAULT_TRACE_ID,
+    log_event,
+    setup_logging,
+    trace_id_var,
+)
+from shared.infrastructure.telemetry import (
+    TelemetryConfig,
+    create_metrics_recorder,
+    create_tracing_provider,
+)
 
 # Configure logging
 setup_logging()
@@ -78,14 +90,53 @@ def create_app(*, webhook_handler: SlackWebhookHandler | None = None) -> FastAPI
         version="0.1.0",
     )
 
+    telemetry_config = TelemetryConfig.from_environment()
+    tracing_provider = create_tracing_provider(telemetry_config)
+    metrics_recorder = create_metrics_recorder(telemetry_config)
+
+    @app.middleware("http")
+    async def telemetry_middleware(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        token = trace_id_var.set(DEFAULT_TRACE_ID)
+        start_time = time.monotonic()
+        response: Response | None = None
+        try:
+            tracing_provider.sync_trace_context()
+            response = await call_next(request)
+            return response
+        except Exception as exc:
+            metrics_recorder.record_error(
+                where="webhook",
+                error_type=exc.__class__.__name__,
+            )
+            raise
+        finally:
+            duration_s = time.monotonic() - start_time
+            status_code = response.status_code if response is not None else 500
+            metrics_recorder.record_request(
+                endpoint=request.url.path,
+                method=request.method,
+                status_code=status_code,
+                duration_s=duration_s,
+            )
+            trace_id_var.reset(token)
+
+    # Instrument last so OpenTelemetry middleware wraps our middleware and a span
+    # is active when we sync trace context.
+    if telemetry_config.tracing_enabled:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        if not getattr(app.state, "otel_instrumented", False):
+            FastAPIInstrumentor.instrument_app(app)
+            app.state.otel_instrumented = True
+
     @app.get("/health")
     async def health_check() -> dict:
         return {"status": "healthy", "service": "webhook"}
 
     @app.post("/slack/events")
     async def slack_events(request: Request) -> dict:
-        ensure_trace_id()
-
         log_event(
             logger,
             logging.INFO,
@@ -99,7 +150,6 @@ def create_app(*, webhook_handler: SlackWebhookHandler | None = None) -> FastAPI
 
     @app.post("/slack/interactive")
     async def slack_interactive(request: Request) -> dict:
-        ensure_trace_id()
         log_event(
             logger,
             logging.INFO,

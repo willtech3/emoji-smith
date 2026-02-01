@@ -105,6 +105,10 @@ See the Terraform configuration in `terraform/` for infrastructure details.
 | `SLACK_TEST_BOT_TOKEN` | Token for Slack integration tests | No |
 | `SLACK_TEST_CHANNEL_ID` | Channel ID for Slack integration tests | No |
 | `SLACK_TEST_USER_ID` | User ID for Slack integration tests | No |
+| `ENVIRONMENT` | Deployment environment label (e.g. `development`, `production`) | No (default: `development`) |
+| `TRACING_ENABLED` | Enable OpenTelemetry tracing export to Cloud Trace | No (default: `false`) |
+| `METRICS_ENABLED` | Enable OpenTelemetry metrics export to Cloud Monitoring | No (default: `false`) |
+| `TRACE_SAMPLE_RATE` | Trace sampling ratio (0.0–1.0) when tracing enabled | No (default: `1.0`) |
 
 ## 🛠️ Development
 
@@ -158,4 +162,3 @@ emoji-smith/
 - **Deployment/architecture**: `terraform/` and architecture section above
 - **Testing**: `docs/guides/testing.md`
 - **Issues**: https://github.com/willtech3/emoji-smith/issues
-

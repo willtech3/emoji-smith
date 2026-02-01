@@ -5,7 +5,7 @@ import dataclasses
 import json
 import os
 
-from google.cloud import pubsub_v1
+from google.cloud import pubsub_v1  # type: ignore[attr-defined]
 
 from shared.domain.dtos import EmojiGenerationJobDto
 from shared.domain.repositories.job_queue_repository import JobQueueProducer
