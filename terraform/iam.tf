@@ -31,28 +31,29 @@ resource "google_service_account" "pubsub_push_invoker" {
 # Secret Manager IAM: Allow Cloud Run runtimes to read secrets
 # =============================================================================
 
+# Use static secret names to avoid for_each issues during import
 locals {
-  webhook_secret_ids = [
-    google_secret_manager_secret.slack_bot_token.secret_id,
-    google_secret_manager_secret.slack_signing_secret.secret_id,
-  ]
+  webhook_secrets = {
+    slack_bot_token      = "emoji-smith-slack-bot-token"
+    slack_signing_secret = "emoji-smith-slack-signing-secret"
+  }
 
-  worker_secret_ids = [
-    google_secret_manager_secret.slack_bot_token.secret_id,
-    google_secret_manager_secret.openai_api_key.secret_id,
-    google_secret_manager_secret.google_api_key.secret_id,
-  ]
+  worker_secrets = {
+    slack_bot_token = "emoji-smith-slack-bot-token"
+    openai_api_key  = "emoji-smith-openai-api-key"
+    google_api_key  = "emoji-smith-google-api-key"
+  }
 }
 
 resource "google_secret_manager_secret_iam_member" "webhook_secret_access" {
-  for_each  = toset(local.webhook_secret_ids)
+  for_each  = local.webhook_secrets
   secret_id = each.value
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.webhook_runtime.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "worker_secret_access" {
-  for_each  = toset(local.worker_secret_ids)
+  for_each  = local.worker_secrets
   secret_id = each.value
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.worker_runtime.email}"
