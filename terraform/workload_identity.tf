@@ -93,6 +93,13 @@ resource "google_project_iam_member" "cicd_run_developer" {
   member  = "serviceAccount:${google_service_account.cicd.email}"
 }
 
+# Permission to manage project-level IAM bindings (for trace agent, metric writer roles)
+resource "google_project_iam_member" "cicd_iam_admin" {
+  project = var.project_id
+  role    = "roles/resourcemanager.projectIamAdmin"
+  member  = "serviceAccount:${google_service_account.cicd.email}"
+}
+
 # Permission to act as the runtime service accounts (required for Cloud Run deploy)
 resource "google_service_account_iam_member" "cicd_act_as_webhook" {
   service_account_id = google_service_account.webhook_runtime.name
@@ -102,6 +109,13 @@ resource "google_service_account_iam_member" "cicd_act_as_webhook" {
 
 resource "google_service_account_iam_member" "cicd_act_as_worker" {
   service_account_id = google_service_account.worker_runtime.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.cicd.email}"
+}
+
+# Permission to act as pubsub invoker (required for creating push subscription with OIDC)
+resource "google_service_account_iam_member" "cicd_act_as_pubsub_invoker" {
+  service_account_id = google_service_account.pubsub_push_invoker.name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.cicd.email}"
 }
