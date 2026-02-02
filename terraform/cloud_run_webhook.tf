@@ -98,6 +98,12 @@ resource "google_cloud_run_v2_service" "webhook" {
         value = "1.0"
       }
 
+      # Required for OpenTelemetry Cloud Trace/Monitoring exporters
+      env {
+        name  = "GOOGLE_CLOUD_PROJECT"
+        value = var.project_id
+      }
+
       # Startup probe for faster scaling
       startup_probe {
         http_get {
