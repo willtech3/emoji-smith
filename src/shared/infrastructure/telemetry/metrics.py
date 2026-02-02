@@ -149,12 +149,17 @@ class MetricsRecorder:
 
 
 def _build_meter_provider(config: TelemetryConfig) -> MeterProvider | None:
-    resource = Resource.create(
+    base_resource = Resource.create(
         {
             "service.name": config.service_name,
             "deployment.environment": config.environment,
         }
     )
+
+    # Use GCP resource detector to properly identify Cloud Run resources.
+    # This prevents "Points must be written in order" errors by giving each
+    # Cloud Run instance a unique resource identity.
+    resource = _get_gcp_resource(base_resource)
 
     exporter = _build_cloud_monitoring_exporter(config.project_id)
     if exporter is None:
@@ -168,6 +173,23 @@ def _build_meter_provider(config: TelemetryConfig) -> MeterProvider | None:
 
     reader = PeriodicExportingMetricReader(exporter)
     return MeterProvider(resource=resource, metric_readers=[reader])
+
+
+def _get_gcp_resource(base_resource: Resource) -> Resource:
+    """Merge base resource with GCP-detected resource attributes."""
+    try:
+        from opentelemetry.resourcedetector.gcp_resource_detector import (
+            GoogleCloudResourceDetector,
+        )
+        from opentelemetry.sdk.resources import get_aggregated_resources
+
+        return get_aggregated_resources(
+            [GoogleCloudResourceDetector(raise_on_error=False)],
+            initial_resource=base_resource,
+        )
+    except Exception:  # pragma: no cover - optional dependency
+        logger.debug("GCP resource detector unavailable", exc_info=True)
+        return base_resource
 
 
 def _build_cloud_monitoring_exporter(project_id: str) -> MetricExporter | None:

@@ -45,12 +45,14 @@ class TracingProvider:
             self._configured = True
             return
 
-        resource = Resource.create(
+        base_resource = Resource.create(
             {
                 "service.name": self._config.service_name,
                 "deployment.environment": self._config.environment,
             }
         )
+        # Use GCP resource detector to properly identify Cloud Run resources.
+        resource = _get_gcp_resource(base_resource)
         sampler = ParentBased(TraceIdRatioBased(self._config.trace_sample_rate))
         tracer_provider = TracerProvider(resource=resource, sampler=sampler)
 
@@ -119,3 +121,20 @@ def _build_gcp_propagator() -> TextMapPropagator | None:
         return cast(TextMapPropagator, CloudTraceFormatPropagator())
     except Exception:  # pragma: no cover - optional dependency
         return None
+
+
+def _get_gcp_resource(base_resource: Resource) -> Resource:
+    """Merge base resource with GCP-detected resource attributes."""
+    try:
+        from opentelemetry.resourcedetector.gcp_resource_detector import (
+            GoogleCloudResourceDetector,
+        )
+        from opentelemetry.sdk.resources import get_aggregated_resources
+
+        return get_aggregated_resources(
+            [GoogleCloudResourceDetector(raise_on_error=False)],
+            initial_resource=base_resource,
+        )
+    except Exception:  # pragma: no cover - optional dependency
+        logger.debug("GCP resource detector unavailable", exc_info=True)
+        return base_resource
