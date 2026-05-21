@@ -58,6 +58,36 @@ class TestGeminiAPIRepositoryGenerateImage:
         # Assert
         assert result == [expected_image_data]
         mock_gemini_client.aio.models.generate_content.assert_called_once()
+        call = mock_gemini_client.aio.models.generate_content.call_args
+        config = call.kwargs["config"]
+        assert config.image_config.aspect_ratio == "1:1"
+        assert config.image_config.image_size == "2K"
+
+    @pytest.mark.asyncio()
+    async def test_generate_image_reads_candidate_content_parts(
+        self, repository, mock_gemini_client
+    ):
+        """Support candidate-based response shapes from newer SDK responses."""
+        # Arrange
+        expected_image_data = b"candidate_image_bytes"
+        mock_part = MagicMock()
+        mock_part.inline_data = MagicMock()
+        mock_part.inline_data.data = expected_image_data
+
+        mock_candidate = MagicMock()
+        mock_candidate.content.parts = [mock_part]
+
+        mock_response = MagicMock()
+        mock_response.parts = None
+        mock_response.candidates = [mock_candidate]
+
+        mock_gemini_client.aio.models.generate_content.return_value = mock_response
+
+        # Act
+        result = await repository.generate_image("Test prompt")
+
+        # Assert
+        assert result == [expected_image_data]
 
     @pytest.mark.asyncio()
     async def test_generate_image_when_primary_fails_uses_imagen_fallback(
@@ -90,6 +120,10 @@ class TestGeminiAPIRepositoryGenerateImage:
         assert result == [expected_image_data]
         mock_gemini_client.aio.models.generate_content.assert_called_once()
         mock_gemini_client.aio.models.generate_images.assert_called_once()
+        call = mock_gemini_client.aio.models.generate_images.call_args
+        config = call.kwargs["config"]
+        assert config.aspect_ratio == "1:1"
+        assert config.image_size == "2K"
 
     @pytest.mark.asyncio()
     async def test_generate_image_when_quota_exceeded_raises_rate_limit_error(

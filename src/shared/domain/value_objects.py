@@ -344,11 +344,12 @@ class EmojiGenerationPreferences:
         per Slack requirements.
         """
         base = (
-            ", bold shapes, high contrast, "
+            ", single centered subject, bold shapes, bold silhouette, high contrast, "
+            "no text unless explicitly requested, "
             "optimized for 128x128 Slack emoji display at 20-32px"
         )
         if self.background == BackgroundType.TRANSPARENT:
-            return f", transparent background{base}"
+            return f", transparent background or clean alpha-style cutout{base}"
         return base
 
     @classmethod

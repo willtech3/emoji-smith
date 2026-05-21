@@ -20,7 +20,7 @@ async def test_generate_image_logs_model_generation_primary(caplog) -> None:
         return_value=SimpleNamespace(data=[SimpleNamespace(b64_json="aGVsbG8=")])
     )
 
-    repository = OpenAIAPIRepository(client, model="gpt-image-1.5")
+    repository = OpenAIAPIRepository(client, model="gpt-5")
 
     with caplog.at_level(logging.INFO):
         await repository.generate_image("test prompt")
@@ -33,7 +33,7 @@ async def test_generate_image_logs_model_generation_primary(caplog) -> None:
 
     assert len(generation_logs) == 1
     assert generation_logs[0].event_data["provider"] == "openai"
-    assert generation_logs[0].event_data["model"] == "gpt-image-1.5"
+    assert generation_logs[0].event_data["model"] == "gpt-image-2"
     assert generation_logs[0].event_data["is_fallback"] is False
 
 
@@ -49,7 +49,7 @@ async def test_generate_image_logs_model_generation_fallback(caplog) -> None:
         ]
     )
 
-    repository = OpenAIAPIRepository(client, model="gpt-image-1.5")
+    repository = OpenAIAPIRepository(client, model="gpt-5")
 
     with caplog.at_level(logging.INFO):
         await repository.generate_image("test prompt")
@@ -62,5 +62,5 @@ async def test_generate_image_logs_model_generation_fallback(caplog) -> None:
 
     assert len(generation_logs) == 1
     assert generation_logs[0].event_data["provider"] == "openai"
-    assert generation_logs[0].event_data["model"] == "gpt-image-1-mini"
+    assert generation_logs[0].event_data["model"] == "gpt-image-1.5"
     assert generation_logs[0].event_data["is_fallback"] is True
