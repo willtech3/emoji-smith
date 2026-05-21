@@ -117,14 +117,34 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
 
 @pytest.mark.asyncio()
 @pytest.mark.integration()
-async def test_falls_back_to_mini_when_gpt_image_fails() -> None:
-    """Test fallback to gpt-image-1-mini when primary model fails."""
+async def test_generate_image_uses_gpt_image_2_with_supported_background() -> None:
+    """Use the latest high-end OpenAI image model without unsupported transparency."""
+    client = AsyncMock()
+    client.images.generate.return_value = AsyncMock(
+        data=[AsyncMock(b64_json="aGVsbG8=")]
+    )
+    repo = OpenAIAPIRepository(client)
+
+    result = await repo.generate_image("test prompt", background="transparent")
+
+    assert result == [b"hello"]
+    client.images.generate.assert_called_once()
+    call = client.images.generate.call_args
+    assert call.kwargs["model"] == "gpt-image-2"
+    assert call.kwargs["background"] == "auto"
+    assert call.kwargs["output_format"] == "png"
+
+
+@pytest.mark.asyncio()
+@pytest.mark.integration()
+async def test_falls_back_to_gpt_image_1_5_when_gpt_image_2_fails() -> None:
+    """Test fallback to gpt-image-1.5 when primary model fails."""
     client = AsyncMock()
 
-    # First call (gpt-image-1.5) fails
+    # First call (gpt-image-2) fails
     client.images.generate.side_effect = [
-        Exception("gpt-image-1.5 not available"),
-        AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # gpt-image-1-mini succeeds
+        Exception("gpt-image-2 not available"),
+        AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # gpt-image-1.5 succeeds
     ]
 
     repo = OpenAIAPIRepository(client)
@@ -133,13 +153,14 @@ async def test_falls_back_to_mini_when_gpt_image_fails() -> None:
     # Should have called both models
     assert client.images.generate.call_count == 2
 
-    # First call should be gpt-image-1.5
+    # First call should be gpt-image-2
     first_call = client.images.generate.call_args_list[0]
-    assert first_call.kwargs["model"] == "gpt-image-1.5"
+    assert first_call.kwargs["model"] == "gpt-image-2"
 
-    # Second call should be gpt-image-1-mini
+    # Second call should be gpt-image-1.5, preserving transparent background
     second_call = client.images.generate.call_args_list[1]
-    assert second_call.kwargs["model"] == "gpt-image-1-mini"
+    assert second_call.kwargs["model"] == "gpt-image-1.5"
+    assert second_call.kwargs["background"] == "transparent"
     assert second_call.kwargs["size"] == "1024x1024"
 
     # Should return list of bytes

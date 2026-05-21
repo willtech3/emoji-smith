@@ -20,6 +20,9 @@ from emojismith.domain.repositories.openai_repository import OpenAIRepository
 from shared.infrastructure.logging import log_event
 from shared.infrastructure.telemetry.metrics import MetricsRecorder
 
+OPENAI_IMAGE_MODEL = "gpt-image-2"
+OPENAI_IMAGE_FALLBACK_MODELS = ["gpt-image-1.5", "gpt-image-1-mini"]
+
 
 class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
     """Concrete OpenAI repository using openai package."""
@@ -66,25 +69,33 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
         await self._ensure_model()
 
         system_prompt = (
-            "You are an expert at crafting prompts for OpenAI's gpt-image-1 model "
-            "to create Slack emojis. Use the guidelines below.\n\n"
+            "You are an expert at crafting prompts for OpenAI GPT Image models, "
+            "including gpt-image-2, to create custom Slack emojis. "
+            "Use the guidelines below.\n\n"
             "REQUIREMENTS:\n"
-            "- Always mention a transparent background.\n"
-            "- Optimize for 128x128 pixel Slack emoji display.\n"
-            "- Keep shapes bold and high contrast for readability at tiny sizes.\n\n"
+            "- Describe a single centered emoji subject with a clean silhouette.\n"
+            "- Optimize for 128x128 pixel Slack emoji display and readability "
+            "at 20-32px.\n"
+            "- Use bold shapes, simple composition, and high contrast colors.\n"
+            "- Ask for a transparent background when supported; otherwise ask for an "
+            "isolated subject on a plain, removable background.\n"
+            "- Do not include text, letters, captions, or UI unless the user "
+            "explicitly requests text.\n\n"
             "FORMAT:\n"
-            '"[Style] [Subject] with [Key Features], transparent background, '
-            'optimized for 128x128 pixel Slack emoji, [Additional Details]"\n\n'
+            '"[Style/medium] [single subject/action] with [2-3 distinctive visual '
+            "features], centered icon composition, bold silhouette, optimized for "
+            '128x128 Slack emoji, [background guidance]"\n\n'
             "STYLE OPTIONS:\n"
             "- Cartoon style for playful emojis\n"
             "- Minimalist flat design for professional contexts\n"
             "- Pixel art for retro themes\n"
             "- Realistic style for objects/foods\n\n"
             "PROMPT RULES:\n"
-            "1. Simplify complex descriptions.\n"
+            "1. Turn vague or complex requests into one clear visual metaphor.\n"
             "2. Highlight distinctive features visible when small.\n"
-            "3. Use vibrant contrasting colors.\n"
-            "4. Avoid intricate detail.\n"
+            "3. Use concrete nouns, colors, materials, and emotion cues.\n"
+            "4. Avoid busy backgrounds, tiny props, cropped subjects, and "
+            "fine detail.\n"
             "5. Incorporate message context when useful.\n"
             "6. Return only the final prompt text, "
             "without quotes or extra formatting.\n"
@@ -93,16 +104,17 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
             "EXAMPLES:\n"
             'Context: "Just shipped new feature" / Description: "rocket"\n'
             'Prompt: "Cartoon rocket launching with bright orange flames, '
-            "transparent background, optimized for 128x128 pixel Slack emoji, "
-            'bold outlines, vibrant colors"\n\n'
+            "centered icon composition, bold silhouette, vibrant blue body and red "
+            "fins, optimized for 128x128 Slack emoji, transparent background "
+            'if supported"\n\n'
             'Context: "Team celebration" / Description: "party"\n'
-            'Prompt: "Festive party popper bursting with confetti, transparent '
-            "background, optimized for 128x128 pixel Slack emoji, cartoon style, "
-            'bold colors"\n\n'
+            'Prompt: "Festive party popper bursting with a few large confetti pieces, '
+            "simple cartoon style, centered icon composition, bold outlines, bright "
+            'colors, optimized for 128x128 Slack emoji, isolated plain background"\n\n'
             'Context: "Coffee break" / Description: "tired"\n'
             'Prompt: "Sleepy face clutching coffee cup with rising steam, '
-            "transparent background, optimized for 128x128 pixel Slack emoji, "
-            'simple cartoon style, clear expression"\n'
+            "simple cartoon style, clear tired expression, bold silhouette, "
+            'optimized for 128x128 Slack emoji, no text"\n'
         )
 
         try:
@@ -149,40 +161,41 @@ class OpenAIAPIRepository(OpenAIRepository, ImageGenerationRepository):
         # Cap at 4 images for reasonable UX
         start_time = time.monotonic()
         n = min(num_images, 4)
-        used_model = "gpt-image-1.5"
+        models_to_try = [OPENAI_IMAGE_MODEL, *OPENAI_IMAGE_FALLBACK_MODELS]
+        used_model = OPENAI_IMAGE_MODEL
         is_fallback = False
 
-        try:
-            response = await self._client.images.generate(
-                model=used_model,
-                prompt=prompt,
-                n=n,
-                size="1024x1024",
-                quality=quality,
-                background=background,
-                # GPT image models use output_format, not response_format
-                output_format="png",
-            )
-        except openai.RateLimitError as exc:
-            raise RateLimitExceededError(str(exc)) from exc
-        except Exception as exc:
-            self._logger.warning(
-                "gpt-image-1.5 failed, falling back to gpt-image-1-mini: %s", exc
-            )
+        for index, candidate_model in enumerate(models_to_try):
+            used_model = candidate_model
+            is_fallback = index > 0
+            request_background = background
+            if candidate_model == OPENAI_IMAGE_MODEL and background == "transparent":
+                # gpt-image-2 currently rejects transparent background requests.
+                request_background = "auto"
+
             try:
-                used_model = "gpt-image-1-mini"
-                is_fallback = True
                 response = await self._client.images.generate(
                     model=used_model,
                     prompt=prompt,
                     n=n,
                     size="1024x1024",
-                    background=background,
-                    # GPT image models use output_format
+                    quality=quality,
+                    background=request_background,
                     output_format="png",
                 )
+                break
             except openai.RateLimitError as rate_exc:
                 raise RateLimitExceededError(str(rate_exc)) from rate_exc
+            except Exception as exc:
+                if index == len(models_to_try) - 1:
+                    raise
+                next_model = models_to_try[index + 1]
+                self._logger.warning(
+                    "%s failed, falling back to %s: %s",
+                    used_model,
+                    next_model,
+                    exc,
+                )
 
         if not response.data:
             raise ValueError("OpenAI did not return image data")

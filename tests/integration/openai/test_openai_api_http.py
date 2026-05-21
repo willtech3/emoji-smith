@@ -54,7 +54,7 @@ async def test_generate_image_fallback() -> None:
             return httpx.Response(200, json={})
         model = json.loads(request.content)["model"]
         calls.append(model)
-        if model == "gpt-image-1.5":
+        if model == "gpt-image-2":
             return httpx.Response(500)
         b64 = base64.b64encode(b"img").decode()
         return httpx.Response(200, json={"data": [{"b64_json": b64}]})
@@ -69,8 +69,8 @@ async def test_generate_image_fallback() -> None:
     repo = OpenAIAPIRepository(client)
     result = await repo.generate_image("prompt")
     assert result == [b"img"]  # Returns list of bytes
-    assert calls[0] == "gpt-image-1.5"
-    assert calls[-1] == "gpt-image-1-mini"
+    assert calls[0] == "gpt-image-2"
+    assert calls[-1] == "gpt-image-1.5"
 
 
 @pytest.mark.asyncio()

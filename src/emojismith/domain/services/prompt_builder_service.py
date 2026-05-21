@@ -47,7 +47,7 @@ class PromptBuilderService:
             spec: The emoji specification containing description, context, and style
 
         Returns:
-            An optimized prompt string ready for gpt-image-1
+            An optimized prompt string ready for the configured image model
         """
         if not spec or not spec.description:
             raise ValueError("Specification must have a description")
@@ -193,7 +193,9 @@ class PromptBuilderService:
         Returns:
             The prompt with emoji requirements added
         """
-        requirements = "as a simple emoji icon"
+        requirements = (
+            "as a simple centered emoji icon with bold silhouette and no text"
+        )
         return f"{prompt} {requirements}"
 
     def optimize_prompt_length(self, prompt: str) -> str:

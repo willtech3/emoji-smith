@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any
 
 from google import genai
 from google.api_core import exceptions as google_exceptions
@@ -42,6 +43,10 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
         self._text_model = text_model
         self._metrics = metrics_recorder
 
+    def _image_size_for_quality(self, quality: str) -> str:
+        """Map shared quality preferences to Google image output sizes."""
+        return "1K" if quality in {"low", "medium"} else "2K"
+
     def _is_rate_limit_error(self, exc: Exception) -> bool:
         """Check if an exception represents a rate limit error.
 
@@ -58,7 +63,9 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
         # Fallback: check for 429 status code in the error
         return getattr(exc, "code", None) == 429
 
-    async def _generate_with_model(self, prompt: str, model: str) -> bytes:
+    async def _generate_with_model(
+        self, prompt: str, model: str, image_size: str
+    ) -> bytes:
         """Generate image with specified model using native async."""
         response = await self._client.aio.models.generate_content(
             model=model,
@@ -67,16 +74,29 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
                 response_modalities=["IMAGE"],
                 image_config=types.ImageConfig(
                     aspect_ratio="1:1",
+                    image_size=image_size,
                 ),
             ),
         )
 
-        if response.parts is not None:
-            for part in response.parts:
-                if part.inline_data and part.inline_data.data is not None:
-                    return bytes(part.inline_data.data)
+        for part in self._iter_response_parts(response):
+            if part.inline_data and part.inline_data.data is not None:
+                return bytes(part.inline_data.data)
 
         raise ValueError("Gemini did not return image data")
+
+    def _iter_response_parts(self, response: Any) -> list[Any]:
+        """Return parts from both current and candidate-based SDK responses."""
+        parts = getattr(response, "parts", None)
+        if parts is not None:
+            return list(parts)
+
+        candidates = getattr(response, "candidates", None) or []
+        candidate_parts: list[object] = []
+        for candidate in candidates:
+            content = getattr(candidate, "content", None)
+            candidate_parts.extend(getattr(content, "parts", None) or [])
+        return candidate_parts
 
     async def enhance_prompt(self, context: str, description: str) -> str:
         """Enhance a prompt using Gemini 3 Flash for emoji generation.
@@ -93,16 +113,18 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
         # 3. Include examples
         # 4. Specify output format
         system_instruction = """You are an expert prompt engineer specializing in \
-creating prompts for AI image generation of Slack emojis.
+creating prompts for Gemini image models and Imagen to generate Slack emojis.
 
 TASK: Transform the user's context and description into an optimized image \
-generation prompt for creating a Slack emoji.
+generation prompt for creating one custom Slack emoji.
 
 REQUIREMENTS:
-- Output must specify a transparent background
-- Optimize for 128x128 pixel display (Slack emoji size)
-- Use bold shapes and high contrast for small-size readability
-- Keep designs simple - avoid fine details that disappear at small sizes
+- Describe a single centered subject or visual metaphor
+- Ask for a transparent background or clean alpha-style cutout when possible
+- Optimize for 128x128 pixel display and readability at 20-32px
+- Use bold shapes, simple composition, and high contrast colors
+- Avoid text, captions, letters, or UI unless explicitly requested
+- Avoid fine details, busy scenes, tiny props, and cropped subjects
 
 OUTPUT FORMAT:
 Return ONLY the optimized prompt text. No explanations, no quotes, no formatting.
@@ -118,20 +140,20 @@ EXAMPLES:
 Input Context: "Just deployed the new feature!"
 Input Description: "rocket ship"
 Output: Cartoon rocket ship with bright orange flames launching upward, \
-bold black outlines, vibrant blue body with red fins, transparent background, \
-optimized for 128x128 pixel Slack emoji
+centered icon composition, bold black outlines, vibrant blue body with red fins, \
+transparent background if supported, optimized for 128x128 Slack emoji
 
 Input Context: "Team standup meeting"
 Input Description: "coffee cup"
 Output: Steaming coffee mug in minimalist flat design, warm brown with \
-white steam curls, simple clean lines, transparent background, \
-optimized for 128x128 pixel Slack emoji
+white steam curls, simple clean lines, centered icon composition, \
+clean removable background, optimized for 128x128 Slack emoji
 
 Input Context: "Bug fixed!"
 Input Description: "celebration"
 Output: Colorful party popper with confetti burst, cartoon style with \
-bold outlines, bright rainbow confetti pieces, transparent background, \
-optimized for 128x128 pixel Slack emoji"""
+bold outlines, a few bright rainbow confetti pieces, centered icon composition, \
+no text, optimized for 128x128 Slack emoji"""
 
         user_message = f"""Input Context: {context}
 Input Description: {description}
@@ -158,7 +180,7 @@ Output:"""
                 raise RateLimitExceededError(str(exc)) from exc
             raise
 
-    async def _generate_with_imagen(self, prompt: str) -> bytes:
+    async def _generate_with_imagen(self, prompt: str, image_size: str) -> bytes:
         """Generate image with Imagen 4 Ultra fallback.
 
         Uses the Imagen API which has a different method signature than Gemini.
@@ -169,6 +191,7 @@ Output:"""
             config=types.GenerateImagesConfig(
                 number_of_images=1,
                 aspect_ratio="1:1",
+                image_size=image_size,
             ),
         )
 
@@ -201,14 +224,17 @@ Output:"""
             List of image bytes
         """
         # Unused parameters kept for protocol compatibility
-        _ = quality, background
+        _ = background
         images = []
         n = min(num_images, 4)
+        image_size = self._image_size_for_quality(quality)
 
         for _ in range(n):
             try:
                 start_time = time.monotonic()
-                image_bytes = await self._generate_with_model(prompt, self._model)
+                image_bytes = await self._generate_with_model(
+                    prompt, self._model, image_size
+                )
                 duration_s = time.monotonic() - start_time
                 log_event(
                     self._logger,
@@ -239,7 +265,7 @@ Output:"""
                 )
                 try:
                     start_time = time.monotonic()
-                    image_bytes = await self._generate_with_imagen(prompt)
+                    image_bytes = await self._generate_with_imagen(prompt, image_size)
                     duration_s = time.monotonic() - start_time
                     log_event(
                         self._logger,
