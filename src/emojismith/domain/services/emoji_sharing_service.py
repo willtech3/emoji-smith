@@ -16,6 +16,13 @@ class WorkspaceType(str, Enum):
     ENTERPRISE_GRID = "enterprise_grid"
 
 
+class SharingStrategy(str, Enum):
+    """Strategy for sharing a custom emoji."""
+
+    DIRECT_UPLOAD = "direct_upload"
+    FILE_SHARE = "file_share"
+
+
 @dataclass(frozen=True)
 class EmojiSharingContext:
     """Context for determining sharing strategy."""
@@ -23,7 +30,6 @@ class EmojiSharingContext:
     emoji: GeneratedEmoji
     original_message: SlackMessage
     preferences: EmojiSharingPreferences
-    workspace_type: WorkspaceType
 
 
 class EmojiSharingService:
@@ -46,13 +52,17 @@ class EmojiSharingService:
         """
         return self._workspace_type
 
-    def determine_sharing_strategy(self, context: EmojiSharingContext) -> None:
+    def determine_sharing_strategy(
+        self, context: EmojiSharingContext
+    ) -> SharingStrategy:
         """Determine the best sharing strategy based on workspace capabilities.
 
-        Note: This method is currently not used as the sharing logic is
-        implemented directly in the application layer. It's kept for potential
-        future use if we decide to reintroduce the strategy pattern.
+        Args:
+            context: The emoji sharing context.
+
+        Returns:
+            The determined SharingStrategy.
         """
-        # The actual sharing logic is implemented in EmojiCreationService
-        # based on the workspace type
-        pass
+        if self._workspace_type == WorkspaceType.ENTERPRISE_GRID:
+            return SharingStrategy.DIRECT_UPLOAD
+        return SharingStrategy.FILE_SHARE

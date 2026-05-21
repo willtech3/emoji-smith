@@ -6,6 +6,7 @@ from emojismith.domain.entities.generated_emoji import GeneratedEmoji
 from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingContext,
     EmojiSharingService,
+    SharingStrategy,
     WorkspaceType,
 )
 from shared.domain.entities.slack_message import SlackMessage
@@ -20,11 +21,6 @@ from shared.domain.value_objects import (
 @pytest.mark.unit()
 class TestEmojiSharingService:
     """Test emoji sharing service determines correct strategy."""
-
-    @pytest.fixture()
-    def sharing_service(self):
-        """Create emoji sharing service."""
-        return EmojiSharingService()
 
     @pytest.fixture()
     def sample_emoji(self):
@@ -51,62 +47,50 @@ class TestEmojiSharingService:
             image_size=ImageSize.EMOJI_SIZE,
         )
 
-    def test_determine_sharing_strategy_with_enterprise_grid(
-        self, sharing_service, sample_emoji, sample_message, channel_sharing_prefs
-    ):
-        """Test determine_sharing_strategy handles Enterprise Grid context."""
-        # Arrange
-        context = EmojiSharingContext(
+    @pytest.fixture()
+    def sample_context(self, sample_emoji, sample_message, channel_sharing_prefs):
+        """Create a reusable sharing context for tests."""
+        return EmojiSharingContext(
             emoji=sample_emoji,
             original_message=sample_message,
             preferences=channel_sharing_prefs,
-            workspace_type=WorkspaceType.ENTERPRISE_GRID,
         )
 
-        # Act - method now returns None but should not raise
-        result = sharing_service.determine_sharing_strategy(context)
+    def test_determine_sharing_strategy_with_enterprise_grid(self, sample_context):
+        """Test determine_sharing_strategy returns DIRECT_UPLOAD for Enterprise Grid."""
+        # Arrange — workspace type belongs on the service
+        service = EmojiSharingService(workspace_type=WorkspaceType.ENTERPRISE_GRID)
+
+        # Act
+        result = service.determine_sharing_strategy(sample_context)
 
         # Assert
-        assert result is None
+        assert result == SharingStrategy.DIRECT_UPLOAD
 
-    def test_determine_sharing_strategy_with_standard_workspace(
-        self, sharing_service, sample_emoji, sample_message, channel_sharing_prefs
-    ):
-        """Test determine_sharing_strategy handles standard workspace context."""
+    def test_determine_sharing_strategy_with_standard_workspace(self, sample_context):
+        """Test determine_sharing_strategy returns FILE_SHARE for standard workspace."""
         # Arrange
-        context = EmojiSharingContext(
-            emoji=sample_emoji,
-            original_message=sample_message,
-            preferences=channel_sharing_prefs,
-            workspace_type=WorkspaceType.STANDARD,
-        )
+        service = EmojiSharingService(workspace_type=WorkspaceType.STANDARD)
 
-        # Act - method now returns None but should not raise
-        result = sharing_service.determine_sharing_strategy(context)
+        # Act
+        result = service.determine_sharing_strategy(sample_context)
 
         # Assert
-        assert result is None
+        assert result == SharingStrategy.FILE_SHARE
 
-    def test_determine_sharing_strategy_with_free_workspace(
-        self, sharing_service, sample_emoji, sample_message, channel_sharing_prefs
-    ):
-        """Test determine_sharing_strategy handles free workspace context."""
+    def test_determine_sharing_strategy_with_free_workspace(self, sample_context):
+        """Test determine_sharing_strategy returns FILE_SHARE for free workspace."""
         # Arrange
-        context = EmojiSharingContext(
-            emoji=sample_emoji,
-            original_message=sample_message,
-            preferences=channel_sharing_prefs,
-            workspace_type=WorkspaceType.FREE,
-        )
+        service = EmojiSharingService(workspace_type=WorkspaceType.FREE)
 
-        # Act - method now returns None but should not raise
-        result = sharing_service.determine_sharing_strategy(context)
+        # Act
+        result = service.determine_sharing_strategy(sample_context)
 
         # Assert
-        assert result is None
+        assert result == SharingStrategy.FILE_SHARE
 
     def test_sharing_context_preserves_thread_preferences(
-        self, sharing_service, sample_emoji, sample_message
+        self, sample_emoji, sample_message
     ):
         """Test sharing context maintains thread sharing preference."""
         # Arrange
@@ -120,20 +104,21 @@ class TestEmojiSharingService:
             emoji=sample_emoji,
             original_message=sample_message,
             preferences=thread_prefs,
-            workspace_type=WorkspaceType.STANDARD,
         )
 
-        # Act - verify context preserves preferences
-        sharing_service.determine_sharing_strategy(context)
+        # Act — verify context preserves preferences
+        service = EmojiSharingService()
+        service.determine_sharing_strategy(context)
 
-        # Assert - context still has correct preferences
+        # Assert — context still has correct preferences
         assert context.preferences.share_location == ShareLocation.THREAD
         assert context.preferences.thread_ts == "1234567890.123456"
 
-    def test_workspace_type_is_stored(self, sharing_service):
+    def test_workspace_type_is_stored(self):
         """Test service stores the workspace type provided at initialization."""
         # Default workspace type should be STANDARD
-        assert sharing_service.workspace_type == WorkspaceType.STANDARD
+        service = EmojiSharingService()
+        assert service.workspace_type == WorkspaceType.STANDARD
 
         # Test with explicit workspace type
         enterprise_service = EmojiSharingService(
@@ -168,14 +153,12 @@ class TestEmojiSharingContext:
             emoji=emoji,
             original_message=message,
             preferences=prefs,
-            workspace_type=WorkspaceType.STANDARD,
         )
 
         # Assert
         assert context.emoji == emoji
         assert context.original_message == message
         assert context.preferences == prefs
-        assert context.workspace_type == WorkspaceType.STANDARD
 
     def test_context_is_immutable(self):
         """Test context cannot be modified after creation."""
@@ -194,9 +177,8 @@ class TestEmojiSharingContext:
                 instruction_visibility=InstructionVisibility.EVERYONE,
                 image_size=ImageSize.EMOJI_SIZE,
             ),
-            workspace_type=WorkspaceType.STANDARD,
         )
 
         # Act & Assert
         with pytest.raises(AttributeError):
-            context.workspace_type = WorkspaceType.ENTERPRISE_GRID
+            context.emoji = GeneratedEmoji(name="other", image_data=b"other")
