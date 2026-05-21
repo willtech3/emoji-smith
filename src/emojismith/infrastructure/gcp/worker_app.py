@@ -78,6 +78,7 @@ async def process_pubsub_message(request: Request) -> dict:
     """
     job_start_time: float | None = None
     job_provider = "unknown"
+    token = None
     try:
         envelope = await request.json()
 
@@ -100,6 +101,7 @@ async def process_pubsub_message(request: Request) -> dict:
         job_provider = job.image_provider
 
         trace_id_value = job.trace_id or job.job_id
+        token = trace_id_var.set(trace_id_value)
 
         # Prefer continuing the trace (when the incoming job trace id is a valid
         # 32-hex OpenTelemetry trace id). Otherwise, fall back to using the job
@@ -172,7 +174,6 @@ async def process_pubsub_message(request: Request) -> dict:
                 )
                 await emoji_service.process_emoji_generation_job(job)
         else:
-            trace_id_var.set(trace_id_value)
             log_event(
                 logger,
                 logging.INFO,
@@ -226,3 +227,6 @@ async def process_pubsub_message(request: Request) -> dict:
         )
         # Return 500 to trigger Pub/Sub retry.
         raise HTTPException(status_code=500, detail="Internal error") from e
+    finally:
+        if token is not None:
+            trace_id_var.reset(token)

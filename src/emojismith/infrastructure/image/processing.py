@@ -2,6 +2,7 @@
 
 import logging
 from io import BytesIO
+from typing import Literal
 
 from PIL import Image
 
@@ -24,20 +25,32 @@ class PillowImageProcessor:
             img = img.convert("RGBA")
             img = img.resize((128, 128), RESAMPLE)
 
-            final_colors = 256  # Track the final color count used
-            for colors in (256, 128, 64, 32):
-                data = self._quantize_and_save(img, colors)
-                self._logger.debug(
-                    "quantized with %d colors: %d bytes (%.1f%% of original)",
-                    colors,
-                    len(data),
-                    (len(data) / original_size) * 100,
-                )
-                if len(data) < 64 * 1024:
-                    final_colors = colors
-                    break
+            # Try saving as a high-fidelity 32-bit RGBA PNG first
+            output = BytesIO()
+            img.save(output, format="PNG", optimize=True, compress_level=9)
+            data = output.getvalue()
+
+            if len(data) < 64 * 1024:
+                final_colors: int | Literal["lossless"] = "lossless"
             else:
-                raise ValueError("processed image too large")
+                self._logger.warning(
+                    "Lossless compression exceeded 64KB. "
+                    "Falling back to color quantization."
+                )
+                final_colors = 256  # Track the final color count used
+                for colors in (256, 128, 64, 32):
+                    data = self._quantize_and_save(img, colors)
+                    self._logger.debug(
+                        "quantized with %d colors: %d bytes (%.1f%% of original)",
+                        colors,
+                        len(data),
+                        (len(data) / original_size) * 100,
+                    )
+                    if len(data) < 64 * 1024:
+                        final_colors = colors
+                        break
+                else:
+                    raise ValueError("processed image too large")
 
         self._logger.info(
             "image processed",

@@ -17,7 +17,7 @@ from emojismith.domain.services.emoji_instruction_service import (
 from emojismith.domain.services.emoji_sharing_service import (
     EmojiSharingContext,
     EmojiSharingService,
-    WorkspaceType,
+    SharingStrategy,
 )
 from emojismith.domain.services.emoji_validation_service import EmojiValidationService
 from emojismith.domain.services.generation_service import EmojiGenerationService
@@ -149,10 +149,6 @@ class EmojiCreationService:
             background=gen_prefs.background.value,
         )
 
-        # Get workspace type from sharing service
-        workspace_type = self._sharing_service.workspace_type
-
-        # Create sharing context for all emojis
         from shared.domain.entities.slack_message import SlackMessage
 
         original_message = SlackMessage(
@@ -187,10 +183,11 @@ class EmojiCreationService:
                 emoji=emoji,
                 original_message=original_message,
                 preferences=sharing_preferences,
-                workspace_type=workspace_type,
             )
 
-            if workspace_type == WorkspaceType.ENTERPRISE_GRID:
+            strategy = self._sharing_service.determine_sharing_strategy(context)
+
+            if strategy == SharingStrategy.DIRECT_UPLOAD:
                 # Try direct upload for Enterprise Grid
                 uploaded = await self._slack_repo.upload_emoji(
                     name=emoji.name, image_data=emoji.image_data
@@ -207,7 +204,7 @@ class EmojiCreationService:
                             )
                         except Exception as e:
                             self._logger.error(f"Failed to add emoji reaction: {e}")
-            else:
+            elif strategy == SharingStrategy.FILE_SHARE:
                 # Use file sharing for non-Enterprise workspaces
                 if self._file_sharing_repo:
                     # When generating multiple variations, posting the full upload steps
