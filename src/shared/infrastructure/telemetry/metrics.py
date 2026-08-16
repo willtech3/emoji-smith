@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import cast
+from uuid import uuid4
 
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
@@ -149,12 +150,7 @@ class MetricsRecorder:
 
 
 def _build_meter_provider(config: TelemetryConfig) -> MeterProvider | None:
-    resource = Resource.create(
-        {
-            "service.name": config.service_name,
-            "deployment.environment": config.environment,
-        }
-    )
+    resource = _build_metrics_resource(config)
 
     exporter = _build_cloud_monitoring_exporter(config.project_id)
     if exporter is None:
@@ -168,6 +164,21 @@ def _build_meter_provider(config: TelemetryConfig) -> MeterProvider | None:
 
     reader = PeriodicExportingMetricReader(exporter)
     return MeterProvider(resource=resource, metric_readers=[reader])
+
+
+def _build_metrics_resource(config: TelemetryConfig) -> Resource:
+    """Build a process-unique resource for cumulative Cloud Monitoring metrics."""
+    resource = Resource.create(
+        {
+            "service.name": config.service_name,
+            # The exporter maps this to generic_task.task_id. Cloud Run may run
+            # overlapping revisions or multiple instances; a process-unique ID
+            # prevents their cumulative metric streams from colliding.
+            "service.instance.id": uuid4().hex,
+            "deployment.environment": config.environment,
+        }
+    )
+    return resource
 
 
 def _build_cloud_monitoring_exporter(project_id: str) -> MetricExporter | None:
@@ -184,7 +195,8 @@ def _build_cloud_monitoring_exporter(project_id: str) -> MetricExporter | None:
 
     try:
         return cast(
-            MetricExporter, CloudMonitoringMetricsExporter(project_id=project_id)
+            MetricExporter,
+            CloudMonitoringMetricsExporter(project_id=project_id),
         )
     except TypeError:
         return cast(MetricExporter, CloudMonitoringMetricsExporter())
