@@ -10,10 +10,10 @@ Emoji Smith is a Slack bot that generates custom emoji reactions using AI (OpenA
 
 - **🎯 Context-aware generation**: Uses the original message for better emojis
 - **🎨 Style customization**: Multiple styles and quality options
-- **🔄 Multi-provider**: OpenAI + Google image generation
+- **🔄 Multi-provider**: GPT Image 2 + Gemini 3 Pro Image, with Gemini 3.1 Flash Image fallback
 - **⚡ Fast Slack response**: Webhook responds within Slack’s 3-second timeout
 - **🔒 Secure deployment**: GCP Secret Manager + least privilege service accounts
-- **🚀 Serverless runtime**: Cloud Run + Pub/Sub
+- **🚀 Serverless runtime**: Cloud Run + Pub/Sub, with one warm webhook instance for reliable Slack modals
 
 ## 🏗️ Architecture (Production)
 

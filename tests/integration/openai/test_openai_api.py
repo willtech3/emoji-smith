@@ -49,6 +49,7 @@ async def test_enhance_prompt_uses_comprehensive_system_prompt() -> None:
     assert "slack" in system_prompt.lower()
     assert "emoji" in system_prompt.lower()
     assert "gpt-image" in system_prompt.lower()
+    assert "untrusted" in system_prompt.lower()
     assert (
         len(system_prompt) > 100
     )  # Should be comprehensive, not just "Enhance emoji prompt"
@@ -106,13 +107,12 @@ async def test_rejects_image_generation_when_no_data_returned() -> None:
 @pytest.mark.asyncio()
 @pytest.mark.integration()
 async def test_rejects_image_generation_when_b64_json_is_none() -> None:
-    """Test that None b64_json is handled gracefully by returning empty list."""
+    """A successful-looking response without image bytes must fail the job."""
     client = AsyncMock()
     client.images.generate.return_value = AsyncMock(data=[AsyncMock(b64_json=None)])
     repo = OpenAIAPIRepository(client)
-    # With new API, None b64_json results in empty list since we skip None values
-    result = await repo.generate_image("prompt")
-    assert result == []  # Empty list when no valid images
+    with pytest.raises(ValueError, match="decodable image data"):
+        await repo.generate_image("prompt")
 
 
 @pytest.mark.asyncio()
@@ -137,36 +137,17 @@ async def test_generate_image_uses_gpt_image_2_with_supported_background() -> No
 
 @pytest.mark.asyncio()
 @pytest.mark.integration()
-async def test_falls_back_to_gpt_image_1_5_when_gpt_image_2_fails() -> None:
-    """Test fallback to gpt-image-1.5 when primary model fails."""
+async def test_does_not_fall_back_to_deprecated_image_models() -> None:
+    """A GPT Image 2 failure must not route work to deprecated models."""
     client = AsyncMock()
-
-    # First call (gpt-image-2) fails
-    client.images.generate.side_effect = [
-        Exception("gpt-image-2 not available"),
-        AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),  # gpt-image-1.5 succeeds
-    ]
+    client.images.generate.side_effect = Exception("gpt-image-2 unavailable")
 
     repo = OpenAIAPIRepository(client)
-    result = await repo.generate_image("test prompt")
+    with pytest.raises(Exception, match="gpt-image-2 unavailable"):
+        await repo.generate_image("test prompt")
 
-    # Should have called both models
-    assert client.images.generate.call_count == 2
-
-    # First call should be gpt-image-2
-    first_call = client.images.generate.call_args_list[0]
-    assert first_call.kwargs["model"] == "gpt-image-2"
-
-    # Second call should be gpt-image-1.5, preserving transparent background
-    second_call = client.images.generate.call_args_list[1]
-    assert second_call.kwargs["model"] == "gpt-image-1.5"
-    assert second_call.kwargs["background"] == "transparent"
-    assert second_call.kwargs["size"] == "1024x1024"
-
-    # Should return list of bytes
-    assert isinstance(result, list)
-    assert len(result) == 1
-    assert isinstance(result[0], bytes)
+    client.images.generate.assert_awaited_once()
+    assert client.images.generate.call_args.kwargs["model"] == "gpt-image-2"
 
 
 @pytest.mark.asyncio()
