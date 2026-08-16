@@ -4,7 +4,7 @@
 # IMPORTANT: invoker_iam_disabled requires google-beta provider
 
 resource "google_cloud_run_v2_service" "webhook" {
-  provider = google-beta  # Required for invoker_iam_disabled
+  provider = google-beta # Required for invoker_iam_disabled
   name     = "emoji-smith-webhook"
   location = var.region
 
@@ -17,10 +17,10 @@ resource "google_cloud_run_v2_service" "webhook" {
   template {
     service_account = google_service_account.webhook_runtime.email
 
-    # Scaling settings for free tier optimization
+    # Slack trigger IDs expire quickly; keep one warm instance for modal opens.
     scaling {
-      min_instance_count = 0  # Scale to zero when idle
-      max_instance_count = 2  # Limit max instances
+      min_instance_count = 1 # Avoid cold starts expiring Slack trigger IDs
+      max_instance_count = 2 # Limit max instances
     }
 
     containers {
@@ -32,7 +32,7 @@ resource "google_cloud_run_v2_service" "webhook" {
           cpu    = "1"
           memory = "256Mi"
         }
-        cpu_idle = true  # Only charge for CPU during requests
+        cpu_idle = true # Only charge for CPU during requests
       }
 
       # Port configuration

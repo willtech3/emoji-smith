@@ -2,6 +2,12 @@
 
 > **Adding Google Gemini (Nano Banana Pro) alongside OpenAI for user-selectable image generation**
 
+> [!NOTE]
+> This is the historical implementation specification. The production model
+> set was re-audited on 2026-08-16: OpenAI uses `gpt-image-2`; Google uses
+> `gemini-3-pro-image` with `gemini-3.1-flash-image` fallback. Imagen is no
+> longer used because Google deprecated that API family.
+
 ## Overview
 
 This document specifies adding **Google Gemini** as an additional image generation provider alongside the existing **OpenAI** integration. Users will be able to select their preferred model provider from the Slack UI, and the worker will generate images using the chosen provider.

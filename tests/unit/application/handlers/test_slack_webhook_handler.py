@@ -70,6 +70,11 @@ class TestGenerateEmojiName:
         assert not base_name.startswith("_")
         assert not base_name.endswith("_")
 
+    def test_punctuation_only_description_uses_emoji_prefix(self):
+        name = WebhookEventProcessor._generate_emoji_name("🎉!!!")
+
+        assert name.startswith("emoji_")
+
 
 @pytest.mark.unit()
 class TestModalSubmissionAutoGeneratesName:
@@ -180,6 +185,46 @@ class TestModalSubmissionAutoGeneratesName:
         assert job.emoji_name == "custom_banana"
         assert job.trace_id
         uuid.UUID(job.trace_id)
+
+    @pytest.mark.asyncio()
+    async def test_normalizes_spaces_and_case_in_provided_name(
+        self, processor, mock_job_queue
+    ):
+        payload = self._make_submission_payload(
+            description="A happy dancing banana",
+            emoji_name="Custom Banana",
+        )
+
+        result = await processor.process(json.dumps(payload).encode())
+
+        assert result == {"response_action": "clear"}
+        job = mock_job_queue.enqueue_job.call_args.args[0]
+        assert job.emoji_name == "custom_banana"
+
+    @pytest.mark.asyncio()
+    async def test_rejects_invalid_provided_name(self, processor, mock_job_queue):
+        payload = self._make_submission_payload(
+            description="A happy dancing banana",
+            emoji_name="bad-name!",
+        )
+
+        result = await processor.process(json.dumps(payload).encode())
+
+        assert result["response_action"] == "errors"
+        assert "lowercase letters" in result["errors"]["emoji_name"]
+        mock_job_queue.enqueue_job.assert_not_awaited()
+
+    @pytest.mark.asyncio()
+    async def test_rejects_description_over_500_characters(
+        self, processor, mock_job_queue
+    ):
+        payload = self._make_submission_payload(description="x" * 501)
+
+        result = await processor.process(json.dumps(payload).encode())
+
+        assert result["response_action"] == "errors"
+        assert "500 characters" in result["errors"]["emoji_description"]
+        mock_job_queue.enqueue_job.assert_not_awaited()
 
 
 @pytest.mark.unit()

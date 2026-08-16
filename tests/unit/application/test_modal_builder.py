@@ -57,6 +57,24 @@ class TestEmojiCreationModalBuilder:
         assert description_block["type"] == "input"
         assert description_block["element"]["type"] == "plain_text_input"
         assert description_block["element"]["multiline"] is True
+        assert description_block["element"]["max_length"] == 500
+
+    def test_provider_labels_match_current_models(
+        self, builder_with_google, sample_metadata
+    ):
+        view = builder_with_google.build_collapsed_view(sample_metadata)
+        provider_block = next(
+            b
+            for b in view["blocks"]
+            if b.get("block_id") == builder_with_google.IMAGE_PROVIDER_BLOCK
+        )
+        option_labels = {
+            option["value"]: option["text"]["text"]
+            for option in provider_block["element"]["options"]
+        }
+
+        assert option_labels["openai"] == "🤖 GPT Image 2"
+        assert option_labels["google_gemini"] == "🍌 Nano Banana Pro"
 
     def test_build_collapsed_view_contains_image_provider(
         self, builder, sample_metadata
@@ -172,6 +190,17 @@ class TestEmojiCreationModalBuilder:
         assert builder.STYLE_TEXT_BLOCK in block_ids
         assert builder.STYLE_TOGGLE_BLOCK in block_ids
 
+    def test_style_label_does_not_duplicate_slacks_optional_marker(
+        self, builder, sample_metadata
+    ):
+        view = builder.build_expanded_view(sample_metadata)
+        style_block = next(
+            b for b in view["blocks"] if b.get("block_id") == builder.STYLE_TEXT_BLOCK
+        )
+
+        assert style_block["optional"] is True
+        assert style_block["label"]["text"] == "Style"
+
     def test_build_expanded_view_toggle_collapses(self, builder, sample_metadata):
         view = builder.build_expanded_view(sample_metadata)
         blocks = view["blocks"]
@@ -198,6 +227,34 @@ class TestEmojiCreationModalBuilder:
         )
         assert name_block is not None
         assert name_block.get("optional") is True
+        assert name_block["element"]["max_length"] == 32
+
+    def test_build_expanded_view_uses_provider_neutral_quality_copy(
+        self, builder, sample_metadata
+    ):
+        view = builder.build_expanded_view(sample_metadata)
+        quality_block = next(
+            b for b in view["blocks"] if b.get("block_id") == builder.QUALITY_BLOCK
+        )
+
+        assert quality_block["label"]["text"] == "Output Quality"
+        assert "OpenAI only" not in json.dumps(quality_block)
+
+    def test_background_copy_discloses_best_effort_cutout(
+        self, builder, sample_metadata
+    ):
+        view = builder.build_expanded_view(sample_metadata)
+        background_block = next(
+            b for b in view["blocks"] if b.get("block_id") == builder.BACKGROUND_BLOCK
+        )
+
+        assert background_block["element"]["initial_option"]["value"] == "transparent"
+        assert (
+            "Clean cutout"
+            in background_block["element"]["initial_option"]["text"]["text"]
+        )
+        assert "solid background" in background_block["hint"]["text"]
+        assert "not guaranteed" in background_block["hint"]["text"]
 
     def test_build_expanded_view_provider_default_is_openai_without_google(
         self, builder, sample_metadata

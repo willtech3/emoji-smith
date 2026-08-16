@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from emojismith.domain.exceptions import ValidationError
 from shared.domain.value_objects import EmojiStylePreferences
 
+MAX_EMOJI_DESCRIPTION_LENGTH = 500
+
 
 @dataclass(frozen=True)
 class EmojiSpecification:
@@ -13,8 +15,13 @@ class EmojiSpecification:
     style: EmojiStylePreferences = field(default_factory=EmojiStylePreferences)
 
     def __post_init__(self) -> None:
-        if not self.description:
+        if not self.description or not self.description.strip():
             raise ValidationError("description is required")
+        if len(self.description) > MAX_EMOJI_DESCRIPTION_LENGTH:
+            raise ValidationError(
+                "description must be "
+                f"{MAX_EMOJI_DESCRIPTION_LENGTH} characters or fewer"
+            )
         # context is optional - users may trigger emoji creation on messages
         # without text (e.g., image-only messages)
 

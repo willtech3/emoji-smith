@@ -38,20 +38,18 @@ async def test_generate_image_logs_model_generation_primary(caplog) -> None:
 
 
 @pytest.mark.asyncio()
-async def test_generate_image_logs_model_generation_fallback(caplog) -> None:
-    """Verify model_generation is logged with fallback metadata when primary fails."""
+async def test_generate_image_failure_does_not_log_deprecated_fallback(caplog) -> None:
+    """Verify a primary failure is surfaced without deprecated fallback metadata."""
     client = MagicMock()
     client.images = MagicMock()
-    client.images.generate = AsyncMock(
-        side_effect=[
-            Exception("primary failed"),
-            SimpleNamespace(data=[SimpleNamespace(b64_json="aGVsbG8=")]),
-        ]
-    )
+    client.images.generate = AsyncMock(side_effect=Exception("primary failed"))
 
     repository = OpenAIAPIRepository(client, model="gpt-5")
 
-    with caplog.at_level(logging.INFO):
+    with (
+        caplog.at_level(logging.INFO),
+        pytest.raises(Exception, match="primary failed"),
+    ):
         await repository.generate_image("test prompt")
 
     generation_logs = [
@@ -60,7 +58,5 @@ async def test_generate_image_logs_model_generation_fallback(caplog) -> None:
         if getattr(record, "event_data", {}).get("event") == "model_generation"
     ]
 
-    assert len(generation_logs) == 1
-    assert generation_logs[0].event_data["provider"] == "openai"
-    assert generation_logs[0].event_data["model"] == "gpt-image-1.5"
-    assert generation_logs[0].event_data["is_fallback"] is True
+    assert generation_logs == []
+    client.images.generate.assert_awaited_once()

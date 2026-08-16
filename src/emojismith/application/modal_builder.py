@@ -12,6 +12,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from emojismith.domain.value_objects.emoji_specification import (
+    MAX_EMOJI_DESCRIPTION_LENGTH,
+)
+
 
 class EmojiCreationModalBuilder:
     """Builds Slack modal views with progressive disclosure.
@@ -41,6 +45,8 @@ class EmojiCreationModalBuilder:
     STYLE_TOGGLE_ACTION = "toggle_style_options"
 
     MODAL_CALLBACK_ID = "emoji_creation_modal"
+    MAX_DESCRIPTION_LENGTH = MAX_EMOJI_DESCRIPTION_LENGTH
+    MAX_EMOJI_NAME_LENGTH = 32
 
     def __init__(
         self,
@@ -67,7 +73,7 @@ class EmojiCreationModalBuilder:
             {
                 "text": {
                     "type": "plain_text",
-                    "text": "🤖 GPT Image 1.5",
+                    "text": "🤖 GPT Image 2",
                 },
                 "value": "openai",
             },
@@ -127,6 +133,7 @@ class EmojiCreationModalBuilder:
                     "type": "plain_text_input",
                     "action_id": self.DESCRIPTION_ACTION,
                     "multiline": True,
+                    "max_length": self.MAX_DESCRIPTION_LENGTH,
                     "placeholder": {
                         "type": "plain_text",
                         "text": "A happy dancing banana wearing sunglasses...",
@@ -178,6 +185,7 @@ class EmojiCreationModalBuilder:
                     "type": "plain_text_input",
                     "action_id": self.DESCRIPTION_ACTION,
                     "multiline": True,
+                    "max_length": self.MAX_DESCRIPTION_LENGTH,
                     "placeholder": {
                         "type": "plain_text",
                         "text": "A happy dancing banana wearing sunglasses...",
@@ -195,6 +203,7 @@ class EmojiCreationModalBuilder:
                 "element": {
                     "type": "plain_text_input",
                     "action_id": self.NAME_ACTION,
+                    "max_length": self.MAX_EMOJI_NAME_LENGTH,
                     "placeholder": {
                         "type": "plain_text",
                         "text": "e.g., dancing_banana (auto-generated if empty)",
@@ -203,7 +212,10 @@ class EmojiCreationModalBuilder:
                 "label": {"type": "plain_text", "text": "Emoji Name"},
                 "hint": {
                     "type": "plain_text",
-                    "text": "Will become :emoji_name: (lowercase, underscores only)",
+                    "text": (
+                        "Will become :emoji_name: (lowercase letters, numbers, "
+                        "and underscores)"
+                    ),
                 },
             },
             {"type": "divider"},
@@ -211,7 +223,7 @@ class EmojiCreationModalBuilder:
                 "type": "context",
                 "elements": [{"type": "mrkdwn", "text": "⚙️ *Advanced Options*"}],
             },
-            # Quality (only applies to OpenAI, Google uses prompt-based styling)
+            # Quality maps to native rendering quality or output resolution.
             {
                 "type": "input",
                 "block_id": self.QUALITY_BLOCK,
@@ -247,7 +259,7 @@ class EmojiCreationModalBuilder:
                         },
                     ],
                 },
-                "label": {"type": "plain_text", "text": "Quality (OpenAI only)"},
+                "label": {"type": "plain_text", "text": "Output Quality"},
             },
             # Background
             {
@@ -258,12 +270,18 @@ class EmojiCreationModalBuilder:
                     "type": "static_select",
                     "action_id": self.BACKGROUND_ACTION,
                     "initial_option": {
-                        "text": {"type": "plain_text", "text": "🔲 Transparent"},
+                        "text": {
+                            "type": "plain_text",
+                            "text": "✂️ Clean cutout (best effort)",
+                        },
                         "value": "transparent",
                     },
                     "options": [
                         {
-                            "text": {"type": "plain_text", "text": "🔲 Transparent"},
+                            "text": {
+                                "type": "plain_text",
+                                "text": "✂️ Clean cutout (best effort)",
+                            },
                             "value": "transparent",
                         },
                         {
@@ -273,6 +291,13 @@ class EmojiCreationModalBuilder:
                     ],
                 },
                 "label": {"type": "plain_text", "text": "Background"},
+                "hint": {
+                    "type": "plain_text",
+                    "text": (
+                        "Models may return a solid background; a clean cutout is "
+                        "prompt guidance and is not guaranteed."
+                    ),
+                },
             },
             # Number of Images
             {
@@ -322,7 +347,7 @@ class EmojiCreationModalBuilder:
                         "text": "cartoon, pixel art, minimalist, 3D, watercolor...",
                     },
                 },
-                "label": {"type": "plain_text", "text": "Style (optional)"},
+                "label": {"type": "plain_text", "text": "Style"},
             },
             # Toggle button
             {

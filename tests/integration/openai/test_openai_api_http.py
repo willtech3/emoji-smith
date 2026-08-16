@@ -1,4 +1,3 @@
-import base64
 import json
 
 import httpx
@@ -46,7 +45,7 @@ async def test_enhance_prompt_recorded() -> None:
 
 @pytest.mark.asyncio()
 @pytest.mark.integration()
-async def test_generate_image_fallback() -> None:
+async def test_generate_image_does_not_use_deprecated_fallback() -> None:
     calls = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -54,10 +53,7 @@ async def test_generate_image_fallback() -> None:
             return httpx.Response(200, json={})
         model = json.loads(request.content)["model"]
         calls.append(model)
-        if model == "gpt-image-2":
-            return httpx.Response(500)
-        b64 = base64.b64encode(b"img").decode()
-        return httpx.Response(200, json={"data": [{"b64_json": b64}]})
+        return httpx.Response(500)
 
     transport = httpx.MockTransport(handler)
     client = openai.AsyncOpenAI(
@@ -67,10 +63,10 @@ async def test_generate_image_fallback() -> None:
         ),
     )
     repo = OpenAIAPIRepository(client)
-    result = await repo.generate_image("prompt")
-    assert result == [b"img"]  # Returns list of bytes
-    assert calls[0] == "gpt-image-2"
-    assert calls[-1] == "gpt-image-1.5"
+    with pytest.raises(openai.InternalServerError):
+        await repo.generate_image("prompt")
+    assert calls
+    assert set(calls) == {"gpt-image-2"}
 
 
 @pytest.mark.asyncio()

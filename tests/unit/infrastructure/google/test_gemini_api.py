@@ -33,12 +33,13 @@ async def test_generate_image_logs_model_generation(caplog):
 
 
 @pytest.mark.asyncio()
-async def test_generate_image_logs_imagen_fallback(caplog):
-    """Verify model_generation event is logged for Imagen fallback."""
+async def test_generate_image_logs_flash_image_fallback(caplog):
+    """Verify model_generation is logged for the stable Gemini fallback."""
     client = MagicMock()
     repo = GeminiAPIRepository(client=client)
-    repo._generate_with_model = AsyncMock(side_effect=Exception("primary failed"))  # type: ignore[attr-defined]
-    repo._generate_with_imagen = AsyncMock(return_value=b"fallback-image")  # type: ignore[attr-defined]
+    repo._generate_with_model = AsyncMock(  # type: ignore[attr-defined]
+        side_effect=[Exception("primary failed"), b"fallback-image"]
+    )
 
     with caplog.at_level(logging.INFO):
         images = await repo.generate_image("test prompt")
@@ -50,6 +51,6 @@ async def test_generate_image_logs_imagen_fallback(caplog):
         if hasattr(r, "event_data") and r.event_data.get("event") == "model_generation"
     ]
     assert len(generation_logs) == 1
-    assert generation_logs[0].event_data["provider"] == "google_imagen"
+    assert generation_logs[0].event_data["provider"] == "google_gemini"
     assert generation_logs[0].event_data["model"] == repo._fallback_model
     assert generation_logs[0].event_data["is_fallback"] is True

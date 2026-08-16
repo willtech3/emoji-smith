@@ -80,6 +80,9 @@ class WebhookEventProcessor:
         if len(slugified) > max_base_len:
             slugified = slugified[:max_base_len].rstrip("_")
 
+        if not slugified:
+            slugified = "emoji"
+
         return f"{slugified}_{hash_suffix}"
 
     async def process(self, body: bytes) -> dict[str, Any]:
@@ -168,11 +171,23 @@ class WebhookEventProcessor:
             .get("value", "")
         )
 
+        description = (description or "").strip()
+
         if not description:
             return {
                 "response_action": "errors",
                 "errors": {
                     self._modal_builder.DESCRIPTION_BLOCK: "Please describe your emoji"
+                },
+            }
+
+        if len(description) > self._modal_builder.MAX_DESCRIPTION_LENGTH:
+            return {
+                "response_action": "errors",
+                "errors": {
+                    self._modal_builder.DESCRIPTION_BLOCK: (
+                        "Keep the description to 500 characters or fewer"
+                    )
                 },
             }
 
@@ -182,7 +197,18 @@ class WebhookEventProcessor:
             .get(self._modal_builder.NAME_ACTION, {})
             .get("value", "")
         )
-        if not emoji_name:
+        if emoji_name:
+            emoji_name = re.sub(r"\s+", "_", emoji_name.strip().lower())
+            if not re.fullmatch(r"[a-z0-9_]{1,32}", emoji_name):
+                return {
+                    "response_action": "errors",
+                    "errors": {
+                        self._modal_builder.EMOJI_NAME_BLOCK: (
+                            "Use 1-32 lowercase letters, numbers, or underscores"
+                        )
+                    },
+                }
+        else:
             emoji_name = self._generate_emoji_name(description)
 
         # Extract image provider (default based on availability)

@@ -31,6 +31,14 @@ class TestEmojiSpecification:
         with pytest.raises(ValidationError):
             EmojiSpecification(context="ctx", description="")
 
+    def test_emoji_specification_whitespace_description_raises_error(self) -> None:
+        with pytest.raises(ValidationError, match="description is required"):
+            EmojiSpecification(context="ctx", description="   ")
+
+    def test_emoji_specification_rejects_description_over_500_characters(self) -> None:
+        with pytest.raises(ValidationError, match="500 characters or fewer"):
+            EmojiSpecification(context="ctx", description="x" * 501)
+
     def test_emoji_specification_empty_context_allowed(self) -> None:
         """Test that empty context is allowed for messages without text."""
         spec = EmojiSpecification(context="", description="thumbs up emoji")
