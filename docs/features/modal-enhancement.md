@@ -7,8 +7,9 @@
 > `gpt-image-2.5-sunburst`. Google uses `gemini-3-pro-image` with
 > `gemini-nano-banana-2.1` as its fallback. emoji-smith requests background
 > `"auto"` from OpenAI and treats the output as opaque, so the UI describes
-> background removal as a best-effort clean cutout. The detailed material below records the original
-> 2025 implementation plan and may mention superseded model IDs.
+> background removal as a best-effort clean cutout. The detailed material
+> below records the original 2025 implementation plan and may mention
+> superseded model IDs.
 
 ### Implementation Status (Audited 2025-12-25)
 

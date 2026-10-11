@@ -5,8 +5,8 @@
 > [!NOTE]
 > This is the historical implementation specification. The production model
 > set was re-audited on 2026-10-11: OpenAI uses `gpt-image-2.5-sunburst`;
-> Google uses `gemini-3-pro-image` with `gemini-nano-banana-2.1` fallback. Imagen is no
-> longer used because Google deprecated that API family.
+> Google uses `gemini-3-pro-image` with `gemini-nano-banana-2.1` fallback.
+> Imagen is no longer used because Google deprecated that API family.
 
 ## Overview
 
