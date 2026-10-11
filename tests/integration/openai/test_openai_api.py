@@ -1,5 +1,6 @@
 """Tests for OpenAIAPIRepository."""
 
+import re
 from unittest.mock import AsyncMock
 
 import httpx
@@ -146,7 +147,9 @@ async def test_does_not_fall_back_to_deprecated_image_models() -> None:
     client.images.generate.side_effect = Exception("gpt-image-2.5-sunburst unavailable")
 
     repo = OpenAIAPIRepository(client)
-    with pytest.raises(Exception, match="gpt-image-2.5-sunburst unavailable"):
+    with pytest.raises(
+        Exception, match=re.escape("gpt-image-2.5-sunburst unavailable")
+    ):
         await repo.generate_image("test prompt")
 
     client.images.generate.assert_awaited_once()
