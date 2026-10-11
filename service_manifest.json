@@ -1,0 +1,28 @@
+{
+  "service": "emoji-smith-webhook",
+  "runtime": {
+    "kind": "python",
+    "version": "3.12",
+    "setup": "uv sync --all-extras --frozen",
+    "entrypoint": "uvicorn emojismith.infrastructure.gcp.webhook_app:app --host 0.0.0.0 --port 8080",
+    "port": 8080
+  },
+  "health": {"path": "/health", "expect_status": 200, "timeout_seconds": 60},
+  "env": [
+    {"name": "SLACK_SIGNING_SECRET", "secret": true, "required": true, "description": "Verifies the HMAC signature on every Slack request"},
+    {"name": "SLACK_BOT_TOKEN", "secret": true, "required": true, "description": "Slack bot token for views.open and file sharing"},
+    {"name": "GOOGLE_CLOUD_PROJECT", "secret": false, "required": true, "description": "Google Cloud project for Pub/Sub and telemetry"},
+    {"name": "PUBSUB_PROJECT", "secret": false, "required": false, "description": "Pub/Sub project for the job topic, when it differs from GOOGLE_CLOUD_PROJECT"},
+    {"name": "PUBSUB_TOPIC", "secret": false, "required": false, "description": "Pub/Sub topic that receives emoji-generation jobs"},
+    {"name": "OPENAI_API_KEY", "secret": true, "required": false, "description": "OpenAI key; used by the worker for prompt enhancement and image generation"},
+    {"name": "OPENAI_CHAT_MODEL", "secret": false, "required": false, "description": "OpenAI text model used for prompt enhancement"},
+    {"name": "GOOGLE_API_KEY", "secret": true, "required": false, "description": "Gemini key; enables the Google image provider"},
+    {"name": "ENVIRONMENT", "secret": false, "required": false, "description": "Deployment environment name for logs and telemetry"},
+    {"name": "TRACING_ENABLED", "secret": false, "required": false, "description": "Turns Cloud Trace export on or off"},
+    {"name": "TRACE_SAMPLE_RATE", "secret": false, "required": false, "description": "Trace sampling ratio"},
+    {"name": "METRICS_ENABLED", "secret": false, "required": false, "description": "Turns Cloud Monitoring metrics on or off"},
+    {"name": "K_SERVICE", "secret": false, "required": false, "description": "Set by Cloud Run; identifies the running service"},
+    {"name": "EMOJISMITH_FORCE_ENTERPRISE", "secret": false, "required": false, "description": "Forces Slack Enterprise Grid handling"}
+  ],
+  "test_environment": {"profile": "test_environment.json"}
+}
