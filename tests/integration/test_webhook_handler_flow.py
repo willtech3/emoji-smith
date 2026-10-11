@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import time
+import urllib.parse
 from unittest.mock import AsyncMock
 
 import pytest
@@ -142,3 +143,75 @@ def test_invalid_signature_rejected(
     assert resp.status_code == 500
     slack_repo.open_modal.assert_not_called()
     job_queue.enqueue_job.assert_not_called()
+
+
+@pytest.mark.parametrize("disguise", ["duplicate-key", "escaped-key", "form-fallback"])
+def test_unsigned_verification_disguise_rejected_without_side_effects(
+    app_with_mocks: tuple[TestClient, AsyncMock, AsyncMock, bytes], disguise: str
+) -> None:
+    client, slack_repo, job_queue, _secret = app_with_mocks
+    submission = json.dumps(_modal_payload()).encode()
+    if disguise == "form-fallback":
+        body = (
+            b'{"type":"url_verification"&payload='
+            + urllib.parse.quote_from_bytes(submission).encode()
+        )
+    else:
+        if disguise == "escaped-key":
+            submission = submission.replace(b'"type"', b'"t\\u0079pe"', 1)
+        body = b'{"type":"url_verification",' + submission[1:]
+
+    response = client.post("/slack/events", content=body)
+
+    assert response.status_code == 500
+    job_queue.enqueue_job.assert_not_called()
+    slack_repo.open_modal.assert_not_called()
+    slack_repo.update_modal.assert_not_called()
+
+
+@pytest.mark.parametrize("compact", [True, False])
+def test_signed_url_verification_returns_challenge(
+    app_with_mocks: tuple[TestClient, AsyncMock, AsyncMock, bytes], compact: bool
+) -> None:
+    client, slack_repo, job_queue, secret = app_with_mocks
+    body = json.dumps(
+        {"type": "url_verification", "challenge": "signed-challenge"},
+        separators=(",", ":") if compact else None,
+    ).encode()
+
+    response = client.post(
+        "/slack/events", content=body, headers=_headers(body, secret)
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"challenge": "signed-challenge"}
+    job_queue.enqueue_job.assert_not_called()
+    slack_repo.open_modal.assert_not_called()
+
+
+def test_unsigned_url_verification_rejected(
+    app_with_mocks: tuple[TestClient, AsyncMock, AsyncMock, bytes],
+) -> None:
+    client, _slack_repo, job_queue, _secret = app_with_mocks
+    response = client.post(
+        "/slack/events", content=b'{"type":"url_verification","challenge":"unsigned"}'
+    )
+
+    assert response.status_code == 500
+    job_queue.enqueue_job.assert_not_called()
+
+
+def test_signed_form_submission_enqueues_job(
+    app_with_mocks: tuple[TestClient, AsyncMock, AsyncMock, bytes],
+) -> None:
+    client, _slack_repo, job_queue, secret = app_with_mocks
+    body = urllib.parse.urlencode({"payload": json.dumps(_modal_payload())}).encode()
+
+    response = client.post(
+        "/slack/events", content=body, headers=_headers(body, secret)
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"response_action": "clear"}
+    job_queue.enqueue_job.assert_awaited_once()
+    assert job_queue.enqueue_job.call_args.args[0].user_description == "facepalm"
