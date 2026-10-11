@@ -593,7 +593,10 @@ def check_worker_pipeline() -> tuple[bool, str]:
     from emojismith.infrastructure.factories import ImageGeneratorFactory
     from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
     from emojismith.infrastructure.image.processing import PillowImageProcessor
-    from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
+    from emojismith.infrastructure.openai.openai_api import (
+        OPENAI_IMAGE_MODEL,
+        OpenAIAPIRepository,
+    )
     from emojismith.infrastructure.repositories.style_template_config_repository import (
         StyleTemplateConfigRepository,
     )
@@ -636,7 +639,7 @@ def check_worker_pipeline() -> tuple[bool, str]:
     if len(images) != 1:
         problems.append(f"images.generate calls={len(images)}")
     elif not (
-        images[0].get("model") == "gpt-image-2"
+        images[0].get("model") == OPENAI_IMAGE_MODEL
         and images[0].get("n") == 1
         and images[0].get("size") == "1024x1024"
         and FAKE_MARKER in (images[0].get("prompt") or "")
