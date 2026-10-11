@@ -33,7 +33,7 @@ async def test_generate_image_logs_model_generation_primary(caplog) -> None:
 
     assert len(generation_logs) == 1
     assert generation_logs[0].event_data["provider"] == "openai"
-    assert generation_logs[0].event_data["model"] == "gpt-image-2"
+    assert generation_logs[0].event_data["model"] == "gpt-image-2.5-sunburst"
     assert generation_logs[0].event_data["is_fallback"] is False
 
 

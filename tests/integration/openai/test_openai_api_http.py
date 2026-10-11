@@ -66,7 +66,7 @@ async def test_generate_image_does_not_use_deprecated_fallback() -> None:
     with pytest.raises(openai.InternalServerError):
         await repo.generate_image("prompt")
     assert calls
-    assert set(calls) == {"gpt-image-2"}
+    assert set(calls) == {"gpt-image-2.5-sunburst"}
 
 
 @pytest.mark.asyncio()

@@ -117,8 +117,8 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
 
 @pytest.mark.asyncio()
 @pytest.mark.integration()
-async def test_generate_image_uses_gpt_image_2_with_supported_background() -> None:
-    """Use the latest high-end OpenAI image model without unsupported transparency."""
+async def test_generate_image_uses_gpt_image_2_5_sunburst_with_supported_background():
+    """Use gpt-image-2.5-sunburst with today's unchanged request parameters."""
     client = AsyncMock()
     client.images.generate.return_value = AsyncMock(
         data=[AsyncMock(b64_json="aGVsbG8=")]
@@ -128,9 +128,12 @@ async def test_generate_image_uses_gpt_image_2_with_supported_background() -> No
     result = await repo.generate_image("test prompt", background="transparent")
 
     assert result == [b"hello"]
-    client.images.generate.assert_called_once()
+    client.images.generate.assert_awaited_once()
     call = client.images.generate.call_args
-    assert call.kwargs["model"] == "gpt-image-2"
+    assert call.kwargs["model"] == "gpt-image-2.5-sunburst"
+    assert call.kwargs["size"] == "1024x1024"
+    assert call.kwargs["n"] == 1
+    assert call.kwargs["quality"] == "high"
     assert call.kwargs["background"] == "auto"
     assert call.kwargs["output_format"] == "png"
 
@@ -138,16 +141,16 @@ async def test_generate_image_uses_gpt_image_2_with_supported_background() -> No
 @pytest.mark.asyncio()
 @pytest.mark.integration()
 async def test_does_not_fall_back_to_deprecated_image_models() -> None:
-    """A GPT Image 2 failure must not route work to deprecated models."""
+    """A gpt-image-2.5-sunburst failure must not route work to another model."""
     client = AsyncMock()
-    client.images.generate.side_effect = Exception("gpt-image-2 unavailable")
+    client.images.generate.side_effect = Exception("gpt-image-2.5-sunburst unavailable")
 
     repo = OpenAIAPIRepository(client)
-    with pytest.raises(Exception, match="gpt-image-2 unavailable"):
+    with pytest.raises(Exception, match="gpt-image-2.5-sunburst unavailable"):
         await repo.generate_image("test prompt")
 
     client.images.generate.assert_awaited_once()
-    assert client.images.generate.call_args.kwargs["model"] == "gpt-image-2"
+    assert client.images.generate.call_args.kwargs["model"] == "gpt-image-2.5-sunburst"
 
 
 @pytest.mark.asyncio()
