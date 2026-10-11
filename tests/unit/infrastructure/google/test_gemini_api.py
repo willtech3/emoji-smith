@@ -34,7 +34,7 @@ async def test_generate_image_logs_model_generation(caplog):
 
 @pytest.mark.asyncio()
 async def test_generate_image_logs_nano_banana_2_1_fallback(caplog):
-    """Verify model_generation is logged for the gemini-nano-banana-2.1 fallback."""
+    """Verify model_generation is logged for the stable Gemini fallback."""
     client = MagicMock()
     repo = GeminiAPIRepository(client=client)
     repo._generate_with_model = AsyncMock(  # type: ignore[attr-defined]

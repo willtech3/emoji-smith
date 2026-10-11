@@ -119,7 +119,7 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
 @pytest.mark.asyncio()
 @pytest.mark.integration()
 async def test_generate_image_uses_gpt_image_2_5_sunburst_with_supported_background():
-    """Use gpt-image-2.5-sunburst with today's unchanged request parameters."""
+    """Use the latest high-end OpenAI image model without unsupported transparency."""
     client = AsyncMock()
     client.images.generate.return_value = AsyncMock(
         data=[AsyncMock(b64_json="aGVsbG8=")]
@@ -129,6 +129,7 @@ async def test_generate_image_uses_gpt_image_2_5_sunburst_with_supported_backgro
     result = await repo.generate_image("test prompt", background="transparent")
 
     assert result == [b"hello"]
+    client.images.generate.assert_called_once()
     client.images.generate.assert_awaited_once()
     call = client.images.generate.call_args
     assert call.kwargs["model"] == "gpt-image-2.5-sunburst"
