@@ -87,10 +87,10 @@ class TestGeminiAPIRepositoryGenerateImage:
         assert result == [expected_image_data]
 
     @pytest.mark.asyncio()
-    async def test_generate_image_when_primary_fails_uses_flash_image_fallback(
+    async def test_generate_image_when_primary_fails_uses_nano_banana_2_1_fallback(
         self, repository, mock_gemini_client
     ):
-        """Test the stable Flash Image model is used as the Gemini fallback."""
+        """Test gemini-nano-banana-2.1 is used as the Gemini fallback."""
         # Arrange
         expected_image_data = b"fallback_image_bytes"
 
@@ -114,7 +114,7 @@ class TestGeminiAPIRepositoryGenerateImage:
         assert mock_gemini_client.aio.models.generate_content.await_count == 2
         calls = mock_gemini_client.aio.models.generate_content.call_args_list
         assert calls[0].kwargs["model"] == "gemini-3-pro-image"
-        assert calls[1].kwargs["model"] == "gemini-3.1-flash-image"
+        assert calls[1].kwargs["model"] == "gemini-nano-banana-2.1"
         call = calls[1]
         config = call.kwargs["config"]
         assert config.image_config.aspect_ratio == "1:1"

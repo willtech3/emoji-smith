@@ -32,7 +32,7 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
         self,
         client: genai.Client,
         model: str = "gemini-3-pro-image",
-        fallback_model: str = "gemini-3.1-flash-image",
+        fallback_model: str = "gemini-nano-banana-2.1",
         text_model: str = "gemini-3-flash-preview",
         metrics_recorder: MetricsRecorder | None = None,
     ) -> None:
