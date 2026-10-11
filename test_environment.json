@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "name": "emoji-smith",
+  "runtime": "linux",
+  "commands": {
+    "prepare": "bash verification/factory-onboarding/prepare.sh",
+    "start": "bash verification/factory-onboarding/start.sh",
+    "seed": "bash verification/factory-onboarding/seed.sh",
+    "verify": "bash verification/factory-onboarding/verify.sh",
+    "stop": "bash verification/factory-onboarding/stop.sh"
+  },
+  "services": [
+    {
+      "id": "webhook",
+      "port": 8080,
+      "health_path": "/health",
+      "expect_status": 200
+    },
+    {
+      "id": "worker",
+      "port": 8081,
+      "health_path": "/health",
+      "expect_status": 200
+    },
+    {
+      "id": "fake-pubsub",
+      "port": 8086,
+      "health_path": "/health",
+      "expect_status": 200
+    },
+    {
+      "id": "fake-openai",
+      "port": 8090,
+      "health_path": "/health",
+      "expect_status": 200
+    }
+  ],
+  "secrets": [],
+  "data": {
+    "kind": "synthetic",
+    "authentication": "test-identity"
+  },
+  "network": {
+    "allowed_hosts": [
+      "pypi.org",
+      "files.pythonhosted.org",
+      "github.com",
+      "objects.githubusercontent.com",
+      "release-assets.githubusercontent.com"
+    ],
+    "allow_package_managers": true
+  },
+  "timeout_seconds": 1800,
+  "verification": {
+    "kind": "api",
+    "checks": [
+      {
+        "id": "webhook-health",
+        "description": "Production webhook app (uvicorn emojismith.infrastructure.gcp.webhook_app:app) answers GET /health with {status: healthy, service: webhook}."
+      },
+      {
+        "id": "slack-url-verification",
+        "description": "POST /slack/events with a url_verification body HMAC-signed by the sandbox-generated signing secret (SlackWebhookHandler authenticates every raw request since PR 415) returns 200, echoes the synthetic challenge and publishes nothing."
+      },
+      {
+        "id": "submission-validation-errors",
+        "description": "Correctly signed view_submission with an empty description or an invalid emoji name returns Slack response_action=errors and publishes nothing."
+      },
+      {
+        "id": "rejects-unauthenticated-requests",
+        "description": "view_submission with missing, wrong-secret, tampered-body or stale-timestamp Slack signatures is rejected with a non-2xx status and publishes nothing."
+      },
+      {
+        "id": "signed-submission-enqueues-job",
+        "description": "Correctly HMAC-signed view_submission to /slack/interactive returns response_action=clear and the unmodified PubSubJobQueue publishes a matching EmojiGenerationJob to the configured topic via PUBSUB_EMULATOR_HOST."
+      },
+      {
+        "id": "url-verification-bypass-probe",
+        "description": "Gating security probe: UNSIGNED disguised requests (duplicate-key; escaped-key with the second key written as t\\u0079pe; malformed-prefix form-fallback with payload=; and a plain unsigned url_verification) are each sent to both /slack/events and /slack/interactive. Passes only if all 8 responses are non-2xx, no challenge is echoed, and fake Pub/Sub receives no new message (no queued jobs)."
+      },
+      {
+        "id": "modal-flow",
+        "description": "Signed message_action opens the collapsed emoji modal with the source message metadata, and the expand toggle block_action updates it to the advanced view (real handler/validator/modal builder; Slack views API replaced by a recording repository)."
+      },
+      {
+        "id": "worker-push-validation",
+        "description": "Production worker app answers GET /health and rejects malformed Pub/Sub push envelopes on POST /pubsub with HTTP 400."
+      },
+      {
+        "id": "worker-pipeline",
+        "description": "The job published by the webhook is processed by the real EmojiCreationService composition: prompt enhancement and gpt-image-2 generation via the OpenAI SDK against the in-sandbox fake, Pillow resize/validation to a 128x128 PNG under 64KB, and a file-share request for the requesting synthetic user/channel (Slack upload replaced by a recording repository)."
+      },
+      {
+        "id": "ci-test-suite",
+        "description": "The repository's CI pytest suite (pytest tests/ -q, as in .github/workflows/deploy-gcp.yml) passes in the uv-synced environment."
+      }
+    ]
+  }
+}
