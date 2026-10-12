@@ -3,18 +3,19 @@
 > **Generate the highest quality Slack reaction emojis with a frictionless UX**
 
 > [!NOTE]
-> **Current production model set (audited 2026-08-16):** OpenAI uses
-> `gpt-image-2`. Google uses `gemini-3-pro-image` with
-> `gemini-3.1-flash-image` as its fallback. GPT Image 2 does not currently
-> provide transparent output, so the UI describes background removal as a
-> best-effort clean cutout. The detailed material below records the original
-> 2025 implementation plan and may mention superseded model IDs.
+> **Current production model set (audited 2026-10-11):** OpenAI uses
+> `gpt-image-2.5-sunburst`. Google uses `gemini-3-pro-image` with
+> `gemini-nano-banana-2.1` as its fallback. emoji-smith requests background
+> `"auto"` from OpenAI and treats the output as opaque, so the UI describes
+> background removal as a best-effort clean cutout. The detailed material
+> below records the original 2025 implementation plan and may mention
+> superseded model IDs.
 
 ### Implementation Status (Audited 2025-12-25)
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Phase 1: Model Upgrades | ✅ Complete | gpt-image-2; Gemini 3 Pro + 3.1 Flash Image |
+| Phase 1: Model Upgrades | ✅ Complete | gpt-image-2.5-sunburst; Gemini 3 Pro + Nano Banana 2.1 |
 | Phase 2: Domain Value Objects | ✅ Complete | BackgroundType, QualityLevel, NumberOfImages, EmojiGenerationPreferences |
 | Phase 3: Modal Builder | ✅ Complete | Moved to application layer (architectural fix) |
 | Phase 4: Infrastructure Updates | ✅ Complete | Multi-image support in both providers |

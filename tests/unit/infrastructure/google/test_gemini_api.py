@@ -28,12 +28,12 @@ async def test_generate_image_logs_model_generation(caplog):
     ]
     assert len(generation_logs) == 1
     assert generation_logs[0].event_data["provider"] == "google_gemini"
-    assert generation_logs[0].event_data["model"] == repo._model
+    assert generation_logs[0].event_data["model"] == "gemini-3-pro-image"
     assert generation_logs[0].event_data["is_fallback"] is False
 
 
 @pytest.mark.asyncio()
-async def test_generate_image_logs_flash_image_fallback(caplog):
+async def test_generate_image_logs_nano_banana_2_1_fallback(caplog):
     """Verify model_generation is logged for the stable Gemini fallback."""
     client = MagicMock()
     repo = GeminiAPIRepository(client=client)
@@ -52,5 +52,5 @@ async def test_generate_image_logs_flash_image_fallback(caplog):
     ]
     assert len(generation_logs) == 1
     assert generation_logs[0].event_data["provider"] == "google_gemini"
-    assert generation_logs[0].event_data["model"] == repo._fallback_model
+    assert generation_logs[0].event_data["model"] == "gemini-nano-banana-2.1"
     assert generation_logs[0].event_data["is_fallback"] is True
