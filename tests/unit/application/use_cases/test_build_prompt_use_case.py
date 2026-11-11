@@ -156,6 +156,22 @@ class TestBuildPromptUseCase:
         assert len(result) <= 150
 
     @pytest.mark.asyncio()
+    @pytest.mark.parametrize("blank", ["", "   \n"])
+    async def test_build_prompt_when_enhancer_returns_blank_uses_base_prompt(
+        self,
+        use_case: BuildPromptUseCase,
+        basic_spec: EmojiSpecification,
+        mock_prompt_enhancer: Mock,
+        blank: str,
+    ):
+        """An empty enhancement must not become an empty image prompt."""
+        mock_prompt_enhancer.enhance_prompt.return_value = blank
+
+        result = await use_case.build_prompt(basic_spec, enhance=True)
+
+        assert "celebration" in result
+
+    @pytest.mark.asyncio()
     async def test_build_prompt_preserves_context_themes(
         self, use_case: BuildPromptUseCase
     ):

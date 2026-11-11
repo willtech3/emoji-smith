@@ -14,7 +14,7 @@ export PUBSUB_EMULATOR_HOST="127.0.0.1:8085"
 
 # OpenAI SDK honours OPENAI_BASE_URL; points at the in-sandbox fake (fake_openai.py).
 export OPENAI_BASE_URL="http://127.0.0.1:8090/v1"
-export OPENAI_CHAT_MODEL="gpt-5"
+export OPENAI_CHAT_MODEL="gpt-6.1-sol"
 
 # Telemetry exporters stay disabled so no Google Cloud credentials are needed.
 export TRACING_ENABLED="false"

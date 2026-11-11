@@ -21,7 +21,10 @@ from emojismith.domain.services.style_template_manager import StyleTemplateManag
 from emojismith.infrastructure.factories import ImageGeneratorFactory
 from emojismith.infrastructure.image.pil_image_validator import PILImageValidator
 from emojismith.infrastructure.image.processing import PillowImageProcessor
-from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
+from emojismith.infrastructure.openai.openai_api import (
+    OPENAI_CHAT_MODEL,
+    OpenAIAPIRepository,
+)
 from emojismith.infrastructure.repositories.style_template_config_repository import (
     StyleTemplateConfigRepository,
 )
@@ -29,11 +32,17 @@ from emojismith.infrastructure.slack.slack_api import SlackAPIRepository
 from emojismith.infrastructure.slack.slack_file_sharing import (
     SlackFileSharingRepository,
 )
+from emojismith.infrastructure.slack.slack_user_notifier import SlackUserNotifier
 from shared.infrastructure.telemetry.metrics import MetricsRecorder
 
 # Profile imports to identify bottlenecks
 logger = logging.getLogger(__name__)
 logger.info("📦 All imports completed - profiling will happen in functions")
+
+# Prompt enhancement is an optional quality step: if the chat model is slow we
+# fall back to the locally built prompt instead of stalling the whole job.
+PROMPT_ENHANCEMENT_TIMEOUT_S = 45.0
+PROMPT_ENHANCEMENT_MAX_RETRIES = 1
 
 
 def create_worker_emoji_service(
@@ -54,8 +63,12 @@ def create_worker_emoji_service(
     slack_client = AsyncWebClient(token=slack_token)
     slack_repo = SlackAPIRepository(slack_client)
 
-    openai_client = AsyncOpenAI(api_key=openai_api_key)
-    chat_model = os.getenv("OPENAI_CHAT_MODEL", "gpt-5")
+    openai_client = AsyncOpenAI(
+        api_key=openai_api_key,
+        timeout=PROMPT_ENHANCEMENT_TIMEOUT_S,
+        max_retries=PROMPT_ENHANCEMENT_MAX_RETRIES,
+    )
+    chat_model = os.getenv("OPENAI_CHAT_MODEL") or OPENAI_CHAT_MODEL
     openai_repo = OpenAIAPIRepository(
         openai_client,
         model=chat_model,
@@ -109,4 +122,5 @@ def create_worker_emoji_service(
         file_sharing_repo=file_sharing_repo,
         sharing_service=sharing_service,
         instruction_service=instruction_service,
+        user_notifier=SlackUserNotifier(slack_client),
     )

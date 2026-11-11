@@ -4,8 +4,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from google.api_core import exceptions as google_exceptions
+from google.genai import types
 
-from emojismith.domain.errors import RateLimitExceededError
+from emojismith.domain.errors import (
+    ImageGenerationRejectedError,
+    RateLimitExceededError,
+)
 from emojismith.infrastructure.google.gemini_api import GeminiAPIRepository
 
 
@@ -222,3 +226,91 @@ async def test_enhance_prompt_treats_slack_content_as_untrusted(
     config = mock_gemini_client.aio.models.generate_content.call_args.kwargs["config"]
     assert "untrusted" in config.system_instruction.lower()
     assert config.automatic_function_calling.disable is True
+
+
+class TestGeminiAPIRepositoryReliability:
+    """Safety refusals, concurrency, and current default models."""
+
+    @staticmethod
+    def _image_response(data: bytes) -> MagicMock:
+        part = MagicMock()
+        part.inline_data.data = data
+        response = MagicMock()
+        response.parts = [part]
+        return response
+
+    @staticmethod
+    def _refusal_response() -> MagicMock:
+        candidate = MagicMock()
+        candidate.content.parts = []
+        candidate.finish_reason = types.FinishReason.IMAGE_SAFETY
+        response = MagicMock()
+        response.parts = None
+        response.candidates = [candidate]
+        response.prompt_feedback = None
+        return response
+
+    @pytest.mark.asyncio()
+    async def test_generate_image_when_both_models_refuse_raises_rejected_error(
+        self, repository, mock_gemini_client
+    ):
+        mock_gemini_client.aio.models.generate_content.return_value = (
+            self._refusal_response()
+        )
+
+        with pytest.raises(ImageGenerationRejectedError, match="IMAGE_SAFETY"):
+            await repository.generate_image("Test prompt")
+
+        assert mock_gemini_client.aio.models.generate_content.await_count == 2
+
+    @pytest.mark.asyncio()
+    async def test_generate_image_when_primary_refuses_tries_fallback_model(
+        self, repository, mock_gemini_client
+    ):
+        mock_gemini_client.aio.models.generate_content.side_effect = [
+            self._refusal_response(),
+            self._image_response(b"fallback"),
+        ]
+
+        result = await repository.generate_image("Test prompt")
+
+        assert result == [b"fallback"]
+
+    @pytest.mark.asyncio()
+    async def test_generate_image_with_multiple_images_runs_requests_concurrently(
+        self, repository, mock_gemini_client
+    ):
+        """Four sequential generations can exceed the worker's time budget."""
+        import asyncio
+
+        in_flight = 0
+        peak = 0
+
+        async def slow_generate(**_kwargs):
+            nonlocal in_flight, peak
+            in_flight += 1
+            peak = max(peak, in_flight)
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+            return self._image_response(b"img")
+
+        mock_gemini_client.aio.models.generate_content.side_effect = slow_generate
+
+        result = await repository.generate_image("Test prompt", num_images=4)
+
+        assert result == [b"img"] * 4
+        assert peak == 4
+
+    @pytest.mark.asyncio()
+    async def test_enhance_prompt_uses_stable_flash_text_model(
+        self, repository, mock_gemini_client
+    ):
+        """Preview models can be withdrawn on two weeks' notice."""
+        mock_gemini_client.aio.models.generate_content.return_value = MagicMock(
+            text="a prompt"
+        )
+
+        await repository.enhance_prompt("ctx", "desc")
+
+        call = mock_gemini_client.aio.models.generate_content.call_args
+        assert call.kwargs["model"] == "gemini-3.8-flash"

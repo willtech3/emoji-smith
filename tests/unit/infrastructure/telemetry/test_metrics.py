@@ -34,7 +34,7 @@ def test_metrics_recorder_noops_when_disabled() -> None:
     recorder.record_job_processed(status="ok", provider="openai", duration_s=1.0)
     recorder.record_emoji_generated(
         provider="openai",
-        model="gpt-image-2.5-sunburst",
+        model="gpt-image-2.6-sunburst",
         is_fallback=False,
         duration_s=2.0,
     )

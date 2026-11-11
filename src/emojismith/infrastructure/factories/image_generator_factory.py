@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from google import genai
+from google.genai import types as genai_types
 from openai import AsyncOpenAI
 
 from emojismith.domain.factories.image_generator_factory import (
@@ -14,6 +15,13 @@ from emojismith.domain.value_objects.image_provider import ImageProvider
 from emojismith.infrastructure.google.gemini_api import GeminiAPIRepository
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 from shared.infrastructure.telemetry.metrics import MetricsRecorder
+
+# Image generation normally finishes well inside a minute, but providers document
+# multi-minute worst cases. Without explicit limits the SDK defaults (10 minutes
+# plus retries for OpenAI, no limit for Gemini) outlive the worker's 600s request
+# timeout, so a stalled call would kill the job without any error handling.
+IMAGE_REQUEST_TIMEOUT_S = 180.0
+IMAGE_REQUEST_MAX_RETRIES = 1
 
 if TYPE_CHECKING:
     from emojismith.domain.repositories.image_generation_repository import (
@@ -59,13 +67,22 @@ class ImageGeneratorFactory(ImageGeneratorFactoryProtocol):
         if provider == ImageProvider.OPENAI:
             if not self._openai_api_key:
                 raise ValueError("OPENAI_API_KEY required for OpenAI provider")
-            openai_client = AsyncOpenAI(api_key=self._openai_api_key)
+            openai_client = AsyncOpenAI(
+                api_key=self._openai_api_key,
+                timeout=IMAGE_REQUEST_TIMEOUT_S,
+                max_retries=IMAGE_REQUEST_MAX_RETRIES,
+            )
             return OpenAIAPIRepository(openai_client, metrics_recorder=self._metrics)
 
         elif provider == ImageProvider.GOOGLE_GEMINI:
             if not self._google_api_key:
                 raise ValueError("GOOGLE_API_KEY required for Gemini provider")
-            gemini_client = genai.Client(api_key=self._google_api_key)
+            gemini_client = genai.Client(
+                api_key=self._google_api_key,
+                http_options=genai_types.HttpOptions(
+                    timeout=int(IMAGE_REQUEST_TIMEOUT_S * 1000)  # milliseconds
+                ),
+            )
             return GeminiAPIRepository(gemini_client, metrics_recorder=self._metrics)
 
         else:

@@ -6,11 +6,18 @@ from typing import Any
 
 from emojismith.application.use_cases.build_prompt_use_case import BuildPromptUseCase
 from emojismith.domain.dtos import GeneratedEmojiDto
+from emojismith.domain.errors import (
+    ImageGenerationRejectedError,
+    RateLimitExceededError,
+)
 from emojismith.domain.factories.image_generator_factory import ImageGeneratorFactory
 from emojismith.domain.repositories.file_sharing_repository import FileSharingRepository
 from emojismith.domain.repositories.image_processor import ImageProcessor
 from emojismith.domain.repositories.job_queue_repository import JobQueueRepository
 from emojismith.domain.repositories.slack_repository import SlackRepository
+from emojismith.domain.repositories.user_notification_repository import (
+    UserNotificationRepository,
+)
 from emojismith.domain.services.emoji_instruction_service import (
     EmojiInstructionService,
 )
@@ -49,6 +56,7 @@ class EmojiCreationService:
         file_sharing_repo: FileSharingRepository | None = None,
         sharing_service: EmojiSharingService | None = None,
         instruction_service: EmojiInstructionService | None = None,
+        user_notifier: UserNotificationRepository | None = None,
     ) -> None:
         self._slack_repo = slack_repo
         self._build_prompt_use_case = build_prompt_use_case
@@ -63,6 +71,7 @@ class EmojiCreationService:
             # Fallback for tests/legacy usage, but production code should inject it
             instruction_service = EmojiInstructionService()
         self._instruction_service = instruction_service
+        self._user_notifier = user_notifier
 
     async def process_emoji_generation_job(
         self, job: EmojiGenerationJob | EmojiGenerationJobDto
@@ -271,6 +280,21 @@ class EmojiCreationService:
                             extra={"emoji_name": emoji.name},
                         )
 
+        if emojis and shared_count == 0:
+            # Regenerating would not help: the images exist but Slack refused
+            # every post (typically the bot is not in a private channel).
+            self._logger.error(
+                "Generated emoji could not be shared",
+                extra={"job_id": job_entity.job_id, "emoji_name": name},
+            )
+            await self._notify(
+                job_entity,
+                f"I created `:{name}:` but couldn't post it in "
+                f"<#{job_entity.channel_id}>. If this is a private channel, "
+                "invite me to it and try again.",
+            )
+            return
+
         self._logger.info(
             "Successfully processed emoji generation job",
             extra={
@@ -280,6 +304,47 @@ class EmojiCreationService:
                 "images_shared": shared_count,
             },
         )
+
+    async def notify_generation_failed(
+        self, job: EmojiGenerationJob | EmojiGenerationJobDto, error: Exception
+    ) -> None:
+        """Tell the requester that their emoji will not arrive.
+
+        Without this the user submits the modal and never hears back when a job
+        fails for good. The message never includes provider error details.
+        """
+        if isinstance(error, ImageGenerationRejectedError):
+            reason = (
+                "The image model declined this request under its content policy. "
+                "Try rephrasing your description."
+            )
+        elif isinstance(error, RateLimitExceededError):
+            reason = (
+                "The image provider is rate limiting requests right now. "
+                "Please try again in a few minutes."
+            )
+        else:
+            reason = (
+                "Something went wrong while generating the image. "
+                "Please try again, or pick a different image model."
+            )
+        await self._notify(
+            job, f"Sorry, I couldn't create `:{job.emoji_name}:`. {reason}"
+        )
+
+    async def _notify(
+        self, job: EmojiGenerationJob | EmojiGenerationJobDto, text: str
+    ) -> None:
+        if self._user_notifier is None or not job.user_id or not job.channel_id:
+            return
+        try:
+            await self._user_notifier.notify_user(
+                user_id=job.user_id,
+                channel_id=job.channel_id,
+                text=text,
+            )
+        except Exception as exc:
+            self._logger.error(f"Failed to notify user about job outcome: {exc}")
 
     async def process_emoji_generation_job_dict(self, job_data: dict[str, Any]) -> None:
         """Generate emoji using dict payload, upload to Slack, and add reaction."""

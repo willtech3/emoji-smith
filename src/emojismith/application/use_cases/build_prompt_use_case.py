@@ -120,6 +120,8 @@ class BuildPromptUseCase:
                 enhanced_prompt = await self._prompt_enhancer.enhance_prompt(
                     spec.context, base_prompt
                 )
+                if not enhanced_prompt or not enhanced_prompt.strip():
+                    raise ValueError("prompt enhancer returned an empty prompt")
                 log_event(
                     self._logger,
                     logging.INFO,

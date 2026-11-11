@@ -7,7 +7,10 @@ import httpx
 import openai
 import pytest
 
-from emojismith.domain.errors import RateLimitExceededError
+from emojismith.domain.errors import (
+    ImageGenerationRejectedError,
+    RateLimitExceededError,
+)
 from emojismith.infrastructure.openai.openai_api import OpenAIAPIRepository
 
 
@@ -118,8 +121,8 @@ async def test_rejects_image_generation_when_b64_json_is_none() -> None:
 
 @pytest.mark.asyncio()
 @pytest.mark.integration()
-async def test_generate_image_uses_gpt_image_2_5_sunburst_with_supported_background():
-    """Use the latest high-end OpenAI image model without unsupported transparency."""
+async def test_generate_image_uses_gpt_image_2_6_sunburst_with_supported_background():
+    """Use the latest high-end OpenAI image model with native transparency."""
     client = AsyncMock()
     client.images.generate.return_value = AsyncMock(
         data=[AsyncMock(b64_json="aGVsbG8=")]
@@ -132,29 +135,29 @@ async def test_generate_image_uses_gpt_image_2_5_sunburst_with_supported_backgro
     client.images.generate.assert_called_once()
     client.images.generate.assert_awaited_once()
     call = client.images.generate.call_args
-    assert call.kwargs["model"] == "gpt-image-2.5-sunburst"
+    assert call.kwargs["model"] == "gpt-image-2.6-sunburst"
     assert call.kwargs["size"] == "1024x1024"
     assert call.kwargs["n"] == 1
     assert call.kwargs["quality"] == "high"
-    assert call.kwargs["background"] == "auto"
+    assert call.kwargs["background"] == "transparent"
     assert call.kwargs["output_format"] == "png"
 
 
 @pytest.mark.asyncio()
 @pytest.mark.integration()
 async def test_does_not_fall_back_to_deprecated_image_models() -> None:
-    """A gpt-image-2.5-sunburst failure must not route work to another model."""
+    """A gpt-image-2.6-sunburst failure must not route work to another model."""
     client = AsyncMock()
-    client.images.generate.side_effect = Exception("gpt-image-2.5-sunburst unavailable")
+    client.images.generate.side_effect = Exception("gpt-image-2.6-sunburst unavailable")
 
     repo = OpenAIAPIRepository(client)
     with pytest.raises(
-        Exception, match=re.escape("gpt-image-2.5-sunburst unavailable")
+        Exception, match=re.escape("gpt-image-2.6-sunburst unavailable")
     ):
         await repo.generate_image("test prompt")
 
     client.images.generate.assert_awaited_once()
-    assert client.images.generate.call_args.kwargs["model"] == "gpt-image-2.5-sunburst"
+    assert client.images.generate.call_args.kwargs["model"] == "gpt-image-2.6-sunburst"
 
 
 @pytest.mark.asyncio()
@@ -194,3 +197,75 @@ async def test_generate_image_raises_rate_limit_error() -> None:
     repo = OpenAIAPIRepository(client)
     with pytest.raises(RateLimitExceededError):
         await repo.generate_image("prompt")
+
+
+def _bad_request(code: str) -> openai.BadRequestError:
+    request = httpx.Request("POST", "https://api.openai.com/v1/images/generations")
+    return openai.BadRequestError(
+        "bad request",
+        response=httpx.Response(400, request=request),
+        body={"code": code, "message": "bad request"},
+    )
+
+
+@pytest.mark.asyncio()
+@pytest.mark.integration()
+async def test_generate_image_when_transparency_rejected_retries_with_auto() -> None:
+    """A model that refuses transparency must still produce an emoji."""
+    client = AsyncMock()
+    client.images.generate.side_effect = [
+        _bad_request("invalid_value"),
+        AsyncMock(data=[AsyncMock(b64_json="aGVsbG8=")]),
+    ]
+    repo = OpenAIAPIRepository(client)
+
+    result = await repo.generate_image("test prompt", background="transparent")
+
+    assert result == [b"hello"]
+    backgrounds = [
+        call.kwargs["background"] for call in client.images.generate.call_args_list
+    ]
+    assert backgrounds == ["transparent", "auto"]
+
+
+@pytest.mark.asyncio()
+@pytest.mark.integration()
+async def test_generate_image_when_opaque_request_rejected_does_not_retry() -> None:
+    client = AsyncMock()
+    client.images.generate.side_effect = _bad_request("invalid_value")
+    repo = OpenAIAPIRepository(client)
+
+    with pytest.raises(openai.BadRequestError):
+        await repo.generate_image("test prompt", background="opaque")
+
+    client.images.generate.assert_awaited_once()
+
+
+@pytest.mark.asyncio()
+@pytest.mark.integration()
+async def test_generate_image_when_moderation_blocks_raises_rejected_error() -> None:
+    """Moderation refusals are permanent, so they must not look retryable."""
+    client = AsyncMock()
+    client.images.generate.side_effect = _bad_request("moderation_blocked")
+    repo = OpenAIAPIRepository(client)
+
+    with pytest.raises(ImageGenerationRejectedError):
+        await repo.generate_image("test prompt", background="transparent")
+
+    client.images.generate.assert_awaited_once()
+
+
+@pytest.mark.asyncio()
+@pytest.mark.integration()
+async def test_enhance_prompt_defaults_to_current_chat_models() -> None:
+    """Retired chat models must not be the default or the fallbacks."""
+    client = AsyncMock()
+    client.models.retrieve.side_effect = [Exception("unavailable"), None]
+    client.responses.create.return_value = AsyncMock(output_text="ok")
+    repo = OpenAIAPIRepository(client)
+
+    await repo.enhance_prompt("ctx", "desc")
+
+    checked = [call.args[0] for call in client.models.retrieve.call_args_list]
+    assert checked == ["gpt-6.1-sol", "gpt-6.1-terra"]
+    assert client.responses.create.call_args.kwargs["model"] == "gpt-6.1-terra"
