@@ -4,8 +4,9 @@
 
 > [!NOTE]
 > This is the historical implementation specification. The production model
-> set was re-audited on 2026-10-11: OpenAI uses `gpt-image-2.5-sunburst`;
-> Google uses `gemini-3-pro-image` with `gemini-nano-banana-2.1` fallback.
+> set was re-audited on 2026-11-11: OpenAI uses `gpt-image-2.6-sunburst`
+> for images and `gpt-6.1-sol` for prompt enhancement; Google uses
+> `gemini-3-pro-image` with `gemini-nano-banana-2.1` fallback.
 > Imagen is no longer used because Google deprecated that API family.
 
 ## Overview
@@ -665,7 +666,7 @@ for part in response.parts:
 |----------|-------------|----------|
 | `OPENAI_API_KEY` | OpenAI API key | Yes (for OpenAI provider) |
 | `GOOGLE_API_KEY` | Google AI API key | Yes (for Gemini provider) |
-| `OPENAI_CHAT_MODEL` | Model for prompt enhancement | Optional (default: `gpt-5`) |
+| `OPENAI_CHAT_MODEL` | Model for prompt enhancement | Optional (default: `gpt-6.1-sol`) |
 
 ### GCP Secret Manager (Production)
 

@@ -47,6 +47,7 @@ class EmojiCreationModalBuilder:
     MODAL_CALLBACK_ID = "emoji_creation_modal"
     MAX_DESCRIPTION_LENGTH = MAX_EMOJI_DESCRIPTION_LENGTH
     MAX_EMOJI_NAME_LENGTH = 32
+    MAX_PRIVATE_METADATA_LENGTH = 3000  # Slack's hard limit for views
 
     def __init__(
         self,
@@ -120,6 +121,24 @@ class EmojiCreationModalBuilder:
             "label": {"type": "plain_text", "text": "Image Model"},
         }
 
+    @classmethod
+    def _encode_metadata(cls, metadata: dict[str, Any]) -> str:
+        """Serialize modal state within Slack's private_metadata limit.
+
+        Slack rejects views whose private_metadata exceeds 3000 characters,
+        which would stop the modal from opening at all. The quoted message is
+        only prompt context, so it is shortened until the payload fits.
+        """
+        encoded = json.dumps(metadata, ensure_ascii=False)
+        message_text = metadata.get("message_text")
+        while len(encoded) > cls.MAX_PRIVATE_METADATA_LENGTH and message_text:
+            overflow = len(encoded) - cls.MAX_PRIVATE_METADATA_LENGTH
+            message_text = message_text[: max(0, len(message_text) - overflow)]
+            encoded = json.dumps(
+                {**metadata, "message_text": message_text}, ensure_ascii=False
+            )
+        return encoded
+
     def build_collapsed_view(self, metadata: dict[str, Any]) -> dict[str, Any]:
         """Build simple mode modal (description only)."""
         metadata_with_state = {**metadata, "show_advanced": False}
@@ -169,7 +188,7 @@ class EmojiCreationModalBuilder:
             "submit": {"type": "plain_text", "text": "✨ Generate"},
             "close": {"type": "plain_text", "text": "Cancel"},
             "blocks": blocks,
-            "private_metadata": json.dumps(metadata_with_state),
+            "private_metadata": self._encode_metadata(metadata_with_state),
         }
 
     def build_expanded_view(self, metadata: dict[str, Any]) -> dict[str, Any]:
@@ -375,5 +394,5 @@ class EmojiCreationModalBuilder:
             "submit": {"type": "plain_text", "text": "✨ Generate"},
             "close": {"type": "plain_text", "text": "Cancel"},
             "blocks": blocks,
-            "private_metadata": json.dumps(metadata_with_state),
+            "private_metadata": self._encode_metadata(metadata_with_state),
         }

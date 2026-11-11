@@ -10,6 +10,8 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI, HTTPException, Request, Response
 
 from emojismith.app import create_worker_emoji_service
+from emojismith.application.services.emoji_service import EmojiCreationService
+from emojismith.domain.errors import ImageGenerationRejectedError
 from shared.domain.dtos import EmojiGenerationJobDto
 from shared.infrastructure.logging import (
     DEFAULT_TRACE_ID,
@@ -27,6 +29,11 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# Must match dead_letter_policy.max_delivery_attempts in terraform/pubsub.tf:
+# the delivery with this attempt number is the last one before dead-lettering,
+# so it is our last chance to tell the user the job failed.
+MAX_DELIVERY_ATTEMPTS = 5
 
 telemetry_config = TelemetryConfig.from_environment()
 tracing_provider = create_tracing_provider(telemetry_config)
@@ -71,6 +78,21 @@ async def health() -> dict:
     return {"status": "healthy"}
 
 
+async def _notify_failure(
+    emoji_service: EmojiCreationService | None,
+    job: EmojiGenerationJobDto,
+    error: Exception,
+) -> None:
+    """Best-effort: tell the requester their emoji is not coming."""
+    try:
+        service = emoji_service or create_worker_emoji_service(
+            metrics_recorder=metrics_recorder
+        )
+        await service.notify_generation_failed(job, error)
+    except Exception:
+        logger.exception("Failed to notify user about failed job %s", job.job_id)
+
+
 @app.post("/pubsub")
 async def process_pubsub_message(request: Request) -> dict:
     """
@@ -79,6 +101,10 @@ async def process_pubsub_message(request: Request) -> dict:
     job_start_time: float | None = None
     job_provider = "unknown"
     token = None
+    job: EmojiGenerationJobDto | None = None
+    emoji_service: EmojiCreationService | None = None
+    delivery_attempt = 0
+    message_id = "unknown"
     try:
         envelope = await request.json()
 
@@ -89,6 +115,8 @@ async def process_pubsub_message(request: Request) -> dict:
 
         message = envelope["message"]
         message_id = message.get("messageId", "unknown")
+        raw_attempt = envelope.get("deliveryAttempt")
+        delivery_attempt = raw_attempt if isinstance(raw_attempt, int) else 0
 
         # Decode the job data
         if "data" not in message:
@@ -225,6 +253,15 @@ async def process_pubsub_message(request: Request) -> dict:
             where="worker",
             error_type=e.__class__.__name__,
         )
+        # A content-policy refusal fails identically on every retry, so tell the
+        # user now and acknowledge the message instead of burning five attempts.
+        permanent = isinstance(e, ImageGenerationRejectedError)
+        final_attempt = delivery_attempt >= MAX_DELIVERY_ATTEMPTS
+        if job is not None and (permanent or final_attempt):
+            await _notify_failure(emoji_service, job, e)
+        if permanent:
+            return {"status": "rejected", "messageId": message_id}
+
         # Return 500 to trigger Pub/Sub retry.
         raise HTTPException(status_code=500, detail="Internal error") from e
     finally:

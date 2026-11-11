@@ -80,6 +80,18 @@ class TestWebhookApp:
         assert resp.status_code == 200
         assert resp.json() == {"challenge": "abc"}
 
+    def test_invalid_signature_returns_401_not_server_error(self, webhook_app_module):
+        security_service = MagicMock(spec=WebhookSecurityService)
+        security_service.is_authentic_webhook.return_value = False
+        handler = SlackWebhookHandler(
+            security_service=security_service, event_processor=AsyncMock()
+        )
+        client = TestClient(webhook_app_module.create_app(webhook_handler=handler))
+
+        resp = client.post("/slack/events", content=b"{}")
+
+        assert resp.status_code == 401
+
     def test_message_action_opens_modal(self, webhook_test_client):
         client, slack_repo, _job_queue = webhook_test_client
         payload = {

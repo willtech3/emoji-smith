@@ -20,7 +20,7 @@ async def test_generate_image_logs_model_generation_primary(caplog) -> None:
         return_value=SimpleNamespace(data=[SimpleNamespace(b64_json="aGVsbG8=")])
     )
 
-    repository = OpenAIAPIRepository(client, model="gpt-5")
+    repository = OpenAIAPIRepository(client, model="gpt-6.1-sol")
 
     with caplog.at_level(logging.INFO):
         await repository.generate_image("test prompt")
@@ -33,7 +33,7 @@ async def test_generate_image_logs_model_generation_primary(caplog) -> None:
 
     assert len(generation_logs) == 1
     assert generation_logs[0].event_data["provider"] == "openai"
-    assert generation_logs[0].event_data["model"] == "gpt-image-2.5-sunburst"
+    assert generation_logs[0].event_data["model"] == "gpt-image-2.6-sunburst"
     assert generation_logs[0].event_data["is_fallback"] is False
 
 
@@ -44,7 +44,7 @@ async def test_generate_image_failure_does_not_log_deprecated_fallback(caplog) -
     client.images = MagicMock()
     client.images.generate = AsyncMock(side_effect=Exception("primary failed"))
 
-    repository = OpenAIAPIRepository(client, model="gpt-5")
+    repository = OpenAIAPIRepository(client, model="gpt-6.1-sol")
 
     with (
         caplog.at_level(logging.INFO),

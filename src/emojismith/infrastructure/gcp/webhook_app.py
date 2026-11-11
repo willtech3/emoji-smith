@@ -13,10 +13,12 @@ import time
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from slack_sdk.web.async_client import AsyncWebClient
 
 from emojismith.application.handlers.slack_webhook_handler import (
     SlackWebhookHandler,
+    UnauthorizedError,
     WebhookEventProcessor,
 )
 from emojismith.domain.services.webhook_security_service import WebhookSecurityService
@@ -130,6 +132,14 @@ def create_app(*, webhook_handler: SlackWebhookHandler | None = None) -> FastAPI
         if not getattr(app.state, "otel_instrumented", False):
             FastAPIInstrumentor.instrument_app(app)
             app.state.otel_instrumented = True
+
+    @app.exception_handler(UnauthorizedError)
+    async def unauthorized_handler(
+        _request: Request, _exc: UnauthorizedError
+    ) -> JSONResponse:
+        # A bad signature is the caller's fault: answer 401 rather than letting
+        # it surface as a 500 that pollutes error metrics and alerts.
+        return JSONResponse(status_code=401, content={"error": "unauthorized"})
 
     @app.get("/health")
     async def health_check() -> dict:

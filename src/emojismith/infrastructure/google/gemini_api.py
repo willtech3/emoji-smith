@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -10,7 +11,10 @@ from google import genai
 from google.api_core import exceptions as google_exceptions
 from google.genai import types
 
-from emojismith.domain.errors import RateLimitExceededError
+from emojismith.domain.errors import (
+    ImageGenerationRejectedError,
+    RateLimitExceededError,
+)
 from emojismith.domain.repositories.image_generation_repository import (
     ImageGenerationRepository,
 )
@@ -19,6 +23,32 @@ from emojismith.domain.repositories.prompt_enhancer_repository import (
 )
 from shared.infrastructure.logging import log_event
 from shared.infrastructure.telemetry.metrics import MetricsRecorder
+
+GEMINI_IMAGE_MODEL = "gemini-3-pro-image"
+GEMINI_IMAGE_FALLBACK_MODEL = "gemini-nano-banana-2.1"
+GEMINI_TEXT_MODEL = "gemini-3.8-flash"
+
+# Finish/block reasons that mean the provider refused the prompt or its output.
+# A different model or a retry will not change the outcome for the same prompt.
+_SAFETY_FINISH_REASONS = frozenset(
+    {
+        types.FinishReason.SAFETY,
+        types.FinishReason.BLOCKLIST,
+        types.FinishReason.PROHIBITED_CONTENT,
+        types.FinishReason.SPII,
+        types.FinishReason.IMAGE_SAFETY,
+        types.FinishReason.IMAGE_PROHIBITED_CONTENT,
+    }
+)
+_SAFETY_BLOCK_REASONS = frozenset(
+    {
+        types.BlockedReason.SAFETY,
+        types.BlockedReason.BLOCKLIST,
+        types.BlockedReason.PROHIBITED_CONTENT,
+        types.BlockedReason.IMAGE_SAFETY,
+        types.BlockedReason.JAILBREAK,
+    }
+)
 
 
 class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
@@ -31,9 +61,9 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
     def __init__(
         self,
         client: genai.Client,
-        model: str = "gemini-3-pro-image",
-        fallback_model: str = "gemini-nano-banana-2.1",
-        text_model: str = "gemini-3-flash-preview",
+        model: str = GEMINI_IMAGE_MODEL,
+        fallback_model: str = GEMINI_IMAGE_FALLBACK_MODEL,
+        text_model: str = GEMINI_TEXT_MODEL,
         metrics_recorder: MetricsRecorder | None = None,
     ) -> None:
         self._client = client
@@ -86,7 +116,36 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
             if part.inline_data and part.inline_data.data is not None:
                 return bytes(part.inline_data.data)
 
+        refusal = self._safety_refusal_reason(response)
+        if refusal is not None:
+            raise ImageGenerationRejectedError(
+                f"Gemini declined to generate this image ({refusal})"
+            )
+
         raise ValueError("Gemini did not return image data")
+
+    def _safety_refusal_reason(self, response: Any) -> str | None:
+        """Return the safety reason when the provider refused the request."""
+        block_reason = getattr(
+            getattr(response, "prompt_feedback", None), "block_reason", None
+        )
+        if (
+            isinstance(block_reason, types.BlockedReason)
+            and block_reason in _SAFETY_BLOCK_REASONS
+        ):
+            return str(block_reason.name)
+
+        candidates = getattr(response, "candidates", None)
+        if not isinstance(candidates, list):
+            return None
+        for candidate in candidates:
+            finish_reason = getattr(candidate, "finish_reason", None)
+            if (
+                isinstance(finish_reason, types.FinishReason)
+                and finish_reason in _SAFETY_FINISH_REASONS
+            ):
+                return str(finish_reason.name)
+        return None
 
     def _iter_response_parts(self, response: Any) -> list[Any]:
         """Return parts from both current and candidate-based SDK responses."""
@@ -102,7 +161,7 @@ class GeminiAPIRepository(ImageGenerationRepository, PromptEnhancerRepository):
         return candidate_parts
 
     async def enhance_prompt(self, context: str, description: str) -> str:
-        """Enhance a prompt using Gemini 3 Flash for emoji generation.
+        """Enhance a prompt using a Gemini Flash text model for emoji generation.
 
         Uses Google's prompting best practices:
         - Clear role definition and task description
@@ -211,72 +270,65 @@ Output:"""
         """
         # Background is prompt-guided for Gemini and kept for protocol compatibility.
         _ = background
-        images = []
         n = min(num_images, 4)
         image_size = self._image_size_for_quality(quality)
 
-        for _ in range(n):
-            try:
-                start_time = time.monotonic()
-                image_bytes = await self._generate_with_model(
-                    prompt, self._model, image_size
-                )
-                duration_s = time.monotonic() - start_time
-                log_event(
-                    self._logger,
-                    logging.INFO,
-                    "Image generated",
-                    event="model_generation",
-                    provider="google_gemini",
-                    model=self._model,
-                    is_fallback=False,
-                )
-                if self._metrics is not None:
-                    self._metrics.record_emoji_generated(
-                        provider="google_gemini",
-                        model=self._model,
-                        is_fallback=False,
-                        duration_s=duration_s,
-                    )
-                images.append(image_bytes)
-            except Exception as exc:
-                if self._is_rate_limit_error(exc):
-                    raise RateLimitExceededError(str(exc)) from exc
+        # Variations are independent requests, so run them concurrently: four
+        # sequential high-quality generations can exceed the worker's time budget.
+        return list(
+            await asyncio.gather(
+                *(self._generate_one(prompt, image_size) for _ in range(n))
+            )
+        )
 
-                self._logger.warning(
-                    "%s failed, falling back to %s: %s",
-                    self._model,
-                    self._fallback_model,
-                    exc,
-                )
-                try:
-                    start_time = time.monotonic()
-                    image_bytes = await self._generate_with_model(
-                        prompt, self._fallback_model, image_size
-                    )
-                    duration_s = time.monotonic() - start_time
-                    log_event(
-                        self._logger,
-                        logging.INFO,
-                        "Image generated via Gemini fallback",
-                        event="model_generation",
-                        provider="google_gemini",
-                        model=self._fallback_model,
-                        is_fallback=True,
-                    )
-                    if self._metrics is not None:
-                        self._metrics.record_emoji_generated(
-                            provider="google_gemini",
-                            model=self._fallback_model,
-                            is_fallback=True,
-                            duration_s=duration_s,
-                        )
-                    images.append(image_bytes)
-                except Exception as fallback_exc:
-                    if self._is_rate_limit_error(fallback_exc):
-                        raise RateLimitExceededError(
-                            str(fallback_exc)
-                        ) from fallback_exc
-                    raise fallback_exc
+    async def _generate_one(self, prompt: str, image_size: str) -> bytes:
+        """Generate one image, falling back to the secondary model on failure."""
+        try:
+            return await self._generate_and_record(
+                prompt, self._model, image_size, is_fallback=False
+            )
+        except Exception as exc:
+            if self._is_rate_limit_error(exc):
+                raise RateLimitExceededError(str(exc)) from exc
 
-        return images
+            self._logger.warning(
+                "%s failed, falling back to %s: %s",
+                self._model,
+                self._fallback_model,
+                exc,
+            )
+
+        try:
+            return await self._generate_and_record(
+                prompt, self._fallback_model, image_size, is_fallback=True
+            )
+        except ImageGenerationRejectedError:
+            raise
+        except Exception as fallback_exc:
+            if self._is_rate_limit_error(fallback_exc):
+                raise RateLimitExceededError(str(fallback_exc)) from fallback_exc
+            raise
+
+    async def _generate_and_record(
+        self, prompt: str, model: str, image_size: str, *, is_fallback: bool
+    ) -> bytes:
+        start_time = time.monotonic()
+        image_bytes = await self._generate_with_model(prompt, model, image_size)
+        duration_s = time.monotonic() - start_time
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Image generated via Gemini fallback" if is_fallback else "Image generated",
+            event="model_generation",
+            provider="google_gemini",
+            model=model,
+            is_fallback=is_fallback,
+        )
+        if self._metrics is not None:
+            self._metrics.record_emoji_generated(
+                provider="google_gemini",
+                model=model,
+                is_fallback=is_fallback,
+                duration_s=duration_s,
+            )
+        return image_bytes

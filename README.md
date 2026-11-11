@@ -97,7 +97,7 @@ See the Terraform configuration in `terraform/` for infrastructure details.
 | `SLACK_BOT_TOKEN` | Slack bot user OAuth token | Yes |
 | `SLACK_SIGNING_SECRET` | Slack signing secret (request verification) | Yes (webhook) |
 | `OPENAI_API_KEY` | OpenAI API key | Yes |
-| `OPENAI_CHAT_MODEL` | Chat model for prompt enhancement | No (default: `gpt-5`) |
+| `OPENAI_CHAT_MODEL` | Chat model for prompt enhancement | No (default: `gpt-6.1-sol`) |
 | `GOOGLE_API_KEY` | Google API key (Gemini provider) | No |
 | `PUBSUB_PROJECT` | GCP project ID for Pub/Sub | Yes |
 | `PUBSUB_TOPIC` | Pub/Sub topic name | Yes |

@@ -85,6 +85,14 @@ class WebhookEventProcessor:
 
         return f"{slugified}_{hash_suffix}"
 
+    @staticmethod
+    def _selected_value(
+        state: dict[str, Any], block_id: str, action_id: str, default: str
+    ) -> str:
+        """Read a select's value; Slack sends ``null`` for an unset option."""
+        option = (state.get(block_id) or {}).get(action_id, {}).get("selected_option")
+        return str((option or {}).get("value") or default)
+
     async def process(self, body: bytes) -> dict[str, Any]:
         try:
             payload = json.loads(body.decode("utf-8"))
@@ -131,6 +139,13 @@ class WebhookEventProcessor:
             "timestamp": slack_message.timestamp,
             "team_id": slack_message.team_id,
         }
+
+        # When the action is used on a reply inside a thread, results must be
+        # posted to the thread's parent: Slack does not show messages threaded
+        # under a reply's own timestamp.
+        thread_ts = message.get("thread_ts")
+        if thread_ts and thread_ts != slack_message.timestamp:
+            metadata["thread_ts"] = thread_ts
 
         # Use ModalBuilder for progressive disclosure - start with simple mode
         modal_view = self._modal_builder.build_collapsed_view(metadata)
@@ -212,36 +227,37 @@ class WebhookEventProcessor:
             emoji_name = self._generate_emoji_name(description)
 
         # Extract image provider (default based on availability)
-        image_provider = (
-            state.get(self._modal_builder.IMAGE_PROVIDER_BLOCK, {})
-            .get(self._modal_builder.PROVIDER_ACTION, {})
-            .get("selected_option", {})
-            .get("value", self._modal_builder.default_provider)
+        image_provider = self._selected_value(
+            state,
+            self._modal_builder.IMAGE_PROVIDER_BLOCK,
+            self._modal_builder.PROVIDER_ACTION,
+            self._modal_builder.default_provider,
         )
 
         # Extract advanced options
-        background = (
-            state.get(self._modal_builder.BACKGROUND_BLOCK, {})
-            .get(self._modal_builder.BACKGROUND_ACTION, {})
-            .get("selected_option", {})
-            .get("value", "transparent")
+        background = self._selected_value(
+            state,
+            self._modal_builder.BACKGROUND_BLOCK,
+            self._modal_builder.BACKGROUND_ACTION,
+            "transparent",
         )
-        quality = (
-            state.get(self._modal_builder.QUALITY_BLOCK, {})
-            .get(self._modal_builder.QUALITY_ACTION, {})
-            .get("selected_option", {})
-            .get("value", "high")
+        quality = self._selected_value(
+            state,
+            self._modal_builder.QUALITY_BLOCK,
+            self._modal_builder.QUALITY_ACTION,
+            "high",
         )
-        num_images = (
-            state.get(self._modal_builder.NUM_IMAGES_BLOCK, {})
-            .get(self._modal_builder.NUM_IMAGES_ACTION, {})
-            .get("selected_option", {})
-            .get("value", "1")
+        num_images = self._selected_value(
+            state,
+            self._modal_builder.NUM_IMAGES_BLOCK,
+            self._modal_builder.NUM_IMAGES_ACTION,
+            "1",
         )
         style_text = (
             state.get(self._modal_builder.STYLE_TEXT_BLOCK, {})
             .get(self._modal_builder.STYLE_TEXT_ACTION, {})
-            .get("value", "")
+            .get("value")
+            or ""
         )
 
         # Create generation preferences from form values

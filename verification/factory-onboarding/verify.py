@@ -247,8 +247,8 @@ def check_rejects_unauthenticated() -> tuple[bool, str]:
     leaked = jobs_named(name)
     ok = all(s >= 400 for s in statuses.values()) and not leaked
     return ok, (
-        f"statuses={statuses} (any non-2xx accepted; the app has no handler mapping "
-        f"UnauthorizedError, so 500 is expected rather than 401); jobs published={len(leaked)}"
+        f"statuses={statuses} (any non-2xx accepted; UnauthorizedError maps to 401); "
+        f"jobs published={len(leaked)}"
     )
 
 
@@ -610,7 +610,7 @@ def check_worker_pipeline() -> tuple[bool, str]:
     async def run() -> None:
         # Mirrors emojismith.app.create_worker_emoji_service; only Slack adapters differ.
         openai_repo = OpenAIAPIRepository(
-            AsyncOpenAI(api_key=api_key), model=os.getenv("OPENAI_CHAT_MODEL", "gpt-5")
+            AsyncOpenAI(api_key=api_key), model=os.getenv("OPENAI_CHAT_MODEL", "gpt-6.1-sol")
         )
         service = EmojiCreationService(
             slack_repo=slack,
